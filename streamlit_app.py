@@ -48,12 +48,6 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .metric-card {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 20px;
-        margin: 10px 0;
-    }
     .signal-buy {
         background-color: #d4edda;
         border-left: 5px solid #28a745;
@@ -344,14 +338,14 @@ def main():
                 # Metrikleri göster
                 col1, col2, col3 = st.columns(3)
                 
-              with col1:
-    fg_data = analysis.get('external_data', {}).get('fear_greed', {})
-    if isinstance(fg_data, dict):
-        fg_value = fg_data.get('value', 'N/A')
-        fg_class = fg_data.get('classification', '')
-        st.metric("Fear & Greed", f"{fg_value} - {fg_class}")
-    else:
-        st.metric("Fear & Greed", str(fg_data))
+                with col1:
+                    fg_data = analysis.get('external_data', {}).get('fear_greed', {})
+                    if isinstance(fg_data, dict):
+                        fg_value = fg_data.get('value', 'N/A')
+                        fg_class = fg_data.get('classification', '')
+                        st.metric("Fear & Greed", f"{fg_value} - {fg_class}")
+                    else:
+                        st.metric("Fear & Greed", str(fg_data))
                 
                 with col2:
                     tech = analysis.get('technical', {})
