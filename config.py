@@ -1,60 +1,129 @@
-# config.py
-#! v63.0: LTCUSDT varsayılan listeye eklendi.
-# v48.0: v58.0 Trailing Stop-Loss ayarları eklendi.
-# v47.0: Tüm yapılandırma ayarları, sabitler ve API anahtarları
+"""
+DEMIR - Configuration
+API Keys, Parameters, Settings
+"""
 
 import os
-from dotenv import load_dotenv
+from typing import Dict, Any
 
-# Ortam değişkenlerini yükle
-load_dotenv()
+# ============================================
+# API KEYS (Environment Variables)
+# ============================================
 
-# ----------------------------
-# ⚙️ API Anahtarları ve Ortam Değişkenleri
-# ----------------------------
-API_KEY = os.getenv("BINANCE_API_KEY", "")
-API_SECRET = os.getenv("BINANCE_API_SECRET", "")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-TELEGRAM_ENABLED = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
+BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
+BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET', '')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 
-COINGLASS_API_KEY = os.getenv("COINGLASS_API_KEY", "")
-CRYPTOPANIC_KEY = os.getenv("CRYPTOPANIC_KEY", "")
+# ============================================
+# TRADING PARAMETERS
+# ============================================
 
-WHALE_ADDRESS = os.getenv("WHALE_ADDRESS", "0xc2a30212a8DdAc9e123944d6e29FADdCe994E5f2") # Varsayılan balina adresi
-HYPERLIQUID_API_URL = "https://api.hyperliquid.xyz/info"
+TRADING_CONFIG = {
+    # Risk yönetimi
+    'max_position_size': 0.1,  # Bakiyenin %10'u
+    'stop_loss_pct': 2.0,      # %2 stop loss
+    'take_profit_pct': 5.0,    # %5 take profit
+    
+    # Sinyal parametreleri
+    'min_confidence': 60,      # Minimum güven skoru (0-100)
+    'signal_cooldown': 3600,   # Sinyaller arası bekleme (saniye)
+    
+    # Timeframes
+    'default_timeframe': '1h',
+    'supported_timeframes': ['15m', '1h', '4h', '1d'],
+    
+    # Symbols
+    'default_symbols': ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'],
+    'max_concurrent_positions': 3
+}
 
-# ----------------------------
-# ⚙️ Strateji Sabitleri
-# ----------------------------
-TF_ENTRY = "15m"
-#! v63.0: Kullanıcı isteği üzerine LTCUSDT eklendi.
-TRADE_SYMBOLS_DEFAULT = ["BTC/USDT", "ETH/USDT", "LTCUSDT"] 
-EMA_FAST = 12
-EMA_SLOW = 26
-EMA_MED = 50
-EMA_LONG = 200
-INITIAL_CAPITAL_DEFAULT = 10000.0
-RISK_PER_TRADE_PERCENT = 0.01 # Her işlemde sermayenin %1'i risk edilir
-MAX_HOLD_BARS = 5
+# ============================================
+# TECHNICAL ANALYSIS PARAMETERS
+# ============================================
 
-# ----------------------------
-# ⚙️ v58.0: Trailing Stop-Loss Ayarları (A.docx'ten)
-# ----------------------------
-TRAILING_SL_ENABLED = True # Takip eden stop-loss'u etkinleştirir
-TRAILING_SL_ACTIVATION_R = 1.0 # TSL'nin 1R kâra ulaşıldığında devreye girmesini sağlar
-TRAILING_SL_ATR_MULTIPLIER = 2.0 # Fiyatı kaç ATR geriden takip edeceği
+TA_CONFIG = {
+    'rsi_period': 14,
+    'rsi_overbought': 70,
+    'rsi_oversold': 30,
+    
+    'macd_fast': 12,
+    'macd_slow': 26,
+    'macd_signal': 9,
+    
+    'bollinger_period': 20,
+    'bollinger_std': 2,
+    
+    'ema_periods': [9, 21, 50, 200],
+    
+    'volume_profile_bins': 20,
+    'fibonacci_lookback': 100
+}
 
-# ----------------------------
-# ⚙️ Diğer Sabitler
-# ----------------------------
-BINANCE_FEE_RATE = 0.0004
-DB_NAME = "demir_memory.db"
+# ============================================
+# DATABASE SETTINGS
+# ============================================
 
-# ----------------------------
-# ⚙️ Global Cache'ler
-# ----------------------------
-model_cache = {}
-scaler_cache = {}
+DB_CONFIG = {
+    'type': 'sqlite',  # sqlite veya postgresql
+    'sqlite_path': 'demir_trading.db',
+    
+    # PostgreSQL için (production)
+    'postgres_host': os.getenv('DB_HOST', 'localhost'),
+    'postgres_port': os.getenv('DB_PORT', '5432'),
+    'postgres_db': os.getenv('DB_NAME', 'demir_db'),
+    'postgres_user': os.getenv('DB_USER', 'postgres'),
+    'postgres_password': os.getenv('DB_PASSWORD', '')
+}
 
-print("✅ config.py v63.0 (LTCUSDT Eklendi) yüklendi.") # Yükleme onayı
+# ============================================
+# LOGGING
+# ============================================
+
+LOGGING_CONFIG = {
+    'level': 'INFO',
+    'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    'file': 'demir.log'
+}
+
+# ============================================
+# STREAMLIT UI SETTINGS
+# ============================================
+
+UI_CONFIG = {
+    'page_title': 'DEMIR Trading Bot',
+    'page_icon': '🤖',
+    'layout': 'wide',
+    'refresh_interval': 5,  # saniye
+    'chart_height': 500
+}
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def get_config(section: str = None) -> Dict[str, Any]:
+    """Konfigürasyon verilerini döndür"""
+    configs = {
+        'trading': TRADING_CONFIG,
+        'ta': TA_CONFIG,
+        'db': DB_CONFIG,
+        'logging': LOGGING_CONFIG,
+        'ui': UI_CONFIG
+    }
+    
+    if section:
+        return configs.get(section, {})
+    return configs
+
+
+def validate_config() -> bool:
+    """Zorunlu ayarları kontrol et"""
+    # Kritik ayarlar kontrolü
+    required_keys = []
+    
+    for key in required_keys:
+        if not os.getenv(key):
+            print(f"Uyarı: {key} environment variable tanımlanmamış")
+    
+    return True
