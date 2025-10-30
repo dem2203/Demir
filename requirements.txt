@@ -20,3 +20,4 @@ tensorflow==2.15.0
 scikit-learn==1.3.2
 statsmodels==0.14.2
 arch
+websocket-client==1.7.0
