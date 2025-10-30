@@ -1,6 +1,6 @@
 """
 DEMIR - Professional AI Trading Dashboard
-Ultra-Modern UI with Real-Time Analytics
+Ultra-Modern UI with AI Brain Integration
 """
 
 import streamlit as st
@@ -23,6 +23,14 @@ except ImportError as e:
     st.error(f"⚠️ Modül yükleme hatası: {e}")
     st.stop()
 
+# AI Brain import
+try:
+    from ai_brain import AIBrain
+    AI_BRAIN_AVAILABLE = True
+except ImportError:
+    AI_BRAIN_AVAILABLE = False
+    st.warning("⚠️ AI Brain modülü yüklenemedi. Normal mode aktif.")
+
 # Sayfa yapılandırması
 st.set_page_config(
     page_title="DEMIR AI Trading",
@@ -34,12 +42,10 @@ st.set_page_config(
 # MODERN DARK THEME CSS
 st.markdown("""
 <style>
-    /* Ana background */
     .stApp {
         background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
     }
     
-    /* Header styling */
     .main-title {
         font-size: 3.5rem;
         font-weight: 800;
@@ -58,7 +64,6 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* Glassmorphism cards */
     .glass-card {
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(10px);
@@ -69,7 +74,6 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     
-    /* Price ticker */
     .price-ticker {
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
         padding: 1rem;
@@ -85,7 +89,6 @@ st.markdown("""
         font-weight: 600;
     }
     
-    /* Signal cards */
     .signal-card-buy {
         background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         padding: 1.5rem;
@@ -120,7 +123,6 @@ st.markdown("""
         50% { transform: scale(1.02); }
     }
     
-    /* Metric cards */
     .metric-card {
         background: rgba(255, 255, 255, 0.08);
         padding: 1.2rem;
@@ -141,7 +143,6 @@ st.markdown("""
         margin-bottom: 0.3rem;
     }
     
-    /* Buttons */
     .stButton>button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -158,7 +159,6 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
     }
     
-    /* Scrollbar */
     ::-webkit-scrollbar {
         width: 10px;
     }
@@ -188,6 +188,10 @@ def init_session_state():
         st.session_state.last_analysis = {}
     if 'analysis_running' not in st.session_state:
         st.session_state.analysis_running = False
+    if 'ai_mode' not in st.session_state:
+        st.session_state.ai_mode = False
+    if 'capital' not in st.session_state:
+        st.session_state.capital = 10000
 
 
 # ============================================
@@ -197,7 +201,6 @@ def init_session_state():
 def create_advanced_chart(df, symbol, tech_data):
     """TradingView-style candlestick chart"""
     
-    # Subplot oluştur: main chart + RSI + MACD
     fig = make_subplots(
         rows=3, cols=1,
         shared_xaxes=True,
@@ -206,7 +209,6 @@ def create_advanced_chart(df, symbol, tech_data):
         subplot_titles=(f'{symbol.upper()} Price Action', 'RSI', 'MACD')
     )
     
-    # Candlestick
     fig.add_trace(
         go.Candlestick(
             x=df['timestamp'],
@@ -221,7 +223,6 @@ def create_advanced_chart(df, symbol, tech_data):
         row=1, col=1
     )
     
-    # EMA overlays
     if 'EMA_9' in df.columns:
         fig.add_trace(
             go.Scatter(x=df['timestamp'], y=df['EMA_9'], 
@@ -236,7 +237,6 @@ def create_advanced_chart(df, symbol, tech_data):
             row=1, col=1
         )
     
-    # Bollinger Bands
     if all(k in df.columns for k in ['BB_upper', 'BB_lower']):
         fig.add_trace(
             go.Scatter(x=df['timestamp'], y=df['BB_upper'], 
@@ -250,18 +250,15 @@ def create_advanced_chart(df, symbol, tech_data):
             row=1, col=1
         )
     
-    # RSI
     if 'RSI' in df.columns:
         fig.add_trace(
             go.Scatter(x=df['timestamp'], y=df['RSI'], 
                       name='RSI', line=dict(color='#9c27b0', width=2)),
             row=2, col=1
         )
-        # Overbought/Oversold lines
         fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
         fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
     
-    # MACD
     if all(k in df.columns for k in ['MACD', 'MACD_signal']):
         fig.add_trace(
             go.Scatter(x=df['timestamp'], y=df['MACD'], 
@@ -274,7 +271,6 @@ def create_advanced_chart(df, symbol, tech_data):
             row=3, col=1
         )
     
-    # Layout
     fig.update_layout(
         template='plotly_dark',
         height=800,
@@ -337,7 +333,7 @@ def display_price_ticker():
 
 
 # ============================================
-# ANALYSIS RUNNER
+# ANALYSIS RUNNERS
 # ============================================
 
 def run_analysis(symbol, timeframe='1h'):
@@ -359,7 +355,8 @@ def run_analysis(symbol, timeframe='1h'):
                 'timestamp': datetime.now(),
                 'external_data': ext_data,
                 'technical': tech_analysis,
-                'signal': signal
+                'signal': signal,
+                'mode': 'NORMAL'
             }
             
             st.session_state.last_analysis[symbol] = result
@@ -373,8 +370,35 @@ def run_analysis(symbol, timeframe='1h'):
         return None
 
 
+def run_ai_brain_analysis(symbol):
+    """AI Brain ile profesyonel analiz"""
+    try:
+        st.session_state.analysis_running = True
+        
+        with st.spinner(f"🧠 AI Brain analyzing {symbol.upper()}..."):
+            brain = AIBrain()
+            decision = brain.make_decision(symbol, st.session_state.capital)
+            
+            result = {
+                'symbol': symbol,
+                'timestamp': datetime.now(),
+                'ai_decision': decision,
+                'mode': 'AI_BRAIN'
+            }
+            
+            st.session_state.last_analysis[symbol] = result
+            
+        st.session_state.analysis_running = False
+        return result
+        
+    except Exception as e:
+        st.error(f"❌ AI Brain error: {e}")
+        st.session_state.analysis_running = False
+        return None
+
+
 # ============================================
-# SIGNAL DISPLAY
+# SIGNAL DISPLAYS
 # ============================================
 
 def display_signal(signal_data):
@@ -385,7 +409,6 @@ def display_signal(signal_data):
     confidence = signal_data.get('confidence', 0)
     factors = signal_data.get('factors', {})
     
-    # Signal card
     if signal == 'BUY':
         st.markdown(f"""
         <div class="signal-card-buy">
@@ -408,7 +431,6 @@ def display_signal(signal_data):
         </div>
         """, unsafe_allow_html=True)
     
-    # Factor breakdown
     st.subheader("🧠 AI Decision Breakdown")
     
     cols = st.columns(3)
@@ -423,6 +445,132 @@ def display_signal(signal_data):
             """, unsafe_allow_html=True)
 
 
+def display_ai_decision(decision_data):
+    """AI Brain kararını profesyonel göster"""
+    if not decision_data:
+        return
+    
+    signal = decision_data.get('signal', 'HOLD')
+    confidence = decision_data.get('confidence', 0)
+    reasoning = decision_data.get('reasoning', [])
+    metadata = decision_data.get('metadata', {})
+    
+    if signal == 'BUY':
+        st.markdown(f"""
+        <div class="signal-card-buy">
+            <h2>🟢 AI BRAIN: STRONG BUY</h2>
+            <p style="font-size:1.3rem;">Confidence: <strong>{confidence:.1f}%</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif signal == 'SELL':
+        st.markdown(f"""
+        <div class="signal-card-sell">
+            <h2>🔴 AI BRAIN: STRONG SELL</h2>
+            <p style="font-size:1.3rem;">Confidence: <strong>{confidence:.1f}%</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="signal-card-hold">
+            <h2>🟡 AI BRAIN: HOLD / WAIT</h2>
+            <p style="font-size:1.3rem;">Confidence: <strong>{confidence:.1f}%</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.subheader("💰 Position & Risk Management")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Position Size</div>
+            <div class="metric-value">${decision_data.get('position_size', 0):.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Stop Loss</div>
+            <div class="metric-value" style="color:#ef5350;">${decision_data.get('stop_loss', 0):.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Take Profit</div>
+            <div class="metric-value" style="color:#26a69a;">${decision_data.get('take_profit_1', 0):.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        rr = decision_data.get('risk_reward_ratio', 0)
+        rr_color = '#26a69a' if rr >= 2 else '#ff9800' if rr >= 1.5 else '#ef5350'
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">R/R Ratio</div>
+            <div class="metric-value" style="color:{rr_color};">1:{rr:.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.subheader("🧠 AI Decision Reasoning")
+    
+    for reason in reasoning:
+        if '✅' in reason:
+            st.success(reason)
+        elif '⚠️' in reason:
+            st.warning(reason)
+        elif '❌' in reason:
+            st.error(reason)
+        else:
+            st.info(reason)
+    
+    regime_data = metadata.get('regime', {})
+    if regime_data:
+        regime = regime_data.get('regime', 'UNKNOWN')
+        regime_conf = regime_data.get('confidence', 0)
+        
+        regime_colors = {
+            'TREND': '#26a69a',
+            'RANGE': '#ff9800',
+            'VOLATILE': '#ef5350'
+        }
+        
+        st.markdown(f"""
+        <div class="metric-card" style="border-left-color:{regime_colors.get(regime, '#666')};">
+            <div class="metric-label">Market Regime</div>
+            <div class="metric-value" style="color:{regime_colors.get(regime, '#666')};">{regime}</div>
+            <div style="color:#8b92a7;">Confidence: {regime_conf:.0f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    mtf_data = metadata.get('mtf_confluence', {})
+    if mtf_data:
+        st.subheader("⏱️ Multi-Timeframe Analysis")
+        
+        tf_signals = mtf_data.get('timeframe_signals', {})
+        aligned = mtf_data.get('aligned', False)
+        
+        cols = st.columns(len(tf_signals))
+        
+        for idx, (tf, sig) in enumerate(tf_signals.items()):
+            with cols[idx]:
+                sig_emoji = '🟢' if sig == 'BUY' else '🔴' if sig == 'SELL' else '🟡'
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">{tf.upper()}</div>
+                    <div class="metric-value">{sig_emoji} {sig}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        if aligned:
+            st.success("✅ All timeframes are aligned!")
+        else:
+            st.warning("⚠️ Timeframes show divergence")
+
+
 # ============================================
 # MAIN APP
 # ============================================
@@ -430,12 +578,10 @@ def display_signal(signal_data):
 def main():
     init_session_state()
     
-    # Header
     st.markdown('<h1 class="main-title">⚡ DEMIR AI TRADING</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title">Professional-Grade AI-Powered Crypto Trading System</p>', unsafe_allow_html=True)
     
-    # Top controls
-    col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
+    col1, col2, col3, col4, col5 = st.columns([2, 2, 1, 1, 1])
     
     with col1:
         selected_coins = st.multiselect(
@@ -453,67 +599,80 @@ def main():
             st.success("✅ Live!")
     
     with col4:
+        if AI_BRAIN_AVAILABLE:
+            st.session_state.ai_mode = st.toggle("🧠 AI Brain", value=st.session_state.ai_mode)
+    
+    with col5:
         if st.button("🚀 Analyze"):
             for coin in selected_coins:
-                run_analysis(coin, timeframe)
+                if st.session_state.ai_mode and AI_BRAIN_AVAILABLE:
+                    run_ai_brain_analysis(coin)
+                else:
+                    run_analysis(coin, timeframe)
     
-    # Price ticker
     display_price_ticker()
     
     st.divider()
     
-    # Main content
     if selected_coins:
         selected_coin = selected_coins[0]
         
-        # Analysis results
         if selected_coin in st.session_state.last_analysis:
             analysis = st.session_state.last_analysis[selected_coin]
             
-            # Signal
-            display_signal(analysis.get('signal'))
+            if analysis.get('mode') == 'AI_BRAIN':
+                ai_decision = analysis.get('ai_decision')
+                display_ai_decision(ai_decision)
+                
+                tech_data = ai_decision.get('metadata', {}).get('base_signal', {})
+                if tech_data and 'dataframe' in tech_data and not tech_data['dataframe'].empty:
+                    st.subheader("📈 Technical Chart")
+                    df = tech_data['dataframe']
+                    fig = create_advanced_chart(df, selected_coin, tech_data)
+                    st.plotly_chart(fig, use_container_width=True)
             
-            # Chart
-            tech_data = analysis.get('technical', {})
-            if 'dataframe' in tech_data and not tech_data['dataframe'].empty:
-                st.subheader("📈 Technical Analysis Chart")
-                df = tech_data['dataframe']
-                fig = create_advanced_chart(df, selected_coin, tech_data)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            # Metrics
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                fg = analysis['external_data'].get('fear_greed', {})
-                if isinstance(fg, dict):
+            else:
+                display_signal(analysis.get('signal'))
+                
+                tech_data = analysis.get('technical', {})
+                if 'dataframe' in tech_data and not tech_data['dataframe'].empty:
+                    st.subheader("📈 Technical Analysis Chart")
+                    df = tech_data['dataframe']
+                    fig = create_advanced_chart(df, selected_coin, tech_data)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    fg = analysis['external_data'].get('fear_greed', {})
+                    if isinstance(fg, dict):
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="metric-label">Fear & Greed Index</div>
+                            <div class="metric-value">{fg.get('value', 'N/A')}</div>
+                            <div style="color:#8b92a7;">{fg.get('classification', '')}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                with col2:
+                    rsi = tech_data.get('rsi', 0)
+                    rsi_color = '#ef5350' if rsi > 70 else '#26a69a' if rsi < 30 else '#ff9800'
                     st.markdown(f"""
                     <div class="metric-card">
-                        <div class="metric-label">Fear & Greed Index</div>
-                        <div class="metric-value">{fg.get('value', 'N/A')}</div>
-                        <div style="color:#8b92a7;">{fg.get('classification', '')}</div>
+                        <div class="metric-label">RSI (14)</div>
+                        <div class="metric-value" style="color:{rsi_color};">{rsi:.1f}</div>
                     </div>
                     """, unsafe_allow_html=True)
-            
-            with col2:
-                rsi = tech_data.get('rsi', 0)
-                rsi_color = '#ef5350' if rsi > 70 else '#26a69a' if rsi < 30 else '#ff9800'
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">RSI (14)</div>
-                    <div class="metric-value" style="color:{rsi_color};">{rsi:.1f}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col3:
-                macd_val = tech_data.get('macd_histogram', 0)
-                macd_status = "Bullish ↑" if macd_val > 0 else "Bearish ↓"
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">MACD Signal</div>
-                    <div class="metric-value">{macd_status}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                
+                with col3:
+                    macd_val = tech_data.get('macd_histogram', 0)
+                    macd_status = "Bullish ↑" if macd_val > 0 else "Bearish ↓"
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">MACD Signal</div>
+                        <div class="metric-value">{macd_status}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
         
         else:
             st.info("💡 Click 'Analyze' button to generate signals")
@@ -521,7 +680,6 @@ def main():
     else:
         st.warning("⚠️ Please select at least one coin")
     
-    # Footer
     st.divider()
     st.caption("🔥 DEMIR AI Trading System | Powered by Advanced Machine Learning")
     
