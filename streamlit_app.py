@@ -344,7 +344,7 @@ def main():
                 # Metrikleri göster
                 col1, col2, col3 = st.columns(3)
                 
-               with col1:
+              with col1:
     fg_data = analysis.get('external_data', {}).get('fear_greed', {})
     if isinstance(fg_data, dict):
         fg_value = fg_data.get('value', 'N/A')
