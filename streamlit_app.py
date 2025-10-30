@@ -344,9 +344,14 @@ def main():
                 # Metrikleri göster
                 col1, col2, col3 = st.columns(3)
                 
-                with col1:
-                    st.metric("Fear & Greed", 
-                             analysis.get('external_data', {}).get('fear_greed', 'N/A'))
+               with col1:
+    fg_data = analysis.get('external_data', {}).get('fear_greed', {})
+    if isinstance(fg_data, dict):
+        fg_value = fg_data.get('value', 'N/A')
+        fg_class = fg_data.get('classification', '')
+        st.metric("Fear & Greed", f"{fg_value} - {fg_class}")
+    else:
+        st.metric("Fear & Greed", str(fg_data))
                 
                 with col2:
                     tech = analysis.get('technical', {})
