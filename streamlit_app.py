@@ -1,6 +1,6 @@
 """
 DEMIR - Professional AI Trading Dashboard
-Ultra-Modern UI with AI Brain Integration
+Ultra-Modern UI with AI Brain Integration + Custom Coin Input
 """
 
 import streamlit as st
@@ -192,6 +192,9 @@ def init_session_state():
         st.session_state.ai_mode = False
     if 'capital' not in st.session_state:
         st.session_state.capital = 10000
+    if 'tracked_coins' not in st.session_state:
+        # SABİT 3 COİN
+        st.session_state.tracked_coins = ['btcusdt', 'ethusdt', 'ltcusdt']
 
 
 # ============================================
@@ -581,44 +584,61 @@ def main():
     st.markdown('<h1 class="main-title">⚡ DEMIR AI TRADING</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title">Professional-Grade AI-Powered Crypto Trading System</p>', unsafe_allow_html=True)
     
-    col1, col2, col3, col4, col5 = st.columns([2, 2, 1, 1, 1])
+    # CUSTOM COIN INPUT + SABİT 3 COİN
+    col_input, col_add, col_tf, col_ws, col_ai, col_analyze = st.columns([2, 0.8, 1.5, 0.8, 0.8, 1])
     
-    with col1:
-        selected_coins = st.multiselect(
-            "📊 Select Coins",
-            ['btcusdt', 'ethusdt', 'bnbusdt', 'solusdt'],
-            default=['btcusdt', 'ethusdt']
-        )
+    with col_input:
+        new_coin = st.text_input("➕ Coin Ekle (örn: SOLUSDT)", "").upper()
     
-    with col2:
+    with col_add:
+        st.write("")  # Boşluk
+        st.write("")  # Boşluk
+        if st.button("Ekle"):
+            if new_coin and new_coin.lower() not in st.session_state.tracked_coins:
+                st.session_state.tracked_coins.append(new_coin.lower())
+                st.success(f"✅ {new_coin} eklendi!")
+            elif new_coin.lower() in st.session_state.tracked_coins:
+                st.warning(f"⚠️ {new_coin} zaten listede!")
+    
+    with col_tf:
         timeframe = st.selectbox("⏱️ Timeframe", ['15m', '1h', '4h', '1d'], index=1)
     
-    with col3:
+    with col_ws:
+        st.write("")
+        st.write("")
         if st.button("▶️ Start WS"):
-            start_websocket(selected_coins)
+            start_websocket(st.session_state.tracked_coins)
             st.success("✅ Live!")
     
-    with col4:
+    with col_ai:
+        st.write("")
+        st.write("")
         if AI_BRAIN_AVAILABLE:
-            st.session_state.ai_mode = st.toggle("🧠 AI Brain", value=st.session_state.ai_mode)
+            st.session_state.ai_mode = st.toggle("🧠 AI", value=st.session_state.ai_mode)
     
-    with col5:
-        if st.button("🚀 Analyze"):
-            for coin in selected_coins:
+    with col_analyze:
+        st.write("")
+        st.write("")
+        if st.button("🚀 Analyze All"):
+            for coin in st.session_state.tracked_coins:
                 if st.session_state.ai_mode and AI_BRAIN_AVAILABLE:
                     run_ai_brain_analysis(coin)
                 else:
                     run_analysis(coin, timeframe)
     
+    # SABİT COİN GÖSTERİMİ
+    st.caption(f"📊 Takip edilen coinler: {', '.join([c.upper() for c in st.session_state.tracked_coins])}")
+    
     display_price_ticker()
     
     st.divider()
     
-    if selected_coins:
-        selected_coin = selected_coins[0]
+    if st.session_state.tracked_coins:
+        # Seçili coin için analiz göster
+        selected_coin_display = st.selectbox("Analiz görüntülenecek coin", st.session_state.tracked_coins)
         
-        if selected_coin in st.session_state.last_analysis:
-            analysis = st.session_state.last_analysis[selected_coin]
+        if selected_coin_display in st.session_state.last_analysis:
+            analysis = st.session_state.last_analysis[selected_coin_display]
             
             if analysis.get('mode') == 'AI_BRAIN':
                 ai_decision = analysis.get('ai_decision')
@@ -628,7 +648,7 @@ def main():
                 if tech_data and 'dataframe' in tech_data and not tech_data['dataframe'].empty:
                     st.subheader("📈 Technical Chart")
                     df = tech_data['dataframe']
-                    fig = create_advanced_chart(df, selected_coin, tech_data)
+                    fig = create_advanced_chart(df, selected_coin_display, tech_data)
                     st.plotly_chart(fig, use_container_width=True)
             
             else:
@@ -638,7 +658,7 @@ def main():
                 if 'dataframe' in tech_data and not tech_data['dataframe'].empty:
                     st.subheader("📈 Technical Analysis Chart")
                     df = tech_data['dataframe']
-                    fig = create_advanced_chart(df, selected_coin, tech_data)
+                    fig = create_advanced_chart(df, selected_coin_display, tech_data)
                     st.plotly_chart(fig, use_container_width=True)
                 
                 col1, col2, col3 = st.columns(3)
@@ -675,10 +695,10 @@ def main():
                     """, unsafe_allow_html=True)
         
         else:
-            st.info("💡 Click 'Analyze' button to generate signals")
+            st.info("💡 Click 'Analyze All' button to generate signals")
     
     else:
-        st.warning("⚠️ Please select at least one coin")
+        st.warning("⚠️ No coins in tracking list")
     
     st.divider()
     st.caption("🔥 DEMIR AI Trading System | Powered by Advanced Machine Learning")
