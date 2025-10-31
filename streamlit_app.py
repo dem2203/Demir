@@ -1,22 +1,25 @@
 """
-DEMIR AI Trading Bot - Streamlit Dashboard
-Phase 2 UPDATE: News Sentiment Integration
+DEMIR AI Trading Bot - Real-time Binance Integration
+Phase 2.1: Dynamic Position Calculations
 Tarih: 31 Ekim 2025
 
-GÜNCELLEMELER:
-- News Sentiment bölümü eklendi (coin-specific)
-- Entry Price eklendi
-- CryptoPanic API entegrasyonu
-- Real-time haber analizi
+YENİ ÖZELLİKLER:
+- Binance Futures real-time price
+- Coin-specific calculations (Entry, Stop, Target)
+- Dynamic position sizing
+- Real ATR-based stop loss
 """
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import time
+import requests
+from binance.client import Client
+import os
 
 # ============================================================================
-# CRITICAL: st.set_page_config() MUST BE FIRST - NO CODE BEFORE THIS!
+# CRITICAL: st.set_page_config() MUST BE FIRST
 # ============================================================================
 st.set_page_config(
     page_title="🔱 DEMIR AI Trading Bot",
@@ -26,11 +29,137 @@ st.set_page_config(
 )
 
 # ============================================================================
-# Module imports (AFTER set_page_config)
+# Binance API Setup
+# ============================================================================
+BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
+BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET', '')
+
+try:
+    binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
+    BINANCE_AVAILABLE = True
+except:
+    BINANCE_AVAILABLE = False
+
+# ============================================================================
+# Helper Functions: Real-time Data
+# ============================================================================
+
+def get_current_price(symbol):
+    """Binance Futures'dan güncel fiyat çeker"""
+    try:
+        if BINANCE_AVAILABLE:
+            ticker = binance_client.futures_symbol_ticker(symbol=symbol)
+            return float(ticker['price'])
+        else:
+            # Fallback: Public API (no auth needed)
+            url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={symbol}"
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                return float(data['price'])
+    except Exception as e:
+        st.warning(f"⚠️ Fiyat çekilemedi: {e}")
+        return None
+
+def get_atr(symbol, timeframe='1h', period=14):
+    """ATR hesaplar (Average True Range - volatilite)"""
+    try:
+        # Binance'den klines (mum grafiği) çek
+        if timeframe == '1h':
+            interval = Client.KLINE_INTERVAL_1HOUR
+        elif timeframe == '4h':
+            interval = Client.KLINE_INTERVAL_4HOUR
+        else:
+            interval = Client.KLINE_INTERVAL_1DAY
+        
+        if BINANCE_AVAILABLE:
+            klines = binance_client.futures_klines(
+                symbol=symbol,
+                interval=interval,
+                limit=period + 1
+            )
+        else:
+            # Fallback: Public API
+            url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={timeframe}&limit={period + 1}"
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                klines = response.json()
+            else:
+                return None
+        
+        # ATR hesaplama
+        highs = [float(k[2]) for k in klines]
+        lows = [float(k[3]) for k in klines]
+        closes = [float(k[4]) for k in klines]
+        
+        true_ranges = []
+        for i in range(1, len(klines)):
+            high_low = highs[i] - lows[i]
+            high_close = abs(highs[i] - closes[i-1])
+            low_close = abs(lows[i] - closes[i-1])
+            true_range = max(high_low, high_close, low_close)
+            true_ranges.append(true_range)
+        
+        atr = sum(true_ranges) / len(true_ranges)
+        return atr
+    
+    except Exception as e:
+        st.warning(f"⚠️ ATR hesaplanamadı: {e}")
+        return None
+
+def calculate_position_details(symbol, timeframe='1h', risk_per_trade=200):
+    """
+    Seçilen coin için pozisyon detaylarını hesaplar
+    
+    Returns:
+        dict: {
+            'entry': float,
+            'stop': float,
+            'target': float,
+            'position_size': float,
+            'risk_reward': float
+        }
+    """
+    
+    # 1. Güncel fiyat
+    current_price = get_current_price(symbol)
+    if not current_price:
+        return None
+    
+    # 2. ATR hesapla (stop loss için)
+    atr = get_atr(symbol, timeframe)
+    if not atr:
+        # Fallback: %1.5 volatilite
+        atr = current_price * 0.015
+    
+    # 3. Stop Loss hesapla (2x ATR below entry)
+    stop_loss = current_price - (2 * atr)
+    
+    # 4. Target hesapla (3x ATR above entry - 1:3 R/R için)
+    target = current_price + (3 * atr)
+    
+    # 5. Risk/Reward hesapla
+    risk = current_price - stop_loss
+    reward = target - current_price
+    risk_reward = reward / risk if risk > 0 else 0
+    
+    # 6. Position size hesapla (risk_per_trade = $200)
+    position_size = risk_per_trade / risk if risk > 0 else 0
+    
+    return {
+        'entry': current_price,
+        'stop': stop_loss,
+        'target': target,
+        'position_size': position_size,
+        'risk_reward': risk_reward,
+        'atr': atr
+    }
+
+# ============================================================================
+# Module imports
 # ============================================================================
 import_errors = []
 
-# Mevcut modüller
 try:
     import analysis_layer
 except ImportError as e:
@@ -51,7 +180,6 @@ try:
 except ImportError as e:
     import_errors.append(f"external_data: {e}")
 
-# YENİ: News Sentiment modülü
 try:
     import news_sentiment_layer
     NEWS_AVAILABLE = True
@@ -59,7 +187,6 @@ except ImportError as e:
     NEWS_AVAILABLE = False
     import_errors.append(f"news_sentiment_layer: {e}")
 
-# Show import errors if any (AFTER set_page_config)
 if import_errors:
     with st.expander("⚠️ Module Import Warnings", expanded=False):
         for error in import_errors:
@@ -97,7 +224,6 @@ st.markdown("""
         color: #ffaa00 !important;
         font-weight: bold;
     }
-    /* YENİ: News Sentiment Styling */
     .news-card {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         padding: 20px;
@@ -134,14 +260,12 @@ st.markdown("""
 with st.sidebar:
     st.markdown("## 🎛️ Ayarlar")
     
-    # Coin seçimi
     coin = st.selectbox(
         "Coin ekle",
         ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
         key="coin_select"
     )
     
-    # Zaman dilimi
     timeframe = st.selectbox(
         "Zaman",
         ["1h", "4h", "1d"],
@@ -149,16 +273,13 @@ with st.sidebar:
         key="timeframe_select"
     )
     
-    # Analiz butonu
     analyze_btn = st.button("🚀 ANALİZ", use_container_width=True, type="primary")
     
     st.markdown("---")
     
-    # AI Toggle (YENİ: News dahil)
     st.markdown("### 🤖 AI Özellikleri")
     ai_enabled = st.toggle("AI", value=True)
     
-    # YENİ: News Sentiment Toggle
     if NEWS_AVAILABLE:
         news_enabled = st.toggle("📰 News Sentiment", value=True)
     else:
@@ -171,14 +292,12 @@ with st.sidebar:
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    # AI Recommendation Card (Mevcut)
     st.markdown("### 💬 Açıklama")
     
     if analyze_btn or st.session_state.get('last_analysis'):
         with st.spinner("🧠 AI analiz yapıyor..."):
-            time.sleep(1)  # Simülasyon
+            time.sleep(1)
             
-            # Mock AI response (gerçek analiziniz buraya gelecek)
             st.markdown("""
             <div class="metric-card">
                 <h3>⚠️ Zaman dilimleri uyumsuz. Bekle!</h3>
@@ -191,31 +310,48 @@ with col1:
             """, unsafe_allow_html=True)
 
 with col2:
-    # Position Details (YENİ: Entry Price eklendi)
     st.markdown("### 💼 Pozisyon")
     
-    # YENİ: Entry Price
-    st.metric("Entry", "$108,450.00", delta="Current Price")
-    st.metric("Pozisyon", "$200")
-    st.metric("Stop", "$108,324.00")
-    st.metric("Target", "$113,752.81")
-    st.metric("R/R", "1:3.82")
+    # YENİ: Real-time position calculations
+    if analyze_btn or st.session_state.get('last_analysis'):
+        with st.spinner(f"📊 {coin} analiz ediliyor..."):
+            position_data = calculate_position_details(coin, timeframe, risk_per_trade=200)
+            
+            if position_data:
+                # Format numbers
+                entry_price = f"${position_data['entry']:,.2f}"
+                stop_price = f"${position_data['stop']:,.2f}"
+                target_price = f"${position_data['target']:,.2f}"
+                position_size = f"${position_data['position_size']:,.2f}"
+                risk_reward = f"1:{position_data['risk_reward']:.2f}"
+                
+                # Display metrics
+                st.metric("Entry", entry_price, delta="Current Price")
+                st.metric("Pozisyon", position_size)
+                st.metric("Stop", stop_price)
+                st.metric("Target", target_price)
+                st.metric("R/R", risk_reward)
+                
+                # Save to session
+                st.session_state['position_data'] = position_data
+                st.session_state['last_analysis'] = True
+            else:
+                st.error("❌ Fiyat verisi alınamadı. Binance API'yi kontrol edin.")
+    else:
+        st.info("🚀 ANALİZ butonuna basın")
 
 # ============================================================================
-# YENİ: News Sentiment Section (COIN-SPECIFIC)
+# News Sentiment Section
 # ============================================================================
 if NEWS_AVAILABLE and news_enabled:
     st.markdown("---")
-    st.markdown(f"## 📰 News Sentiment Analysis - {coin}")  # Coin ismi eklendi
+    st.markdown(f"## 📰 News Sentiment Analysis - {coin}")
     
-    # News verisini çek
     if analyze_btn or st.session_state.get('show_news'):
         with st.spinner(f"📡 {coin} haberleri yükleniyor..."):
             try:
-                # YENİ: Seçilen coin için news sentiment sinyali al
                 news_signal = news_sentiment_layer.get_news_signal(coin)
                 
-                # Sentiment'e göre renk seç
                 sentiment = news_signal['sentiment']
                 if sentiment == 'POSITIVE':
                     card_class = 'news-card news-positive'
@@ -227,7 +363,6 @@ if NEWS_AVAILABLE and news_enabled:
                     card_class = 'news-card news-neutral'
                     emoji = '📊'
                 
-                # News kartı göster
                 st.markdown(f"""
                 <div class="{card_class}">
                     <h3>{emoji} {sentiment} Sentiment</h3>
@@ -243,7 +378,6 @@ if NEWS_AVAILABLE and news_enabled:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Detaylı haber listesi (opsiyonel - genişletilebilir)
                 with st.expander(f"📜 Son Haberler - {coin} (Top 10)"):
                     coin_symbol = coin.replace('USDT', '').replace('BUSD', '')
                     news_list = news_sentiment_layer.fetch_news(currencies=coin_symbol, limit=10)
@@ -258,7 +392,6 @@ if NEWS_AVAILABLE and news_enabled:
                             positive = votes.get('positive', 0)
                             negative = votes.get('negative', 0)
                             
-                            # Sentiment emoji
                             if positive > negative:
                                 news_emoji = '🟢'
                             elif negative > positive:
@@ -279,12 +412,11 @@ if NEWS_AVAILABLE and news_enabled:
                 st.error(f"❌ News sentiment alınamadı: {str(e)}")
 
 # ============================================================================
-# Market Data Section (Mevcut - değişiklik yok)
+# Market Data Section
 # ============================================================================
 st.markdown("---")
 st.markdown("## 📊 Market Data")
 
-# Tabs
 tab1, tab2, tab3 = st.tabs(["BTCUSDT", "ETHUSDT", "SOLUSDT"])
 
 with tab1:
@@ -302,6 +434,6 @@ with tab3:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; opacity: 0.6;">
-    🔱 DEMIR AI Trading Bot v2.0 | Phase 2: News Sentiment Integration ✅
+    🔱 DEMIR AI Trading Bot v2.1 | Phase 2: Real-time Binance Integration ✅
 </div>
 """, unsafe_allow_html=True)
