@@ -242,12 +242,25 @@ with col2:
     if st.session_state.get('last_decision'):
         decision = st.session_state['last_decision']
         
-        if decision['entry_price']:
+        if decision.get('entry_price'):
             st.metric("Entry", f"${decision['entry_price']:,.2f}", delta="Current Price")
             st.metric("Pozisyon", f"${decision['position_size_usd']:,.2f}")
-            st.metric("Stop", f"${decision['stop_loss']:,.2f}")
-            st.metric("Target", f"${decision['take_profit']:,.2f}")
-            st.metric("R/R", f"1:{decision['risk_reward']:.2f}")
+            
+            # DÜZELTME: None check ekle
+            if decision.get('stop_loss') is not None:
+                st.metric("Stop", f"${decision['stop_loss']:,.2f}")
+            else:
+                st.metric("Stop", "Calculating...")
+            
+            if decision.get('take_profit') is not None:
+                st.metric("Target", f"${decision['take_profit']:,.2f}")
+            else:
+                st.metric("Target", "Calculating...")
+            
+            if decision.get('risk_reward') and decision['risk_reward'] > 0:
+                st.metric("R/R", f"1:{decision['risk_reward']:.2f}")
+            else:
+                st.metric("R/R", "N/A")
         else:
             st.info("🚀 ANALİZ butonuna basın")
     else:
