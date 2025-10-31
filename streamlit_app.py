@@ -1,22 +1,21 @@
 """
-DEMIR AI Trading Bot - Real-time Binance Integration
-Phase 2.1: Dynamic Position Calculations
+DEMIR AI Trading Bot - Streamlit Dashboard
+Phase 3A FINAL: Complete Integration
 Tarih: 31 Ekim 2025
 
-YENİ ÖZELLİKLER:
-- Binance Futures real-time price
-- Coin-specific calculations (Entry, Stop, Target)
-- Dynamic position sizing
-- Real ATR-based stop loss
+FEATURES:
+- Real-time Binance Futures prices
+- News Sentiment Analysis
+- Phase 3A: Volume Profile, Pivot Points, Fibonacci, VWAP, Monte Carlo, Kelly
+- AI Brain v3 Decision Engine
+- Manual coin addition
+- Multiple timeframes (15m, 1h, 4h, 1d)
 """
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import time
-import requests
-from binance.client import Client
-import os
 
 # ============================================================================
 # CRITICAL: st.set_page_config() MUST BE FIRST
@@ -29,131 +28,10 @@ st.set_page_config(
 )
 
 # ============================================================================
-# Binance API Setup
+# Session state initialization
 # ============================================================================
-BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
-BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET', '')
-
-try:
-    binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
-    BINANCE_AVAILABLE = True
-except:
-    BINANCE_AVAILABLE = False
-
-# ============================================================================
-# Helper Functions: Real-time Data
-# ============================================================================
-
-def get_current_price(symbol):
-    """Binance Futures'dan güncel fiyat çeker"""
-    try:
-        if BINANCE_AVAILABLE:
-            ticker = binance_client.futures_symbol_ticker(symbol=symbol)
-            return float(ticker['price'])
-        else:
-            # Fallback: Public API (no auth needed)
-            url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={symbol}"
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return float(data['price'])
-    except Exception as e:
-        st.warning(f"⚠️ Fiyat çekilemedi: {e}")
-        return None
-
-def get_atr(symbol, timeframe='1h', period=14):
-    """ATR hesaplar (Average True Range - volatilite)"""
-    try:
-        # Binance'den klines (mum grafiği) çek
-        if timeframe == '1h':
-            interval = Client.KLINE_INTERVAL_1HOUR
-        elif timeframe == '4h':
-            interval = Client.KLINE_INTERVAL_4HOUR
-        else:
-            interval = Client.KLINE_INTERVAL_1DAY
-        
-        if BINANCE_AVAILABLE:
-            klines = binance_client.futures_klines(
-                symbol=symbol,
-                interval=interval,
-                limit=period + 1
-            )
-        else:
-            # Fallback: Public API
-            url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={timeframe}&limit={period + 1}"
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                klines = response.json()
-            else:
-                return None
-        
-        # ATR hesaplama
-        highs = [float(k[2]) for k in klines]
-        lows = [float(k[3]) for k in klines]
-        closes = [float(k[4]) for k in klines]
-        
-        true_ranges = []
-        for i in range(1, len(klines)):
-            high_low = highs[i] - lows[i]
-            high_close = abs(highs[i] - closes[i-1])
-            low_close = abs(lows[i] - closes[i-1])
-            true_range = max(high_low, high_close, low_close)
-            true_ranges.append(true_range)
-        
-        atr = sum(true_ranges) / len(true_ranges)
-        return atr
-    
-    except Exception as e:
-        st.warning(f"⚠️ ATR hesaplanamadı: {e}")
-        return None
-
-def calculate_position_details(symbol, timeframe='1h', risk_per_trade=200):
-    """
-    Seçilen coin için pozisyon detaylarını hesaplar
-    
-    Returns:
-        dict: {
-            'entry': float,
-            'stop': float,
-            'target': float,
-            'position_size': float,
-            'risk_reward': float
-        }
-    """
-    
-    # 1. Güncel fiyat
-    current_price = get_current_price(symbol)
-    if not current_price:
-        return None
-    
-    # 2. ATR hesapla (stop loss için)
-    atr = get_atr(symbol, timeframe)
-    if not atr:
-        # Fallback: %1.5 volatilite
-        atr = current_price * 0.015
-    
-    # 3. Stop Loss hesapla (2x ATR below entry)
-    stop_loss = current_price - (2 * atr)
-    
-    # 4. Target hesapla (3x ATR above entry - 1:3 R/R için)
-    target = current_price + (3 * atr)
-    
-    # 5. Risk/Reward hesapla
-    risk = current_price - stop_loss
-    reward = target - current_price
-    risk_reward = reward / risk if risk > 0 else 0
-    
-    # 6. Position size hesapla (risk_per_trade = $200)
-    position_size = risk_per_trade / risk if risk > 0 else 0
-    
-    return {
-        'entry': current_price,
-        'stop': stop_loss,
-        'target': target,
-        'position_size': position_size,
-        'risk_reward': risk_reward,
-        'atr': atr
-    }
+if 'coins' not in st.session_state:
+    st.session_state['coins'] = ["BTCUSDT", "ETHUSDT", "LTCUSDT"]
 
 # ============================================================================
 # Module imports
@@ -161,24 +39,11 @@ def calculate_position_details(symbol, timeframe='1h', risk_per_trade=200):
 import_errors = []
 
 try:
-    import analysis_layer
-except ImportError as e:
-    import_errors.append(f"analysis_layer: {e}")
-
-try:
-    import strategy_layer
-except ImportError as e:
-    import_errors.append(f"strategy_layer: {e}")
-
-try:
     import ai_brain
+    AI_AVAILABLE = True
 except ImportError as e:
+    AI_AVAILABLE = False
     import_errors.append(f"ai_brain: {e}")
-
-try:
-    import external_data
-except ImportError as e:
-    import_errors.append(f"external_data: {e}")
 
 try:
     import news_sentiment_layer
@@ -260,26 +125,44 @@ st.markdown("""
 with st.sidebar:
     st.markdown("## 🎛️ Ayarlar")
     
+    # Coin seçimi
     coin = st.selectbox(
-        "Coin ekle",
-        ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+        "Coin Seç",
+        st.session_state['coins'],
         key="coin_select"
     )
     
+    # Manuel coin ekleme
+    st.markdown("### ➕ Yeni Coin Ekle")
+    new_coin = st.text_input("Coin Symbol (örn: SOLUSDT)", key="new_coin_input")
+    if st.button("Ekle", use_container_width=True):
+        if new_coin and new_coin not in st.session_state['coins']:
+            st.session_state['coins'].append(new_coin.upper())
+            st.success(f"✅ {new_coin.upper()} eklendi!")
+            st.rerun()
+        elif new_coin in st.session_state['coins']:
+            st.warning(f"⚠️ {new_coin.upper()} zaten mevcut!")
+    
+    st.markdown("---")
+    
+    # Zaman dilimi (güncellenmiş)
     timeframe = st.selectbox(
-        "Zaman",
-        ["1h", "4h", "1d"],
-        index=0,
+        "Zaman Dilimi",
+        ["15m", "1h", "4h", "1d"],
+        index=1,  # Default: 1h
         key="timeframe_select"
     )
     
+    # Analiz butonu
     analyze_btn = st.button("🚀 ANALİZ", use_container_width=True, type="primary")
     
     st.markdown("---")
     
+    # AI Toggle
     st.markdown("### 🤖 AI Özellikleri")
-    ai_enabled = st.toggle("AI", value=True)
+    ai_enabled = st.toggle("AI Brain v3", value=True)
     
+    # News Sentiment Toggle
     if NEWS_AVAILABLE:
         news_enabled = st.toggle("📰 News Sentiment", value=True)
     else:
@@ -292,51 +175,81 @@ with st.sidebar:
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.markdown("### 💬 Açıklama")
+    st.markdown("### 💬 AI Açıklama")
     
     if analyze_btn or st.session_state.get('last_analysis'):
-        with st.spinner("🧠 AI analiz yapıyor..."):
-            time.sleep(1)
+        with st.spinner(f"🧠 {coin} analiz ediliyor..."):
             
-            st.markdown("""
-            <div class="metric-card">
-                <h3>⚠️ Zaman dilimleri uyumsuz. Bekle!</h3>
-                <p>📊 Piyasa dalgalı ve tahmin edilemez. Dikkatli ol!</p>
-                <p>💰 Risk/Ödül çok yüksek! 3.8x kazanç potansiyeli.</p>
-                <p>📰 Haberler nötr. Sinyal üzerinde etkisi yok.</p>
-                <p>❌ Güven veya R/R yetersiz. Bekle!</p>
-                <p>📋 Kelly: %2.0 (200 USD)</p>
-            </div>
-            """, unsafe_allow_html=True)
+            if AI_AVAILABLE and ai_enabled:
+                try:
+                    # AI Brain v3 decision
+                    decision = ai_brain.make_trading_decision(
+                        symbol=coin,
+                        interval=timeframe,
+                        portfolio_value=10000,
+                        risk_per_trade=200
+                    )
+                    
+                    # Detaylı AI output
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>🎯 AI Decision: {decision['decision']} {decision['signal']}</h3>
+                        <p><strong>Confidence:</strong> {decision['confidence']*100:.0f}%</p>
+                        <p><strong>Score:</strong> {decision['final_score']:.0f}/100</p>
+                        <p><strong>Reason:</strong> {decision['reason']}</p>
+                        <hr>
+                        <p>📊 <strong>Risk Metrics:</strong></p>
+                        <p>🎲 Risk of Ruin: {decision['risk_metrics']['risk_of_ruin']:.2f}%</p>
+                        <p>📉 Max Drawdown: {decision['risk_metrics']['max_drawdown']:.2f}%</p>
+                        <p>📈 Sharpe Ratio: {decision['risk_metrics']['sharpe_ratio']:.2f}</p>
+                        <hr>
+                        <p>💰 <strong>Position:</strong> ${decision['position_size_usd']:,.2f} ({decision['position_size_pct']:.2f}%)</p>
+                        <p>⚠️ <strong>Risk:</strong> ${decision['risk_amount_usd']:,.2f}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Save to session
+                    st.session_state['last_decision'] = decision
+                    st.session_state['last_analysis'] = True
+                
+                except Exception as e:
+                    st.error(f"❌ AI Brain error: {str(e)}")
+                    st.warning("Fallback: Mock data gösteriliyor")
+                    
+                    # Fallback: Mock data
+                    st.markdown("""
+                    <div class="metric-card">
+                        <h3>⚠️ Zaman dilimleri uyumsuz. Bekle!</h3>
+                        <p>📊 Piyasa dalgalı ve tahmin edilemez. Dikkatli ol!</p>
+                        <p>💰 Risk/Ödül çok yüksek! 3.8x kazanç potansiyeli.</p>
+                        <p>📰 Haberler nötr. Sinyal üzerinde etkisi yok.</p>
+                        <p>❌ Güven veya R/R yetersiz. Bekle!</p>
+                        <p>📋 Kelly: %2.0 (200 USD)</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                # AI disabled - mock data
+                st.markdown("""
+                <div class="metric-card">
+                    <h3>⚠️ AI Brain devre dışı</h3>
+                    <p>AI özelliklerini etkinleştirmek için sidebar'dan "AI Brain v3" toggle'ını açın.</p>
+                </div>
+                """, unsafe_allow_html=True)
 
 with col2:
     st.markdown("### 💼 Pozisyon")
     
-    # YENİ: Real-time position calculations
-    if analyze_btn or st.session_state.get('last_analysis'):
-        with st.spinner(f"📊 {coin} analiz ediliyor..."):
-            position_data = calculate_position_details(coin, timeframe, risk_per_trade=200)
-            
-            if position_data:
-                # Format numbers
-                entry_price = f"${position_data['entry']:,.2f}"
-                stop_price = f"${position_data['stop']:,.2f}"
-                target_price = f"${position_data['target']:,.2f}"
-                position_size = f"${position_data['position_size']:,.2f}"
-                risk_reward = f"1:{position_data['risk_reward']:.2f}"
-                
-                # Display metrics
-                st.metric("Entry", entry_price, delta="Current Price")
-                st.metric("Pozisyon", position_size)
-                st.metric("Stop", stop_price)
-                st.metric("Target", target_price)
-                st.metric("R/R", risk_reward)
-                
-                # Save to session
-                st.session_state['position_data'] = position_data
-                st.session_state['last_analysis'] = True
-            else:
-                st.error("❌ Fiyat verisi alınamadı. Binance API'yi kontrol edin.")
+    if st.session_state.get('last_decision'):
+        decision = st.session_state['last_decision']
+        
+        if decision['entry_price']:
+            st.metric("Entry", f"${decision['entry_price']:,.2f}", delta="Current Price")
+            st.metric("Pozisyon", f"${decision['position_size_usd']:,.2f}")
+            st.metric("Stop", f"${decision['stop_loss']:,.2f}")
+            st.metric("Target", f"${decision['take_profit']:,.2f}")
+            st.metric("R/R", f"1:{decision['risk_reward']:.2f}")
+        else:
+            st.info("🚀 ANALİZ butonuna basın")
     else:
         st.info("🚀 ANALİZ butonuna basın")
 
@@ -378,34 +291,6 @@ if NEWS_AVAILABLE and news_enabled:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                with st.expander(f"📜 Son Haberler - {coin} (Top 10)"):
-                    coin_symbol = coin.replace('USDT', '').replace('BUSD', '')
-                    news_list = news_sentiment_layer.fetch_news(currencies=coin_symbol, limit=10)
-                    
-                    if news_list:
-                        for idx, news in enumerate(news_list[:10], 1):
-                            title = news.get('title', 'No title')
-                            url = news.get('url', '#')
-                            published_at = news.get('published_at', 'Unknown time')
-                            
-                            votes = news.get('votes', {})
-                            positive = votes.get('positive', 0)
-                            negative = votes.get('negative', 0)
-                            
-                            if positive > negative:
-                                news_emoji = '🟢'
-                            elif negative > positive:
-                                news_emoji = '🔴'
-                            else:
-                                news_emoji = '⚪'
-                            
-                            st.markdown(f"""
-                            **{idx}. {news_emoji} [{title}]({url})**  
-                            👍 {positive} | 👎 {negative} | ⏰ {published_at}
-                            """)
-                    else:
-                        st.info(f"❌ {coin_symbol} için haber bulunamadı.")
-                
                 st.session_state['show_news'] = True
                 
             except Exception as e:
@@ -417,16 +302,14 @@ if NEWS_AVAILABLE and news_enabled:
 st.markdown("---")
 st.markdown("## 📊 Market Data")
 
-tab1, tab2, tab3 = st.tabs(["BTCUSDT", "ETHUSDT", "SOLUSDT"])
+# Dynamic tabs based on coin list
+tab_labels = st.session_state['coins']
+tabs = st.tabs(tab_labels)
 
-with tab1:
-    st.info("BTC market data burada gösterilecek")
-
-with tab2:
-    st.info("ETH market data burada gösterilecek")
-
-with tab3:
-    st.info("SOL market data burada gösterilecek")
+for i, tab in enumerate(tabs):
+    with tab:
+        coin_symbol = tab_labels[i]
+        st.info(f"{coin_symbol} market data burada gösterilecek")
 
 # ============================================================================
 # Footer
@@ -434,6 +317,6 @@ with tab3:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; opacity: 0.6;">
-    🔱 DEMIR AI Trading Bot v2.1 | Phase 2: Real-time Binance Integration ✅
+    🔱 DEMIR AI Trading Bot v3.0 | Phase 3A: Complete Integration ✅
 </div>
 """, unsafe_allow_html=True)
