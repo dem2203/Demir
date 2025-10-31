@@ -14,25 +14,9 @@ import pandas as pd
 from datetime import datetime
 import time
 
-# Mevcut modüller
-try:
-    import analysis_layer
-    import strategy_layer
-    import ai_brain
-    import external_data
-except ImportError as e:
-    st.error(f"⚠️ Modül yüklenemedi: {e}")
-
-# YENİ: News Sentiment modülü
-try:
-    import news_sentiment_layer
-    NEWS_AVAILABLE = True
-except ImportError:
-    NEWS_AVAILABLE = False
-    st.warning("⚠️ News Sentiment modülü yüklenemedi. Phase 2 özellikleri devre dışı.")
-
-
-# Sayfa yapılandırması
+# ============================================================================
+# CRITICAL: st.set_page_config() MUST BE FIRST - NO CODE BEFORE THIS!
+# ============================================================================
 st.set_page_config(
     page_title="🔱 DEMIR AI Trading Bot",
     page_icon="⚡",
@@ -40,7 +24,49 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ============================================================================
+# Module imports (AFTER set_page_config)
+# ============================================================================
+import_errors = []
+
+# Mevcut modüller
+try:
+    import analysis_layer
+except ImportError as e:
+    import_errors.append(f"analysis_layer: {e}")
+
+try:
+    import strategy_layer
+except ImportError as e:
+    import_errors.append(f"strategy_layer: {e}")
+
+try:
+    import ai_brain
+except ImportError as e:
+    import_errors.append(f"ai_brain: {e}")
+
+try:
+    import external_data
+except ImportError as e:
+    import_errors.append(f"external_data: {e}")
+
+# YENİ: News Sentiment modülü
+try:
+    import news_sentiment_layer
+    NEWS_AVAILABLE = True
+except ImportError as e:
+    NEWS_AVAILABLE = False
+    import_errors.append(f"news_sentiment_layer: {e}")
+
+# Show import errors if any (AFTER set_page_config)
+if import_errors:
+    with st.expander("⚠️ Module Import Warnings", expanded=False):
+        for error in import_errors:
+            st.warning(error)
+
+# ============================================================================
 # CSS Styling
+# ============================================================================
 st.markdown("""
 <style>
     .main-header {
@@ -91,7 +117,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ============================================================================
 # Header
+# ============================================================================
 st.markdown("""
 <div class="main-header">
     <h1>⚡ DEMIR AI TRADING</h1>
@@ -99,7 +127,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ============================================================================
 # Sidebar
+# ============================================================================
 with st.sidebar:
     st.markdown("## 🎛️ Ayarlar")
     
@@ -132,9 +162,11 @@ with st.sidebar:
         news_enabled = st.toggle("📰 News Sentiment", value=True)
     else:
         news_enabled = False
-        st.info("📰 News özelliği Phase 2'de aktif olacak")
+        st.info("📰 News özelliği yükleniyor...")
 
-# Ana container
+# ============================================================================
+# Ana Container
+# ============================================================================
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -166,7 +198,9 @@ with col2:
     st.metric("Target", "$113752.81")
     st.metric("R/R", "1:3.82")
 
+# ============================================================================
 # YENİ: News Sentiment Section
+# ============================================================================
 if NEWS_AVAILABLE and news_enabled:
     st.markdown("---")
     st.markdown("## 📰 News Sentiment Analysis")
@@ -240,7 +274,9 @@ if NEWS_AVAILABLE and news_enabled:
             except Exception as e:
                 st.error(f"❌ News sentiment alınamadı: {str(e)}")
 
+# ============================================================================
 # Market Data Section (Mevcut - değişiklik yok)
+# ============================================================================
 st.markdown("---")
 st.markdown("## 📊 Market Data")
 
@@ -256,7 +292,9 @@ with tab2:
 with tab3:
     st.info("SOL market data burada gösterilecek")
 
+# ============================================================================
 # Footer
+# ============================================================================
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; opacity: 0.6;">
