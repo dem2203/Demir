@@ -1,11 +1,19 @@
 """
-DEMIR - External Data Layer
-Fear & Greed, VIX, DXY, News, On-Chain Data
+DEMIR - External Data Layer v2
+Fear & Greed, VIX, DXY, News, Sentiment Integration
 """
 
 import requests
 from typing import Dict, Any
 from datetime import datetime
+
+# Import news sentiment layer
+try:
+    from news_sentiment_layer import get_sentiment_data
+    NEWS_AVAILABLE = True
+except:
+    NEWS_AVAILABLE = False
+
 
 # ============================================
 # FEAR & GREED INDEX
@@ -37,10 +45,9 @@ def get_fear_greed_index() -> Dict[str, Any]:
 
 def get_traditional_markets() -> Dict[str, Any]:
     """VIX, DXY, S&P500 (Yahoo Finance proxy)"""
-    
     symbols = {
-        'VIX': '^VIX',      # Volatilite endeksi
-        'DXY': 'DX-Y.NYB',  # Dolar endeksi
+        'VIX': '^VIX',      # Volatility Index
+        'DXY': 'DX-Y.NYB',  # Dollar Index
         'SPX': '^GSPC'      # S&P 500
     }
     
@@ -48,6 +55,7 @@ def get_traditional_markets() -> Dict[str, Any]:
     
     for name, symbol in symbols.items():
         try:
+            # Yahoo Finance API (indirect)
             url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}'
             params = {'interval': '1d', 'range': '1d'}
             
@@ -56,77 +64,24 @@ def get_traditional_markets() -> Dict[str, Any]:
             
             if 'chart' in data and 'result' in data['chart']:
                 result = data['chart']['result'][0]
-                quote = result['indicators']['quote'][0]
+                meta = result.get('meta', {})
                 
                 results[name] = {
-                    'price': quote['close'][-1] if quote['close'] else None,
-                    'change': quote['close'][-1] - quote['open'][0] if quote['close'] and quote['open'] else 0
+                    'price': meta.get('regularMarketPrice', 0),
+                    'change': meta.get('regularMarketChangePercent', 0)
                 }
         except:
-            results[name] = {'price': None, 'change': 0}
+            results[name] = {'price': 0, 'change': 0}
     
     return results
 
 
 # ============================================
-# CRYPTO NEWS (CryptoPanic)
+# FUNDING RATE (Binance)
 # ============================================
 
-def get_crypto_news(limit=5) -> list:
-    """CryptoPanic API - Son haberler"""
-    try:
-        # Public endpoint (API key gerektirmez)
-        url = 'https://cryptopanic.com/api/v1/posts/'
-        params = {
-            'auth_token': 'free',  # Free tier
-            'currencies': 'BTC,ETH',
-            'filter': 'important',
-            'public': 'true'
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        data = response.json()
-        
-        if 'results' in data:
-            news_list = []
-            for item in data['results'][:limit]:
-                news_list.append({
-                    'title': item.get('title', ''),
-                    'published_at': item.get('published_at', ''),
-                    'url': item.get('url', ''),
-                    'votes': item.get('votes', {}).get('positive', 0)
-                })
-            return news_list
-            
-    except:
-        pass
-    
-    return []
-
-
-# ============================================
-# ON-CHAIN DATA (Placeholder - Glassnode gerektirir)
-# ============================================
-
-def get_onchain_metrics() -> Dict[str, Any]:
-    """
-    On-chain metrikler (Glassnode API gerekli)
-    Şimdilik placeholder
-    """
-    return {
-        'exchange_inflow': None,
-        'exchange_outflow': None,
-        'whale_transactions': None,
-        'active_addresses': None
-    }
-
-
-# ============================================
-# BİNANCE FUTURES DATA
-# ============================================
-
-def get_binance_funding_rate(symbol='BTCUSDT') -> float:
-    """Binance Futures funding rate"""
+def get_funding_rate(symbol: str = 'BTCUSDT') -> float:
+    """Current funding rate from Binance Futures"""
     try:
         url = 'https://fapi.binance.com/fapi/v1/premiumIndex'
         params = {'symbol': symbol.upper()}
@@ -134,40 +89,102 @@ def get_binance_funding_rate(symbol='BTCUSDT') -> float:
         response = requests.get(url, params=params, timeout=10)
         data = response.json()
         
-        return float(data.get('lastFundingRate', 0)) * 100  # Yüzde olarak
-        
+        return float(data.get('lastFundingRate', 0))
     except:
         return 0.0
 
 
-def get_binance_open_interest(symbol='BTCUSDT') -> float:
-    """Binance Futures açık pozisyon (Open Interest)"""
+# ============================================
+# ON-CHAIN METRICS (Placeholder)
+# ============================================
+
+def get_onchain_metrics(symbol: str = 'BTC') -> Dict[str, Any]:
+    """
+    On-chain metrics (whale movements, exchange flows, etc.)
+    
+    NOTE: This requires premium APIs like:
+    - Glassnode
+    - CryptoQuant
+    - Santiment
+    
+    For now, returns placeholders
+    """
+    # TODO: Integrate on-chain data APIs
+    return {
+        'whale_movements': 0,
+        'exchange_inflow': 0,
+        'exchange_outflow': 0,
+        'active_addresses': 0,
+        'network_growth': 0
+    }
+
+
+# ============================================
+# NEWS & SENTIMENT INTEGRATION
+# ============================================
+
+def get_news_sentiment(symbol: str = 'BTC') -> Dict[str, Any]:
+    """Get news and sentiment data"""
+    if not NEWS_AVAILABLE:
+        return {
+            'overall_score': 0,
+            'news_score': 0,
+            'social_score': 0,
+            'market_moving_news': [],
+            'news_count': 0
+        }
+    
     try:
-        url = 'https://fapi.binance.com/fapi/v1/openInterest'
-        params = {'symbol': symbol.upper()}
-        
-        response = requests.get(url, params=params, timeout=10)
-        data = response.json()
-        
-        return float(data.get('openInterest', 0))
-        
-    except:
-        return 0.0
+        return get_sentiment_data(symbol)
+    except Exception as e:
+        print(f"❌ Sentiment fetch error: {e}")
+        return {
+            'overall_score': 0,
+            'news_score': 0,
+            'social_score': 0,
+            'market_moving_news': [],
+            'news_count': 0
+        }
 
 
 # ============================================
-# MAIN EXTERNAL DATA COLLECTOR
+# AGGREGATE ALL EXTERNAL DATA
 # ============================================
 
-def get_all_external_data(symbol='BTCUSDT') -> Dict[str, Any]:
-    """Tüm dış verileri topla"""
+def get_all_external_data(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
+    """
+    Aggregate all external data sources
+    
+    Returns:
+        {
+            'fear_greed': {...},
+            'traditional_markets': {...},
+            'funding_rate': float,
+            'onchain': {...},
+            'news_sentiment': {...},
+            'timestamp': str
+        }
+    """
+    # Extract symbol for news (BTC from BTCUSDT)
+    news_symbol = symbol.replace('USDT', '').replace('USD', '')
     
     return {
         'fear_greed': get_fear_greed_index(),
         'traditional_markets': get_traditional_markets(),
-        'crypto_news': get_crypto_news(limit=5),
-        'funding_rate': get_binance_funding_rate(symbol),
-        'open_interest': get_binance_open_interest(symbol),
-        'onchain': get_onchain_metrics(),
+        'funding_rate': get_funding_rate(symbol),
+        'onchain': get_onchain_metrics(news_symbol),
+        'news_sentiment': get_news_sentiment(news_symbol),
         'timestamp': datetime.now().isoformat()
     }
+
+
+if __name__ == '__main__':
+    # Test
+    print("Testing External Data Layer v2...")
+    data = get_all_external_data('BTCUSDT')
+    
+    print(f"\n📊 Fear & Greed: {data['fear_greed']['value']} ({data['fear_greed']['classification']})")
+    print(f"💵 Funding Rate: {data['funding_rate']:.4f}%")
+    print(f"📰 News Sentiment: {data['news_sentiment']['overall_score']:.2f}")
+    print(f"📈 News Count: {data['news_sentiment']['news_count']}")
+    print(f"🚨 Market-Moving: {len(data['news_sentiment']['market_moving_news'])}")
