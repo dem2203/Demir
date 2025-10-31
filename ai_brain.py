@@ -56,7 +56,10 @@ class MultiTimeframeAnalysis:
     """Çoklu zaman dilimi analizi"""
     
     @staticmethod
-    def analyze_confluence(symbol: str, timeframes: List[str] = ['15m', '1h', '4h']) -> Dict:
+    def analyze_confluence(symbol: str, timeframes: List[str] = None) -> Dict:
+        if timeframes is None:
+            timeframes = ['15m', '1h', '4h']
+            
         from analysis_layer import run_full_analysis
         from strategy_layer import generate_signal
         from external_data import get_all_external_data
@@ -168,7 +171,7 @@ class PositionSizer:
             }
         
         kelly_pct = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
-        kelly_pct = kelly_pct / 2  # Half Kelly
+        kelly_pct = kelly_pct / 2
         kelly_pct = min(kelly_pct, max_risk_pct / 100)
         kelly_pct = max(kelly_pct, 0)
         
@@ -243,3 +246,39 @@ class AIBrain:
         reasoning.append(f"📊 {regime.get('explanation', '')}")
         if regime['regime'] == 'TREND' and base_signal['signal'] != 'HOLD':
             confidence += 30
+        elif regime['regime'] == 'RANGE':
+            confidence -= 20
+        
+        reasoning.append(f"💰 {rr_data['explanation']}")
+        if rr_data['trade_quality'] in ['MÜTHİŞ', 'İYİ']:
+            confidence += 20
+        else:
+            confidence -= 30
+        
+        confidence += base_signal.get('confidence', 0) * 0.3
+        confidence = max(0, min(100, confidence))
+        
+        if confidence >= 70 and rr_data['risk_reward_ratio'] >= 2:
+            final_signal = base_signal['signal']
+        else:
+            final_signal = 'HOLD'
+            reasoning.append("❌ Güven veya R/R yetersiz. Bekle!")
+        
+        reasoning.append(f"📈 {position_data['explanation']}")
+        
+        return {
+            'signal': final_signal,
+            'confidence': confidence,
+            'position_size': position_data['position_size'],
+            'stop_loss': rr_data['stop_loss'],
+            'take_profit_1': rr_data['take_profit_1'],
+            'take_profit_2': rr_data['take_profit_2'],
+            'risk_reward_ratio': rr_data['risk_reward_ratio'],
+            'reasoning': reasoning,
+            'metadata': {
+                'regime': regime,
+                'mtf_confluence': mtf,
+                'base_signal': base_signal,
+                'current_price': current_price
+            }
+        }
