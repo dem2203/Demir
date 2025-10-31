@@ -1,5 +1,5 @@
 """
-DEMIR - Strategy Layer
+DEMIR - Strategy Layer FIXED
 Multi-Factor Signal Generation
 """
 
@@ -19,7 +19,6 @@ FACTOR_WEIGHTS = {
     'volume_profile': 1.0,
     'rsi_divergence': 1.5,
     'fibonacci': 0.8,
-    
     # Dış faktörler
     'fear_greed': 0.7,
     'funding_rate': 0.6,
@@ -176,13 +175,12 @@ def generate_signal(symbol: str, tech_data: Dict, external_data: Dict) -> Dict[s
     Multi-factor scoring ile sinyal üret
     
     Returns:
-        {
-            'signal': 'BUY' | 'SELL' | 'HOLD',
-            'confidence': float (0-100),
-            'factors': {faktör: skor}
-        }
+    {
+        'signal': 'BUY' | 'SELL' | 'HOLD',
+        'confidence': float (0-100),
+        'factors': {faktör: skor}
+    }
     """
-    
     factors = {}
     
     # Teknik faktörler
@@ -196,12 +194,13 @@ def generate_signal(symbol: str, tech_data: Dict, external_data: Dict) -> Dict[s
             tech_data.get('macd_histogram', 0)
         )
     
-    if all(k in tech_data for k in ['price', 'bb_upper', 'bb_lower', 'bb_middle']):
+    # FIXED: Bollinger Bands key names
+    if all(k in tech_data for k in ['price', 'BB_High', 'BB_Low', 'BB_Mid']):
         factors['bollinger'] = calculate_bollinger_score(
             tech_data['price'],
-            tech_data['bb_upper'],
-            tech_data['bb_lower'],
-            tech_data['bb_middle']
+            tech_data['BB_High'],
+            tech_data['BB_Low'],
+            tech_data['BB_Mid']
         )
     
     if all(k in tech_data for k in ['price', 'ema_9', 'ema_21', 'ema_50']):
