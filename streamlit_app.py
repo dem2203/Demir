@@ -326,7 +326,7 @@ def stop_websocket():
 # ============================================
 
 def display_price_ticker():
-    if not st.session_state.ws_
+    if st.session_state.tracked_coins:
         st.markdown('<div class="price-ticker">⏳ Canlı veriye bağlanılıyor...</div>', unsafe_allow_html=True)
         return
     
