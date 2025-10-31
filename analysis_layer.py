@@ -32,9 +32,7 @@ except ImportError:
 
 
 def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd.DataFrame:
-    """
-    Binance FUTURES (Perpetual) verisini çek
-    """
+    """Binance FUTURES verisini çek"""
     url = "https://fapi.binance.com/fapi/v1/klines"
     
     params = {
@@ -71,46 +69,91 @@ def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd
         return df
         
     except Exception as e:
-        print(f"❌ Binance FUTURES data error ({symbol}): {e}")
+        print(f"❌ Binance error: {e}")
         return pd.DataFrame()
 
 
-def run_full_analysis(symbol: str, timeframe: str = '1h') -> dict:
-    """
-    Sembol için tam teknik analiz (GÜNCELLENMİŞ)
-    """
-    df = get_binance_data(symbol, timeframe, limit=200)
-    
+def run_technical_analysis(df: pd.DataFrame) -> Dict:
+    """Teknik analiz"""
     if df.empty:
-        return {'error': 'Veri çekilemedi'}
+        return {'error': 'Empty dataframe'}
     
-    # Teknik analiz
-    df = run_technical_analysis(df)
-    
-    if df.empty:
-        return {'error': 'Analiz başarısız'}
-    
-    # Son değerleri al
-    last_row = df.iloc[-1]
-    current_price = float(last_row['Close'])
-    
-    return {
-        'symbol': symbol,
-        'price': current_price,
-        'dataframe': df,
-        'rsi': float(last_row.get('RSI', 0)),
-        'macd_histogram': float(last_row.get('MACDh_12_26_9', 0)),
-        'adx': float(last_row.get('ADX', 0)),
-        'atr': float(last_row.get('ATR', 0)),
-        'volume': float(last_row.get('Volume', 0)),
-        'fibonacci': {
-            'fib_236': float(last_row.get('fib_236', 0)),
-            'fib_382': float(last_row.get('fib_382', 0)),
-            'fib_618': float(last_row.get('fib_618', 0))
-        },
-        'volume_profile': {
-            'poc': float(last_row.get('vp_poc', 0)),
-            'vah': float(last_row.get('vp_vah', 0)),
-            'val': float(last_row.get('vp_val', 0))
+    try:
+        # RSI
+        rsi_indicator = RSIIndicator(close=df['Close'], window=14)
+        df['RSI'] = rsi_indicator.rsi()
+        
+        # MACD
+        macd = MACD(close=df['Close'])
+        df['MACD'] = macd.macd()
+        df['MACD_signal'] = macd.macd_signal()
+        df['MACD_diff'] = macd.macd_diff()
+        
+        # Bollinger Bands
+        bb = BollingerBands(close=df['Close'], window=20, window_dev=2)
+        df['BB_High'] = bb.bollinger_hband()
+        df['BB_Low'] = bb.bollinger_lband()
+        df['BB_Mid'] = bb.bollinger_mavg()
+        
+        # ATR
+        atr = AverageTrueRange(high=df['High'], low=df['Low'], close=df['Close'], window=14)
+        df['ATR'] = atr.average_true_range()
+        
+        # ADX
+        adx = ADXIndicator(high=df['High'], low=df['Low'], close=df['Close'], window=14)
+        df['ADX'] = adx.adx()
+        
+        # EMA
+        ema_20 = EMAIndicator(close=df['Close'], window=20)
+        ema_50 = EMAIndicator(close=df['Close'], window=50)
+        df['EMA_20'] = ema_20.ema_indicator()
+        df['EMA_50'] = ema_50.ema_indicator()
+        
+        return {
+            'dataframe': df,
+            'price': float(df['Close'].iloc[-1]),
+            'rsi': float(df['RSI'].iloc[-1]) if 'RSI' in df.columns else 50,
+            'macd': float(df['MACD'].iloc[-1]) if 'MACD' in df.columns else 0,
+            'bb_upper': float(df['BB_High'].iloc[-1]) if 'BB_High' in df.columns else 0,
+            'bb_lower': float(df['BB_Low'].iloc[-1]) if 'BB_Low' in df.columns else 0,
+            'atr': float(df['ATR'].iloc[-1]) if 'ATR' in df.columns else 0,
+            'adx': float(df['ADX'].iloc[-1]) if 'ADX' in df.columns else 0
         }
+    except Exception as e:
+        print(f"❌ Technical analysis error: {e}")
+        return {'error': str(e)}
+
+
+def run_full_analysis(symbol: str, timeframe: str = '1h') -> Dict:
+    """Full analiz pipeline"""
+    df = get_binance_data(symbol, timeframe, limit=100)
+    
+    if df.empty:
+        return {'error': 'No data'}
+    
+    tech_data = run_technical_analysis(df)
+    
+    if 'error' in tech_data:
+        return tech_data
+    
+    # Fibonacci
+    high = df['High'].max()
+    low = df['Low'].min()
+    diff = high - low
+    
+    tech_data['fibonacci'] = {
+        'fib_236': high - 0.236 * diff,
+        'fib_382': high - 0.382 * diff,
+        'fib_500': high - 0.500 * diff,
+        'fib_618': high - 0.618 * diff,
+        'fib_786': high - 0.786 * diff
     }
+    
+    # Volume Profile
+    tech_data['volume_profile'] = {
+        'vah': high * 0.98,
+        'val': low * 1.02,
+        'poc': (high + low) / 2
+    }
+    
+    return tech_data
