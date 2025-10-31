@@ -1,4 +1,12 @@
+"""
+DEMIR - Analysis Layer
+"""
+
+import pandas as pd
+import numpy as np
 import requests
+from typing import Dict, Tuple, Optional
+# ... geri kalan import'lar
 
 def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd.DataFrame:
     """
