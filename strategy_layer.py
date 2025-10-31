@@ -1,325 +1,340 @@
 """
-DEMIR - Strategy Layer v2
-Multi-Factor Signal Generation + News Sentiment Integration
+DEMIR AI Trading Bot - Strategy Layer v3
+Phase 3A: Complete Integration
+Tarih: 31 Ekim 2025
+
+ENTEGRASYON:
+- Phase 1: Technical Indicators (RSI, MACD, BB, EMA, ATR, ADX)
+- Phase 2: News Sentiment (CryptoPanic)
+- Phase 3A: Volume Profile, Pivot Points, Fibonacci, VWAP
+
+Multi-Factor Scoring System:
+- Technical Score (0-100)
+- News Sentiment Score (0-100)
+- Volume Profile Score (0-100)
+- Pivot Points Score (0-100)
+- Fibonacci Score (0-100)
+- VWAP Score (0-100)
+- FINAL SCORE: Weighted Average
 """
 
-from typing import Dict, Any
-import numpy as np
+from datetime import datetime
+
+# Phase 3A imports
+try:
+    import volume_profile_layer as vp
+    VP_AVAILABLE = True
+except:
+    VP_AVAILABLE = False
+
+try:
+    import pivot_points_layer as pp
+    PP_AVAILABLE = True
+except:
+    PP_AVAILABLE = False
+
+try:
+    import fibonacci_layer as fib
+    FIB_AVAILABLE = True
+except:
+    FIB_AVAILABLE = False
+
+try:
+    import vwap_layer as vwap
+    VWAP_AVAILABLE = True
+except:
+    VWAP_AVAILABLE = False
+
+# Phase 1 & 2 (varsayalım ki var)
+try:
+    import analysis_layer
+    ANALYSIS_AVAILABLE = True
+except:
+    ANALYSIS_AVAILABLE = False
+
+try:
+    import news_sentiment_layer as news
+    NEWS_AVAILABLE = True
+except:
+    NEWS_AVAILABLE = False
 
 
-# ============================================
-# FAKTÖR AĞIRLIKLARI (NEWS EKLENDI)
-# ============================================
-
-FACTOR_WEIGHTS = {
-    # Teknik göstergeler
-    'rsi': 1.0,
-    'macd': 1.0,
-    'bollinger': 0.8,
-    'ema_trend': 1.2,
-    'volume_profile': 1.0,
-    'rsi_divergence': 1.5,
-    'fibonacci': 0.8,
-    # Dış faktörler
-    'fear_greed': 0.7,
-    'funding_rate': 0.6,
-    'traditional_markets': 0.5,
-    'news_sentiment': 0.9  # YÜKSEK AĞIRLIK - Haberler çok önemli!
-}
-
-
-# ============================================
-# FAKTÖR HESAPLAYICILAR
-# ============================================
-
-def calculate_rsi_score(rsi_value: float) -> float:
-    """RSI skoru: 0-30 oversold (pozitif), 70-100 overbought (negatif)"""
-    if rsi_value < 30:
-        return (30 - rsi_value) / 30 * 100
-    elif rsi_value > 70:
-        return -(rsi_value - 70) / 30 * 100
-    else:
-        return 0
-
-
-def calculate_macd_score(macd: float, signal: float, histogram: float) -> float:
-    """MACD skoru: Histogram momentum"""
-    if histogram > 0:
-        return min(100, abs(histogram) * 50)
-    else:
-        return max(-100, -abs(histogram) * 50)
-
-
-def calculate_bollinger_score(price: float, upper: float, lower: float, middle: float) -> float:
-    """Bollinger Bands skoru"""
-    band_width = upper - lower
+def calculate_volume_profile_score(symbol, interval='1h'):
+    """Volume Profile sinyalini 0-100 score'a çevirir"""
+    if not VP_AVAILABLE:
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
     
-    if price < lower:
-        distance = (lower - price) / band_width
-        return min(100, distance * 100)
-    elif price > upper:
-        distance = (price - upper) / band_width
-        return max(-100, -distance * 100)
-    else:
-        return 0
-
-
-def calculate_ema_trend_score(price: float, ema_9: float, ema_21: float, ema_50: float) -> float:
-    """EMA trend skoru"""
-    score = 0
-    
-    if price > ema_9:
-        score += 30
-    if price > ema_21:
-        score += 30
-    if price > ema_50:
-        score += 40
-    
-    # EMA alignment
-    if ema_9 > ema_21 > ema_50:
-        score += 20
-    elif ema_9 < ema_21 < ema_50:
-        score -= 20
-    
-    return score - 50
-
-
-def calculate_volume_profile_score(price: float, vp_data: Dict) -> float:
-    """Volume Profile skoru"""
-    if not vp_data or 'poc' not in vp_data:
-        return 0
-    
-    poc = vp_data['poc']
-    vah = vp_data.get('vah', poc)
-    val = vp_data.get('val', poc)
-    
-    if val <= price <= vah:
-        return 20
-    elif price < val:
-        return -30
-    else:
-        return 30
-
-
-def calculate_divergence_score(div_data: Dict) -> float:
-    """RSI Divergence skoru"""
-    if not div_data:
-        return 0
-    
-    if div_data.get('bullish_divergence'):
-        return div_data.get('strength', 50)
-    elif div_data.get('bearish_divergence'):
-        return -div_data.get('strength', 50)
-    else:
-        return 0
-
-
-def calculate_fibonacci_score(fib_data: Dict, price: float) -> float:
-    """Fibonacci skoru"""
-    if not fib_data:
-        return 0
-    
-    level = fib_data.get('current_level', '')
-    
-    if 'below' in level or '23.6' in level:
-        return 40
-    elif '38.2' in level or '50' in level:
-        return 20
-    elif '61.8' in level or '78.6' in level:
-        return -20
-    elif 'above 100%' in level:
-        return -40
-    else:
-        return 0
-
-
-def calculate_fear_greed_score(fg_value: int) -> float:
-    """Fear & Greed skoru (Contrarian)"""
-    if fg_value < 25:
-        return 50
-    elif fg_value < 45:
-        return 20
-    elif fg_value > 75:
-        return -50
-    elif fg_value > 55:
-        return -20
-    else:
-        return 0
-
-
-def calculate_funding_rate_score(funding_rate: float) -> float:
-    """Funding rate skoru"""
-    if funding_rate > 0.05:
-        return -40
-    elif funding_rate > 0.01:
-        return -20
-    elif funding_rate < -0.05:
-        return 40
-    elif funding_rate < -0.01:
-        return 20
-    else:
-        return 0
-
-
-# ============================================
-# YENİ: NEWS SENTIMENT SCORER
-# ============================================
-
-def calculate_news_sentiment_score(news_data: Dict) -> float:
-    """
-    News sentiment skoru
-    
-    Args:
-        news_data: {
-            'overall_score': float (-100 to 100),
-            'news_score': float,
-            'social_score': float,
-            'market_moving_news': list,
-            'news_count': int
+    try:
+        vp_signal = vp.get_volume_profile_signal(symbol, interval)
+        if not vp_signal:
+            return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+        
+        # Signal to score mapping
+        if vp_signal['signal'] == 'LONG':
+            base_score = 70
+        elif vp_signal['signal'] == 'SHORT':
+            base_score = 30
+        else:
+            base_score = 50
+        
+        # Strength adjustment
+        strength = vp_signal['strength']
+        score = base_score + ((strength - 0.5) * 40)  # ±20 points based on strength
+        score = max(0, min(100, score))
+        
+        return {
+            'score': round(score, 2),
+            'signal': vp_signal['signal'],
+            'zone': vp_signal['zone'],
+            'strength': strength,
+            'description': vp_signal['description'],
+            'available': True
         }
     
-    Returns:
-        Score (-100 to 100)
+    except Exception as e:
+        print(f"❌ VP Score error: {e}")
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+
+
+def calculate_pivot_score(symbol, interval='1d', method='classic'):
+    """Pivot Points sinyalini 0-100 score'a çevirir"""
+    if not PP_AVAILABLE:
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+    
+    try:
+        pp_signal = pp.get_pivot_signal(symbol, interval, method=method)
+        if not pp_signal:
+            return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+        
+        # Signal to score
+        if pp_signal['signal'] == 'LONG':
+            base_score = 70
+        elif pp_signal['signal'] == 'SHORT':
+            base_score = 30
+        else:
+            base_score = 50
+        
+        strength = pp_signal['strength']
+        score = base_score + ((strength - 0.5) * 40)
+        score = max(0, min(100, score))
+        
+        return {
+            'score': round(score, 2),
+            'signal': pp_signal['signal'],
+            'zone': pp_signal['zone'],
+            'strength': strength,
+            'description': pp_signal['description'],
+            'available': True
+        }
+    
+    except Exception as e:
+        print(f"❌ PP Score error: {e}")
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+
+
+def calculate_fibonacci_score(symbol, interval='1h', lookback=50):
+    """Fibonacci sinyalini 0-100 score'a çevirir"""
+    if not FIB_AVAILABLE:
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+    
+    try:
+        fib_signal = fib.get_fibonacci_signal(symbol, interval, lookback=lookback)
+        if not fib_signal:
+            return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+        
+        # Signal to score
+        if fib_signal['signal'] == 'LONG':
+            base_score = 70
+        elif fib_signal['signal'] == 'SHORT':
+            base_score = 30
+        elif fib_signal['signal'] == 'TAKE_PROFIT':
+            base_score = 90  # Güçlü sinyal
+        else:
+            base_score = 50
+        
+        strength = fib_signal['strength']
+        score = base_score + ((strength - 0.5) * 40)
+        score = max(0, min(100, score))
+        
+        return {
+            'score': round(score, 2),
+            'signal': fib_signal['signal'],
+            'level': fib_signal['level'],
+            'strength': strength,
+            'description': fib_signal['description'],
+            'available': True
+        }
+    
+    except Exception as e:
+        print(f"❌ Fib Score error: {e}")
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+
+
+def calculate_vwap_score(symbol, interval='5m', lookback=100):
+    """VWAP sinyalini 0-100 score'a çevirir"""
+    if not VWAP_AVAILABLE:
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+    
+    try:
+        vwap_signal = vwap.get_vwap_signal(symbol, interval, lookback=lookback)
+        if not vwap_signal:
+            return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+        
+        # Signal to score
+        if vwap_signal['signal'] == 'LONG':
+            base_score = 70
+        elif vwap_signal['signal'] == 'SHORT':
+            base_score = 30
+        else:
+            base_score = 50
+        
+        strength = vwap_signal['strength']
+        score = base_score + ((strength - 0.5) * 40)
+        score = max(0, min(100, score))
+        
+        return {
+            'score': round(score, 2),
+            'signal': vwap_signal['signal'],
+            'zone': vwap_signal['zone'],
+            'strength': strength,
+            'description': vwap_signal['description'],
+            'available': True
+        }
+    
+    except Exception as e:
+        print(f"❌ VWAP Score error: {e}")
+        return {'score': 50, 'signal': 'NEUTRAL', 'available': False}
+
+
+def calculate_news_score(symbol):
+    """News sentiment 0-100 score'a çevirir"""
+    if not NEWS_AVAILABLE:
+        return {'score': 50, 'sentiment': 'NEUTRAL', 'available': False}
+    
+    try:
+        news_data = news.get_news_signal(symbol)
+        if not news_data:
+            return {'score': 50, 'sentiment': 'NEUTRAL', 'available': False}
+        
+        # Sentiment to score
+        sentiment_score = news_data['score']  # 0.0-1.0
+        score = sentiment_score * 100
+        
+        return {
+            'score': round(score, 2),
+            'sentiment': news_data['sentiment'],
+            'impact': news_data['impact'],
+            'details': news_data['details'],
+            'available': True
+        }
+    
+    except Exception as e:
+        print(f"❌ News Score error: {e}")
+        return {'score': 50, 'sentiment': 'NEUTRAL', 'available': False}
+
+
+def calculate_comprehensive_score(symbol, interval='1h'):
     """
-    if not news_data:
-        return 0
-    
-    overall_score = news_data.get('overall_score', 0)
-    market_moving = news_data.get('market_moving_news', [])
-    news_count = news_data.get('news_count', 0)
-    
-    # Base score from overall sentiment
-    score = overall_score
-    
-    # Amplify if market-moving news present
-    if len(market_moving) > 0:
-        score *= 1.5  # 50% boost
-    
-    # Reduce confidence if very few news items
-    if news_count < 3:
-        score *= 0.5
-    
-    return max(-100, min(100, score))
-
-
-# ============================================
-# ANA SİNYAL ÜRETME FONKSİYONU (GÜNCEL)
-# ============================================
-
-def generate_signal(symbol: str, tech_data: Dict, external_data: Dict) -> Dict[str, Any]:
-    """
-    Multi-factor scoring ile sinyal üret
+    Tüm Phase'lerin weighted average score'u
     
     Returns:
-        {
-            'signal': 'BUY' | 'SELL' | 'HOLD',
-            'confidence': float (0-100),
-            'factors': {faktör: skor},
-            'news_impact': str (description)
+        dict: {
+            'final_score': 0-100,
+            'signal': 'LONG' | 'SHORT' | 'NEUTRAL',
+            'confidence': 0.0-1.0,
+            'components': {...}
         }
     """
-    factors = {}
     
-    # Teknik faktörler
-    if 'rsi' in tech_data:
-        factors['rsi'] = calculate_rsi_score(tech_data['rsi'])
+    # Tüm skorları hesapla
+    vp_score = calculate_volume_profile_score(symbol, interval)
+    pp_score = calculate_pivot_score(symbol, '1d', 'classic')
+    fib_score = calculate_fibonacci_score(symbol, interval, 50)
+    vwap_score = calculate_vwap_score(symbol, '5m', 100)
+    news_score = calculate_news_score(symbol)
     
-    if 'macd' in tech_data:
-        factors['macd'] = calculate_macd_score(
-            tech_data.get('macd', 0),
-            tech_data.get('macd_signal', 0),
-            tech_data.get('macd_histogram', 0)
-        )
+    # Weights (toplam 100%)
+    weights = {
+        'volume_profile': 0.25,  # %25
+        'pivot_points': 0.20,    # %20
+        'fibonacci': 0.20,       # %20
+        'vwap': 0.20,            # %20
+        'news': 0.15             # %15
+    }
     
-    # FIXED: BB_High, BB_Low, BB_Mid (analysis_layer'dan geliyor)
-    if all(k in tech_data for k in ['price', 'BB_High', 'BB_Low', 'BB_Mid']):
-        factors['bollinger'] = calculate_bollinger_score(
-            tech_data['price'],
-            tech_data['BB_High'],
-            tech_data['BB_Low'],
-            tech_data['BB_Mid']
-        )
-    
-    if all(k in tech_data for k in ['price', 'ema_9', 'ema_21', 'ema_50']):
-        factors['ema_trend'] = calculate_ema_trend_score(
-            tech_data['price'],
-            tech_data['ema_9'],
-            tech_data['ema_21'],
-            tech_data['ema_50']
-        )
-    
-    if 'volume_profile' in tech_data and tech_data['volume_profile']:
-        factors['volume_profile'] = calculate_volume_profile_score(
-            tech_data.get('price', 0),
-            tech_data['volume_profile']
-        )
-    
-    if 'rsi_divergence' in tech_data:
-        factors['rsi_divergence'] = calculate_divergence_score(tech_data['rsi_divergence'])
-    
-    if 'fibonacci' in tech_data and tech_data['fibonacci']:
-        factors['fibonacci'] = calculate_fibonacci_score(
-            tech_data['fibonacci'],
-            tech_data.get('price', 0)
-        )
-    
-    # Dış faktörler
-    if 'fear_greed' in external_data:
-        fg_value = external_data['fear_greed'].get('value', 50)
-        factors['fear_greed'] = calculate_fear_greed_score(fg_value)
-    
-    if 'funding_rate' in external_data:
-        factors['funding_rate'] = calculate_funding_rate_score(external_data['funding_rate'])
-    
-    # YENİ: News Sentiment Factor
-    if 'news_sentiment' in external_data:
-        news_score = calculate_news_sentiment_score(external_data['news_sentiment'])
-        factors['news_sentiment'] = news_score
-    
-    # Ağırlıklı toplam skor
-    weighted_score = 0
+    # Weighted score hesapla
+    total_score = 0
     total_weight = 0
     
-    for factor, score in factors.items():
-        weight = FACTOR_WEIGHTS.get(factor, 1.0)
-        weighted_score += score * weight
-        total_weight += weight
+    components = {
+        'volume_profile': vp_score,
+        'pivot_points': pp_score,
+        'fibonacci': fib_score,
+        'vwap': vwap_score,
+        'news_sentiment': news_score
+    }
     
-    # Normalize
+    for key, component in components.items():
+        if component['available']:
+            total_score += component['score'] * weights[key]
+            total_weight += weights[key]
+    
+    # Normalize score
     if total_weight > 0:
-        final_score = weighted_score / total_weight
+        final_score = total_score / total_weight
     else:
-        final_score = 0
+        final_score = 50  # Neutral if nothing available
     
-    # Sinyal belirle
-    if final_score > 30:
-        signal = 'BUY'
-        confidence = min(100, abs(final_score))
-    elif final_score < -30:
-        signal = 'SELL'
-        confidence = min(100, abs(final_score))
+    # Signal belirleme
+    if final_score >= 65:
+        signal = 'LONG'
+        confidence = (final_score - 50) / 50  # 0.3-1.0
+    elif final_score <= 35:
+        signal = 'SHORT'
+        confidence = (50 - final_score) / 50  # 0.3-1.0
     else:
-        signal = 'HOLD'
-        confidence = 50 - abs(final_score)
-    
-    # News impact description
-    news_impact = "No significant news"
-    if 'news_sentiment' in external_data:
-        news_data = external_data['news_sentiment']
-        market_moving = news_data.get('market_moving_news', [])
-        
-        if len(market_moving) > 0:
-            news_impact = f"⚠️ {len(market_moving)} market-moving news detected!"
-        elif news_data.get('overall_score', 0) > 30:
-            news_impact = "📈 Positive news sentiment"
-        elif news_data.get('overall_score', 0) < -30:
-            news_impact = "📉 Negative news sentiment"
+        signal = 'NEUTRAL'
+        confidence = 1.0 - (abs(final_score - 50) / 15)  # 0.0-1.0
     
     return {
-        'signal': signal,
-        'confidence': confidence,
-        'final_score': final_score,
-        'factors': factors,
         'symbol': symbol,
-        'news_impact': news_impact
+        'interval': interval,
+        'final_score': round(final_score, 2),
+        'signal': signal,
+        'confidence': round(confidence, 2),
+        'components': components,
+        'weights': weights,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
+
+
+# Test fonksiyonu
+if __name__ == "__main__":
+    print("=" * 80)
+    print("🔱 DEMIR AI - Strategy Layer v3 Test")
+    print("=" * 80)
+    
+    symbol = 'BTCUSDT'
+    interval = '1h'
+    
+    print(f"\n📊 Calculating Comprehensive Score for {symbol}...")
+    
+    result = calculate_comprehensive_score(symbol, interval)
+    
+    print(f"\n✅ FINAL RESULTS:")
+    print(f"   Final Score: {result['final_score']}/100")
+    print(f"   Signal: {result['signal']}")
+    print(f"   Confidence: {result['confidence']*100:.0f}%")
+    
+    print(f"\n📋 COMPONENT SCORES:")
+    for component, data in result['components'].items():
+        status = "✅" if data['available'] else "❌"
+        print(f"   {status} {component.replace('_', ' ').title()}: {data['score']}/100")
+        if data['available'] and 'signal' in data:
+            print(f"      Signal: {data['signal']}")
+    
+    print(f"\n⚖️ WEIGHTS:")
+    for component, weight in result['weights'].items():
+        print(f"   {component.replace('_', ' ').title()}: {weight*100}%")
+    
+    print("\n" + "=" * 80)
