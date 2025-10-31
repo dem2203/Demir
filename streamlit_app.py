@@ -1,18 +1,19 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v4
-Phase 1: Trade History + Win Rate + Excel Export
-Tarih: 31 Ekim 2025
+🔱 DEMIR AI TRADING BOT - DASHBOARD v5
+ULTIMATE EDITION: Detaylı Analiz + Yardım Butonu + Zengin UI
+Tarih: 1 Kasım 2025
 
 YENİ ÖZELLİKLER:
-✅ Trade history database
-✅ Win rate calculator
-✅ Performance dashboard (sidebar)
-✅ Excel export
-✅ Auto-save AI decisions
+✅ 11 Layer detaylı skorlar
+✅ Component breakdown
+✅ Yardım/Glossary butonu
+✅ TradingView kaldırıldı (canlı fiyatlar büyütüldü)
+✅ Entry/SL/TP her zaman göster
+✅ Görsel score progress bar'lar
+✅ Detaylı "Reason" açıklamaları
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 import requests
 from datetime import datetime
 import time
@@ -32,7 +33,7 @@ except:
 # Page Config
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Dashboard",
+    page_title="🔱 DEMIR AI Dashboard v5",
     page_icon="🔱",
     layout="wide"
 )
@@ -51,11 +52,25 @@ def get_binance_price(symbol):
                 'price': float(data['lastPrice']),
                 'change_24h': float(data['priceChangePercent']),
                 'volume': float(data['quoteVolume']),
+                'high_24h': float(data['highPrice']),
+                'low_24h': float(data['lowPrice']),
                 'available': True
             }
     except:
         pass
-    return {'price': 0, 'change_24h': 0, 'volume': 0, 'available': False}
+    return {'price': 0, 'change_24h': 0, 'volume': 0, 'high_24h': 0, 'low_24h': 0, 'available': False}
+
+def render_progress_bar(value, max_val=100, color='#667eea'):
+    """Progress bar HTML"""
+    pct = (value / max_val) * 100
+    return f"""
+    <div style="background: #f0f0f0; border-radius: 10px; height: 20px; overflow: hidden; margin: 5px 0;">
+        <div style="background: {color}; width: {pct}%; height: 100%; border-radius: 10px; 
+                    display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75em; font-weight: 600;">
+            {value:.1f}
+        </div>
+    </div>
+    """
 
 # ============================================================================
 # CSS
@@ -76,15 +91,23 @@ st.markdown("""
         background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
         border-radius: 12px;
-        padding: 15px;
+        padding: 20px;
         margin: 10px 0;
     }
     .price-big {
-        font-size: 2em;
+        font-size: 2.5em;
         font-weight: 700;
+        margin: 10px 0;
+    }
+    .price-detail {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+        font-size: 0.9em;
+        opacity: 0.9;
     }
     .tp-box {
-        background: #f8f9fa;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
         border-left: 4px solid #667eea;
         padding: 15px;
         margin: 10px 0;
@@ -102,6 +125,32 @@ st.markdown("""
         font-size: 1.8em;
         font-weight: 700;
     }
+    .layer-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 4px solid #667eea;
+    }
+    .signal-badge {
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 1.1em;
+    }
+    .badge-long {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+    }
+    .badge-short {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+    }
+    .badge-neutral {
+        background: linear-gradient(135deg, #6b7280, #4b5563);
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -110,13 +159,13 @@ st.markdown("""
 # ============================================================================
 st.markdown("""
 <div class="card" style="text-align: center;">
-    <h1 style="color: #667eea; margin: 0;">🔱 DEMIR AI TRADING BOT v4</h1>
-    <p style="color: #666;">Phase 1: Trade History + Performance Tracking</p>
+    <h1 style="color: #667eea; margin: 0;">🔱 DEMIR AI TRADING BOT v5</h1>
+    <p style="color: #666;">ULTIMATE EDITION: Detaylı Analiz + 11 Layer Breakdown + Performance Tracking</p>
 </div>
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# Sidebar - Performance Dashboard
+# Sidebar
 # ============================================================================
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
@@ -172,9 +221,58 @@ with st.sidebar:
     # Analyze button
     analyze_btn = st.button("🔍 AI ANALİZ YAP", use_container_width=True, type="primary")
     
-    # Trade History button
-    if st.button("📜 Trade History", use_container_width=True):
-        st.session_state.show_history = True
+    # ✅ YARDIM BUTONU (YENİ!)
+    st.markdown("---")
+    show_help = st.checkbox("❓ Terimler Rehberi", help="Tüm terimlerin açıklamasını göster")
+
+# ============================================================================
+# YARDIM/GLOSSARY EXPANDER (YENİ!)
+# ============================================================================
+if show_help:
+    with st.expander("📚 TERİMLER KILAVUZU - Tıklayın", expanded=True):
+        st.markdown("""
+        ### 🎯 Temel Terimler
+        
+        **LONG**: Al (fiyat yükselecek) - Fiyat artarsa kazanırsın  
+        **SHORT**: Sat (fiyat düşecek) - Fiyat düşerse kazanırsın  
+        **Confidence**: AI'ın ne kadar emin (≥70% = güçlü, <50% = zayıf)  
+        **Score**: AI'ın final puanı (≥65=LONG, ≤35=SHORT, 35-65=NEUTRAL)  
+        **R/R**: Risk/Reward (1:2 = $1 risk → $2 kazanç)  
+        
+        ### 💼 Pozisyon Planı
+        
+        **Entry**: Trade açma fiyatı  
+        **SL (Stop Loss)**: Zarar durdur - fiyat buraya gelirse kapat  
+        **Position**: Trade için toplam yatırım ($)  
+        **Risk**: Maksimum kaybedebileceğin para  
+        
+        ### 🎯 Take Profit (TP)
+        
+        **TP1**: İlk kar al (1:1) → %50 pozisyon kapat  
+        **TP2**: İkinci kar al (1:1.62 Fibonacci) → %30 kapat  
+        **TP3**: Üçüncü kar al (1:2.62) → %20 kapat  
+        
+        ### 📊 Performance Metrikleri
+        
+        **Win Rate**: Kazanan trade % (≥60% = mükemmel)  
+        **Sharpe Ratio**: Risk-adjusted getiri (>3 = profesyonel)  
+        **Profit Factor**: Toplam kar / Toplam zarar (>2 = çok iyi)  
+        **Max Drawdown**: En büyük portfolio düşüşü (<20% = iyi)  
+        
+        ### 🧠 AI Layer'ları
+        
+        **Volume Profile**: POC, VAH, VAL seviyelerini analiz eder  
+        **Pivot Points**: Önceki gün H/L/C'den destek/direnç hesaplar  
+        **Fibonacci**: 0.236, 0.382, 0.618, 0.786 retracement seviyeleri  
+        **VWAP**: Volume-weighted average price + std dev bantları  
+        **News Sentiment**: Fear & Greed Index + volume trend  
+        **GARCH**: Volatilite tahmini (GARCH(1,1) modeli)  
+        **Markov**: Piyasa rejimi (TREND/RANGE/HIGH_VOL)  
+        **HVI**: Historical volatility index (σ score)  
+        **Volatility Squeeze**: BB + KC squeeze detection  
+        
+        Daha fazla detay için: **GLOSSARY_DASHBOARD_TR.md** dosyasını inceleyin!
+        """)
 
 # ============================================================================
 # Main Content - Tabs
@@ -185,63 +283,52 @@ tab1, tab2 = st.tabs(["📈 Live Dashboard", "📜 Trade History"])
 # TAB 1: Live Dashboard
 # ============================================================================
 with tab1:
-    col_left, col_right = st.columns([2, 1])
+    # ✅ CANLI FİYATLAR (TradingView kaldırıldı - daha büyük)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 📊 Canlı Fiyatlar")
     
-    # SOL: TradingView
-    with col_left:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("### 📈 TradingView Chart")
-        
-        tv_symbol = f"BINANCE:{selected_coin}"
-        
-        tv_html = f"""
-        <div style="height: 500px;">
-            <iframe 
-                src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol={tv_symbol}&interval={interval}&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=light&style=1&timezone=Europe%2FIstanbul&locale=tr"
-                style="width: 100%; height: 100%; border: none;"
-            ></iframe>
-        </div>
-        """
-        
-        components.html(tv_html, height=550)
-        st.markdown('</div>', unsafe_allow_html=True)
+    cols = st.columns(3)
+    coins = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
     
-    # SAĞ: Canlı Fiyatlar
-    with col_right:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("### 📊 Canlı Fiyatlar")
+    for idx, coin in enumerate(coins):
+        data = get_binance_price(coin)
         
-        coins = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
-        
-        for coin in coins:
-            data = get_binance_price(coin)
-            
+        with cols[idx]:
             if data['available']:
                 change_color = '#10b981' if data['change_24h'] >= 0 else '#ef4444'
                 arrow = '↗' if data['change_24h'] >= 0 else '↘'
                 
                 st.markdown(f"""
                 <div class="price-card">
-                    <div style="font-size: 0.9em; opacity: 0.9;">{coin.replace('USDT', '')}</div>
+                    <div style="font-size: 1.2em; font-weight: 600; opacity: 0.9;">{coin.replace('USDT', '')}</div>
                     <div class="price-big">${data['price']:,.2f}</div>
-                    <div style="color: white; font-weight: 600;">
+                    <div style="color: white; font-weight: 700; font-size: 1.2em; margin: 10px 0;">
                         {data['change_24h']:+.2f}% {arrow}
                     </div>
-                    <div style="font-size: 0.85em; opacity: 0.8; margin-top: 5px;">
-                        Vol: ${data['volume']/1e6:.1f}M
+                    <div class="price-detail">
+                        <span>24h High:</span>
+                        <span>${data['high_24h']:,.2f}</span>
+                    </div>
+                    <div class="price-detail">
+                        <span>24h Low:</span>
+                        <span>${data['low_24h']:,.2f}</span>
+                    </div>
+                    <div class="price-detail" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
+                        <span>Volume:</span>
+                        <span>${data['volume']/1e6:.1f}M</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-        
-        st.markdown(f"<div style='text-align: center; color: #999; font-size: 0.8em; margin-top: 10px;'>{datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
     
-    # AI Analiz Sonucu
+    st.markdown(f"<div style='text-align: center; color: white; font-size: 0.9em; margin-top: 10px;'>Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ✅ AI ANALİZ SONUCU (DETAYLI!)
     if analyze_btn and AI_AVAILABLE:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("### 🎯 AI Analiz Sonucu")
         
-        with st.spinner('AI analizi yapılıyor...'):
+        with st.spinner('AI analizi yapılıyor... (11 layer hesaplanıyor)'):
             try:
                 decision = brain.make_trading_decision(
                     symbol=selected_coin,
@@ -250,34 +337,96 @@ with tab1:
                     risk_per_trade=risk
                 )
                 
-                # ✅ PHASE 1: Otomatik database'e kaydet
+                # ✅ Database'e kaydet
                 trade_id = db.log_trade(decision)
                 st.session_state.last_trade_id = trade_id
                 
-                # Karar göster
+                # ✅ Signal Badge
+                signal = decision['decision']
                 signal_emoji = {'LONG': '📈', 'SHORT': '📉', 'NEUTRAL': '⏸️', 'WAIT': '⏳'}
+                badge_class = {
+                    'LONG': 'badge-long',
+                    'SHORT': 'badge-short',
+                    'NEUTRAL': 'badge-neutral',
+                    'WAIT': 'badge-neutral'
+                }
                 
                 st.markdown(f"""
-                <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; color: white;">
-                    <h2>{signal_emoji.get(decision['decision'], '🎯')} {decision['decision']} {decision['signal']}</h2>
-                    <div style="font-size: 1.2em; margin: 10px 0;">
+                <div style="text-align: center; padding: 30px;">
+                    <div class="signal-badge {badge_class.get(signal, 'badge-neutral')}">
+                        {signal_emoji.get(signal, '🎯')} {signal} {decision['signal']}
+                    </div>
+                    <div style="font-size: 1.3em; margin: 20px 0; color: #333;">
                         Confidence: <strong>{decision['confidence']*100:.0f}%</strong> | 
-                        Score: <strong>{decision['final_score']:.0f}/100</strong> | 
+                        Score: <strong>{decision['final_score']:.1f}/100</strong> | 
                         R/R: <strong>1:{decision['risk_reward']:.2f}</strong>
                     </div>
-                    <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">
+                    <div style="font-size: 0.95em; color: #666; margin-top: 15px;">
                         Trade ID: #{trade_id} | Saved to database ✅
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                st.markdown(f"**💡 Sebep:** {decision['reason']}")
+                # ✅ REASON (detaylı açıklama)
+                st.markdown(f"**💡 Karar Gerekçesi:**")
+                st.info(decision['reason'])
                 
-                # Pozisyon Planı + TP
-                if decision.get('entry_price') and decision['decision'] in ['LONG', 'SHORT']:
-                    st.markdown("---")
-                    st.markdown("### 💼 Pozisyon Planı")
+                # ✅ LAYER BREAKDOWN (YENİ!)
+                st.markdown("---")
+                st.markdown("### 🧠 11 Layer Detaylı Analiz")
+                
+                # Component scores varsa göster
+                if 'component_scores' in decision:
+                    scores = decision['component_scores']
                     
+                    col1, col2 = st.columns(2)
+                    
+                    layer_info = {
+                        'volume_profile': {'name': 'Volume Profile', 'desc': 'POC, VAH, VAL analizi', 'weight': 0.12},
+                        'pivot_points': {'name': 'Pivot Points', 'desc': 'Destek/Direnç seviyeleri', 'weight': 0.10},
+                        'fibonacci': {'name': 'Fibonacci', 'desc': 'Retracement seviyeleri', 'weight': 0.10},
+                        'vwap': {'name': 'VWAP', 'desc': 'Volume-weighted price', 'weight': 0.08},
+                        'news_sentiment': {'name': 'News Sentiment', 'desc': 'Fear & Greed Index', 'weight': 0.08},
+                        'garch': {'name': 'GARCH Volatility', 'desc': 'Volatilite tahmini', 'weight': 0.15},
+                        'markov': {'name': 'Markov Regime', 'desc': 'Piyasa rejimi tespiti', 'weight': 0.15},
+                        'hvi': {'name': 'Historical Vol.', 'desc': 'Geçmiş volatilite', 'weight': 0.12},
+                        'squeeze': {'name': 'Vol. Squeeze', 'desc': 'BB + KC squeeze', 'weight': 0.10}
+                    }
+                    
+                    idx = 0
+                    for key, info in layer_info.items():
+                        if key in scores:
+                            score_val = scores[key].get('score', 0)
+                            available = scores[key].get('available', False)
+                            
+                            target_col = col1 if idx % 2 == 0 else col2
+                            
+                            with target_col:
+                                status_icon = '✅' if available else '❌'
+                                color = '#667eea' if available else '#d1d5db'
+                                
+                                st.markdown(f"""
+                                <div class="layer-card">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <strong style="font-size: 1.05em;">{status_icon} {info['name']}</strong>
+                                        <span style="font-weight: 700; color: {color};">{score_val:.1f}/100</span>
+                                    </div>
+                                    <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">{info['desc']}</div>
+                                    {render_progress_bar(score_val, color=color)}
+                                    <div style="font-size: 0.8em; color: #999; margin-top: 5px;">Weight: {info['weight']*100:.0f}%</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            idx += 1
+                
+                else:
+                    st.warning("⚠️ Component scores mevcut değil (decision dict'te 'component_scores' key'i eksik)")
+                
+                # ✅ POZİSYON PLANI + TP (HER ZAMAN GÖSTER)
+                st.markdown("---")
+                st.markdown("### 💼 Pozisyon Planı")
+                
+                if decision.get('entry_price') and decision['decision'] in ['LONG', 'SHORT', 'NEUTRAL']:
                     col1, col2 = st.columns(2)
                     
                     with col1:
@@ -310,20 +459,27 @@ with tab1:
                     
                     st.markdown(f"""
                     <div class="tp-box">
-                        <strong>TP1:</strong> ${tp1:,.2f} ({tp1_pct:+.2f}%) [R/R: 1:1] → Close 50%
+                        <strong style="font-size: 1.1em;">🎯 TP1:</strong> ${tp1:,.2f} ({tp1_pct:+.2f}%) [R/R: 1:1]<br>
+                        <span style="font-size: 0.9em; color: #666;">→ Close 50% of position | Kar garantiye al</span>
                     </div>
                     <div class="tp-box">
-                        <strong>TP2:</strong> ${tp2:,.2f} ({tp2_pct:+.2f}%) [R/R: 1:1.62] → Close 30%
+                        <strong style="font-size: 1.1em;">🎯 TP2:</strong> ${tp2:,.2f} ({tp2_pct:+.2f}%) [R/R: 1:1.62]<br>
+                        <span style="font-size: 0.9em; color: #666;">→ Close 30% of position | Fibonacci golden ratio</span>
                     </div>
                     <div class="tp-box">
-                        <strong>TP3:</strong> ${tp3:,.2f} ({tp3_pct:+.2f}%) [R/R: 1:2.62] → Close 20%
+                        <strong style="font-size: 1.1em;">🎯 TP3:</strong> ${tp3:,.2f} ({tp3_pct:+.2f}%) [R/R: 1:2.62]<br>
+                        <span style="font-size: 0.9em; color: #666;">→ Close 20% of position | Maksimum kar hedefi</span>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    st.info("**📈 Trailing Stop:** TP1 sonrası SL'i entry'e çek. TP2 sonrası SL'i TP1'e çek.")
+                    st.info("**📈 Trailing Stop Stratejisi:** TP1 sonrası SL'i entry'e çek (breakeven). TP2 sonrası SL'i TP1 seviyesine çek.")
+                
+                else:
+                    st.warning("⚠️ Pozisyon planı mevcut değil - Entry price hesaplanamadı veya sinyal WAIT/NEUTRAL")
             
             except Exception as e:
                 st.error(f"❌ Analiz hatası: {e}")
+                st.exception(e)
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -407,8 +563,8 @@ with tab2:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: white; padding: 20px;'>
-    <p><strong>🔱 DEMIR AI Trading Bot v4</strong></p>
-    <p style='font-size: 0.9em; opacity: 0.8;'>Phase 1: Trade History + Performance Tracking | © 2025</p>
+    <p><strong>🔱 DEMIR AI Trading Bot v5 - ULTIMATE EDITION</strong></p>
+    <p style='font-size: 0.9em; opacity: 0.8;'>Detaylı Analiz + 11 Layer Breakdown + Performance Tracking | © 2025</p>
 </div>
 """, unsafe_allow_html=True)
 
