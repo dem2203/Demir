@@ -1,32 +1,17 @@
 """
-DEMIR - Analysis Layer (v3.0)
-Binance Futures API Integration + Technical Analysis
+DEMIR - Analysis Layer v3.0
+Binance Futures + Technical Analysis
 """
 
 import pandas as pd
 import numpy as np
 import requests
-from typing import Dict, Tuple, Optional
-from scipy.fft import fft
-from math import sqrt, log, log2
-
-# Gerekli kütüphaneler
-try:
-    from arch import arch_model
-except ImportError:
-    arch_model = None
-
-try:
-    import statsmodels.api as sm
-except ImportError:
-    sm = None
+from typing import Dict
 
 try:
     from ta.trend import EMAIndicator, MACD, ADXIndicator
     from ta.volatility import BollingerBands, AverageTrueRange
-    from ta.momentum import RSIIndicator, StochasticOscillator
-    from ta.volume import OnBalanceVolumeIndicator, ChaikinMoneyFlowIndicator
-    import pandas_ta as ta
+    from ta.momentum import RSIIndicator
 except ImportError:
     pass
 
@@ -129,7 +114,7 @@ def run_full_analysis(symbol: str, timeframe: str = '1h') -> Dict:
     df = get_binance_data(symbol, timeframe, limit=100)
     
     if df.empty:
-        return {'error': 'No data'}
+        return {'error': 'No data from Binance'}
     
     tech_data = run_technical_analysis(df)
     
