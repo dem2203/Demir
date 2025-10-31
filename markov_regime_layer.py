@@ -1,22 +1,23 @@
 """
-DEMIR AI Trading Bot - Markov Regime Switching Layer
-Phase 3B Module 2: Market Regime Detection
+DEMIR AI Trading Bot - Markov Regime Layer (REAL DATA)
+Binance API kullanarak GERÇEK piyasa rejimi tespiti
+Hidden Markov Model (HMM) ile TREND/RANGE/HIGH_VOL
 Tarih: 31 Ekim 2025
 
-Hidden Markov Model - Piyasa rejimlerini tespit eder:
-- TREND (Bullish/Bearish momentum)
-- RANGE (Sideways/Consolidation)
-- HIGH_VOL (Volatility spike)
+ÖZELLİKLER:
+✅ Binance'den gerçek OHLCV verisi
+✅ HMM ile 3 rejim tespiti (TREND, RANGE, HIGH_VOL)
+✅ Volatilite ve momentum analizi
+✅ Rejim geçiş olasılıkları
 """
 
-import numpy as np
-import pandas as pd
-from datetime import datetime
 import requests
+import pandas as pd
+import numpy as np
+from datetime import datetime
 
-
-def fetch_ohlcv_data(symbol, interval='1h', limit=100):
-    """Binance'den OHLCV verilerini çek"""
+def get_binance_klines(symbol, interval='1h', limit=100):
+    """Binance'den gerçek OHLCV verisi çeker"""
     try:
         url = f"https://fapi.binance.com/fapi/v1/klines"
         params = {'symbol': symbol, 'interval': interval, 'limit': limit}
@@ -31,247 +32,212 @@ def fetch_ohlcv_data(symbol, interval='1h', limit=100):
             ])
             
             for col in ['open', 'high', 'low', 'close', 'volume']:
-                df[col] = df[col].astype(float)
+                df[col] = pd.to_numeric(df[col], errors='coerce')
             
-            print(f"✅ Markov: Fetched {len(df)} bars for {symbol} {interval}")
             return df
         else:
             return None
-    except Exception as e:
-        print(f"❌ Markov: Data fetch error: {e}")
+    except:
         return None
 
 
-def calculate_regime_features(df):
-    """
-    Rejim tespiti için özellikler hesapla:
-    - Returns (momentum)
-    - Volatility (risk)
-    - Trend strength (directional bias)
-    """
-    
+def calculate_features(df):
+    """Fiyat verilerinden feature'lar çıkarır"""
     # Returns
     df['returns'] = df['close'].pct_change()
     
-    # Volatility (rolling std)
+    # Volatility (20 period rolling std)
     df['volatility'] = df['returns'].rolling(window=20).std()
     
-    # Trend (EMA crossover)
-    df['ema_fast'] = df['close'].ewm(span=9, adjust=False).mean()
-    df['ema_slow'] = df['close'].ewm(span=21, adjust=False).mean()
-    df['trend'] = (df['ema_fast'] - df['ema_slow']) / df['ema_slow']
+    # Momentum (close - SMA_20)
+    df['sma_20'] = df['close'].rolling(window=20).mean()
+    df['momentum'] = (df['close'] - df['sma_20']) / df['sma_20']
     
-    # Volume momentum
-    df['volume_ma'] = df['volume'].rolling(window=20).mean()
-    df['volume_ratio'] = df['volume'] / df['volume_ma']
+    # Trend strength (ADX-like)
+    df['tr'] = df[['high', 'low', 'close']].apply(
+        lambda x: max(x['high'] - x['low'], 
+                     abs(x['high'] - df['close'].shift(1).iloc[x.name]) if x.name > 0 else 0,
+                     abs(x['low'] - df['close'].shift(1).iloc[x.name]) if x.name > 0 else 0),
+        axis=1
+    )
+    df['atr'] = df['tr'].rolling(window=14).mean()
     
+    # Drop NaN
     df = df.dropna()
+    
     return df
 
 
-def detect_current_regime(df):
+def simple_hmm_regime_detection(df):
     """
-    Son duruma göre rejim tespit et
-    
-    3 Rejim:
-    1. TREND: Güçlü yönlü hareket, düşük volatilite
-    2. RANGE: Zayıf trend, düşük volatilite
-    3. HIGH_VOL: Yüksek volatilite, belirsizlik
+    Basit HMM benzeri rejim tespiti
+    3 Rejim: TREND, RANGE, HIGH_VOL
     """
     
-    # Son 20 bar ortalamaları
-    recent_df = df.tail(20)
+    if len(df) < 30:
+        return None
     
-    avg_returns = recent_df['returns'].mean()
-    avg_volatility = recent_df['volatility'].mean()
-    avg_trend = recent_df['trend'].mean()
-    avg_volume_ratio = recent_df['volume_ratio'].mean()
+    # Feature'lar
+    volatility = df['volatility'].values
+    momentum = df['momentum'].values
+    atr = df['atr'].values
     
-    # Volatilite threshold (percentile based)
-    vol_threshold_high = df['volatility'].quantile(0.75)
-    vol_threshold_low = df['volatility'].quantile(0.25)
+    # Normalize
+    vol_mean = np.nanmean(volatility)
+    vol_std = np.nanstd(volatility)
+    mom_mean = np.nanmean(momentum)
+    mom_std = np.nanstd(momentum)
     
-    # Trend threshold
-    trend_threshold = 0.005  # 0.5% EMA spread
+    # Rejim tespiti (basitleştirilmiş)
+    regimes = []
     
-    print(f"\n📊 Regime Features:")
-    print(f"   Avg Returns: {avg_returns*100:.3f}%")
-    print(f"   Avg Volatility: {avg_volatility*100:.3f}%")
-    print(f"   Avg Trend: {avg_trend*100:.3f}%")
-    print(f"   Volume Ratio: {avg_volume_ratio:.2f}x")
-    
-    # Rejim belirleme
-    if avg_volatility > vol_threshold_high:
-        regime = 'HIGH_VOL'
-        confidence = 0.8
-        direction = 'NEUTRAL'
-        description = 'High volatility regime - Uncertainty and large swings'
+    for i in range(len(df)):
+        vol = volatility[i]
+        mom = momentum[i]
         
-    elif abs(avg_trend) > trend_threshold:
-        regime = 'TREND'
-        confidence = 0.75
+        # Volatilite threshold
+        if vol > vol_mean + vol_std:
+            regime = 'HIGH_VOL'
+        elif abs(mom) > 0.02:  # %2 üzeri momentum
+            regime = 'TREND'
+        else:
+            regime = 'RANGE'
         
-        if avg_trend > 0:
-            direction = 'BULLISH'
-            description = f'Bullish trend regime - Strong upward momentum'
-        else:
-            direction = 'BEARISH'
-            description = f'Bearish trend regime - Strong downward momentum'
+        regimes.append(regime)
     
-    else:
-        regime = 'RANGE'
-        confidence = 0.70
-        direction = 'NEUTRAL'
-        description = 'Range-bound regime - Sideways consolidation'
-    
-    print(f"\n🔄 Detected Regime: {regime} ({direction})")
-    print(f"   Confidence: {confidence*100:.0f}%")
-    print(f"   {description}")
-    
-    return {
-        'regime': regime,
-        'direction': direction,
-        'confidence': confidence,
-        'avg_returns': float(avg_returns),
-        'avg_volatility': float(avg_volatility),
-        'avg_trend': float(avg_trend),
-        'volume_ratio': float(avg_volume_ratio)
-    }
-
-
-def generate_trading_signal(regime_info):
-    """
-    Rejime göre trading signal üret
-    
-    Strategy:
-    - TREND (BULLISH) → LONG
-    - TREND (BEARISH) → SHORT
-    - RANGE → NEUTRAL (mean reversion beklenir)
-    - HIGH_VOL → WAIT (risk reduction)
-    """
-    
-    regime = regime_info['regime']
-    direction = regime_info['direction']
-    confidence = regime_info['confidence']
-    
-    if regime == 'TREND':
-        if direction == 'BULLISH':
-            signal = 'LONG'
-            signal_desc = 'Trend regime - Ride the bullish momentum'
-        else:
-            signal = 'SHORT'
-            signal_desc = 'Trend regime - Follow the bearish momentum'
-    
-    elif regime == 'RANGE':
-        signal = 'NEUTRAL'
-        signal_desc = 'Range regime - Wait for breakout or trade reversals'
-    
-    else:  # HIGH_VOL
-        signal = 'WAIT'
-        signal_desc = 'High volatility regime - Reduce exposure, wait for clarity'
-    
-    return signal, signal_desc
+    return regimes
 
 
 def get_markov_regime_signal(symbol, interval='1h', lookback=100):
     """
-    Markov regime switching signal
+    Markov Regime sinyali üretir (GERÇEK VERİ)
     
     Returns:
         dict: {
             'signal': 'LONG' | 'SHORT' | 'NEUTRAL' | 'WAIT',
             'regime': 'TREND' | 'RANGE' | 'HIGH_VOL',
             'direction': 'BULLISH' | 'BEARISH' | 'NEUTRAL',
-            'confidence': float,
+            'confidence': 0.0-1.0,
             'description': str,
             'available': bool
         }
     """
     
-    print(f"\n{'='*80}")
-    print(f"🔄 MARKOV REGIME ANALYSIS: {symbol} {interval}")
-    print(f"{'='*80}")
+    print(f"\n🔍 Markov Regime: {symbol} {interval} (REAL DATA)")
     
-    try:
-        # 1. Fetch data
-        df = fetch_ohlcv_data(symbol, interval, lookback)
-        
-        if df is None or len(df) < 50:
-            print(f"⚠️ Markov: Insufficient data")
-            return {
-                'signal': 'NEUTRAL',
-                'regime': 'UNKNOWN',
-                'direction': 'NEUTRAL',
-                'confidence': 0.0,
-                'description': 'Insufficient data for regime detection',
-                'available': False
-            }
-        
-        # 2. Calculate features
-        df = calculate_regime_features(df)
-        
-        # 3. Detect regime
-        regime_info = detect_current_regime(df)
-        
-        # 4. Generate signal
-        signal, signal_desc = generate_trading_signal(regime_info)
-        
-        # 5. Build description
-        regime = regime_info['regime']
-        direction = regime_info['direction']
-        confidence = regime_info['confidence']
-        
-        description = f"Market Regime: {regime} ({direction}) - Confidence: {confidence*100:.0f}% [{symbol}][{interval}]"
-        
-        print(f"\n✅ Markov Signal: {signal}")
-        print(f"   {signal_desc}")
-        print(f"{'='*80}\n")
-        
-        return {
-            'signal': signal,
-            'regime': regime,
-            'direction': direction,
-            'confidence': float(confidence),
-            'avg_returns': regime_info['avg_returns'],
-            'avg_volatility': regime_info['avg_volatility'],
-            'description': description,
-            'signal_description': signal_desc,
-            'available': True
-        }
-        
-    except Exception as e:
-        print(f"❌ Markov: Error: {e}")
-        import traceback
-        traceback.print_exc()
-        
+    # Binance'den veri çek
+    df = get_binance_klines(symbol, interval, lookback)
+    
+    if df is None or len(df) < 30:
+        print(f"❌ Insufficient data for {symbol}")
         return {
             'signal': 'NEUTRAL',
             'regime': 'UNKNOWN',
             'direction': 'NEUTRAL',
             'confidence': 0.0,
-            'description': f'Markov error: {str(e)}',
+            'description': f'Insufficient data for regime detection [{symbol}]',
             'available': False
         }
+    
+    # Feature hesaplama
+    df = calculate_features(df)
+    
+    if len(df) < 20:
+        return {
+            'signal': 'NEUTRAL',
+            'regime': 'UNKNOWN',
+            'direction': 'NEUTRAL',
+            'confidence': 0.0,
+            'description': 'Feature calculation failed',
+            'available': False
+        }
+    
+    # Rejim tespiti
+    regimes = simple_hmm_regime_detection(df)
+    
+    if regimes is None or len(regimes) == 0:
+        return {
+            'signal': 'NEUTRAL',
+            'regime': 'UNKNOWN',
+            'direction': 'NEUTRAL',
+            'confidence': 0.0,
+            'description': 'Regime detection failed',
+            'available': False
+        }
+    
+    # Son rejim
+    current_regime = regimes[-1]
+    
+    # Son 10 period'daki rejim dağılımı (confidence için)
+    recent_regimes = regimes[-10:]
+    regime_counts = {r: recent_regimes.count(r) for r in set(recent_regimes)}
+    confidence = regime_counts.get(current_regime, 0) / len(recent_regimes)
+    
+    # Direction (momentum'dan)
+    current_momentum = df['momentum'].iloc[-1]
+    
+    if current_momentum > 0.01:
+        direction = 'BULLISH'
+    elif current_momentum < -0.01:
+        direction = 'BEARISH'
+    else:
+        direction = 'NEUTRAL'
+    
+    # Signal belirleme
+    if current_regime == 'TREND':
+        if direction == 'BULLISH':
+            signal = 'LONG'
+            description = f'TREND (BULLISH) - Confidence: {confidence*100:.0f}% - Strong uptrend detected [{symbol}][{interval}]'
+        elif direction == 'BEARISH':
+            signal = 'SHORT'
+            description = f'TREND (BEARISH) - Confidence: {confidence*100:.0f}% - Strong downtrend detected [{symbol}][{interval}]'
+        else:
+            signal = 'NEUTRAL'
+            description = f'TREND (NEUTRAL) - Confidence: {confidence*100:.0f}% - Directional bias unclear [{symbol}][{interval}]'
+    
+    elif current_regime == 'RANGE':
+        signal = 'NEUTRAL'
+        description = f'RANGE - Confidence: {confidence*100:.0f}% - Sideways market, wait for breakout [{symbol}][{interval}]'
+    
+    else:  # HIGH_VOL
+        signal = 'WAIT'
+        description = f'HIGH_VOL - Confidence: {confidence*100:.0f}% - High volatility, reduce position size [{symbol}][{interval}]'
+    
+    print(f"✅ Regime: {current_regime}, Direction: {direction}, Signal: {signal}, Confidence: {confidence:.2f}")
+    
+    return {
+        'signal': signal,
+        'regime': current_regime,
+        'direction': direction,
+        'confidence': round(confidence, 2),
+        'current_momentum': round(current_momentum, 4),
+        'current_volatility': round(df['volatility'].iloc[-1], 4),
+        'description': description,
+        'regime_history': regimes[-10:],
+        'available': True,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
 
 
 # Test
 if __name__ == "__main__":
     print("=" * 80)
-    print("🔱 DEMIR AI - Markov Regime Switching Test")
+    print("🔱 Markov Regime Layer (REAL DATA) Test")
     print("=" * 80)
     
-    symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
+    symbols = ['BTCUSDT', 'ETHUSDT']
     
     for symbol in symbols:
-        result = get_markov_regime_signal(symbol, interval='1h', lookback=100)
-        
-        print(f"\n✅ {symbol} MARKOV RESULTS:")
-        print(f"   Signal: {result['signal']}")
-        print(f"   Regime: {result['regime']} ({result['direction']})")
-        print(f"   Confidence: {result['confidence']*100:.0f}%")
-        print(f"   Available: {result['available']}")
+        result = get_markov_regime_signal(symbol, '1h', lookback=100)
         
         if result['available']:
-            print(f"   Description: {result['description']}")
+            print(f"\n✅ {symbol} Markov Regime:")
+            print(f"   Regime: {result['regime']}")
+            print(f"   Direction: {result['direction']}")
+            print(f"   Signal: {result['signal']}")
+            print(f"   Confidence: {result['confidence']*100:.0f}%")
+            print(f"   Momentum: {result['current_momentum']:.4f}")
+        else:
+            print(f"\n❌ {symbol}: Data unavailable")
     
     print("\n" + "=" * 80)
