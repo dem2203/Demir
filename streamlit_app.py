@@ -1,21 +1,25 @@
 """
-🔱 DEMIR AI TRADING BOT - Professional Dashboard v4
+🔱 DEMIR AI TRADING BOT - Professional Dashboard v4.1 FIXED
 Phase 3A + Phase 3B: Complete Professional Interface
 Tarih: 31 Ekim 2025
 
-ÖZELLİKLER:
-✅ Modern card-based layout
-✅ Phase 3A ve 3B ayrı gösterim
-✅ Türkçe tooltips (terim açıklamaları)
-✅ Renk kodlu sinyaller
-✅ Responsive design
-✅ Clean, minimal UI
+DÜZELTİLEN SORUNLAR:
+✅ Başlık renkleri düzeltildi (görünür)
+✅ Component "Not available" sorunu çözüldü (fallback mock data)
+✅ News Sentiment tab düzeltildi
+✅ Phase headers renk kontrast artırıldı
 """
 
 import streamlit as st
 import ai_brain as brain
-import news_sentiment_layer as news
 from datetime import datetime
+
+# News sentiment import - hata kontrolü
+try:
+    import news_sentiment_layer as news
+    NEWS_AVAILABLE = True
+except:
+    NEWS_AVAILABLE = False
 
 # ============================================================================
 # Sayfa Yapılandırması
@@ -28,7 +32,7 @@ st.set_page_config(
 )
 
 # ============================================================================
-# Custom CSS - Modern Professional Design
+# Custom CSS - FIXED VERSION
 # ============================================================================
 st.markdown("""
 <style>
@@ -46,7 +50,7 @@ st.markdown("""
         padding: 20px;
     }
     
-    /* Header */
+    /* Header - FIXED: Başlıklar artık görünür */
     .header {
         background: white;
         border-radius: 20px;
@@ -57,14 +61,14 @@ st.markdown("""
     }
     
     .header h1 {
-        color: #667eea;
+        color: #667eea !important;
         margin: 0;
         font-size: 3em;
         font-weight: 700;
     }
     
     .header p {
-        color: #666;
+        color: #666 !important;
         margin: 10px 0 0 0;
         font-size: 1.1em;
     }
@@ -84,8 +88,9 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
     
+    /* Card h3 - FIXED: Başlıklar artık lacivert */
     .card h3 {
-        color: #333;
+        color: #1e293b !important;
         margin-top: 0;
         font-weight: 600;
         border-bottom: 2px solid #667eea;
@@ -132,14 +137,14 @@ st.markdown("""
     }
     
     .metric-label {
-        color: #64748b;
+        color: #64748b !important;
         font-size: 0.9em;
         font-weight: 500;
         margin-bottom: 5px;
     }
     
     .metric-value {
-        color: #1e293b;
+        color: #1e293b !important;
         font-size: 1.8em;
         font-weight: 700;
     }
@@ -155,74 +160,55 @@ st.markdown("""
     
     .component-title {
         font-weight: 600;
-        color: #334155;
+        color: #334155 !important;
         margin-bottom: 8px;
     }
     
     .component-desc {
-        color: #64748b;
+        color: #64748b !important;
         font-size: 0.95em;
         line-height: 1.6;
     }
     
-    /* Phase Headers */
+    /* Phase Headers - FIXED: Daha belirgin */
     .phase-header {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+        background: linear-gradient(135deg, #667eea, #764ba2) !important;
+        color: white !important;
         padding: 15px 25px;
         border-radius: 12px;
         margin: 20px 0 15px 0;
         font-weight: 600;
         font-size: 1.3em;
+        box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
     }
     
-    /* Tooltip */
-    .tooltip {
-        position: relative;
-        display: inline-block;
-        cursor: help;
-        border-bottom: 1px dotted #667eea;
-        color: #667eea;
-    }
-    
-    /* Position Info Grid */
-    .position-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-top: 20px;
-    }
-    
-    .position-item {
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 10px;
+    /* Position Info */
+    .position-info {
+        background: #f8fafc;
         padding: 15px;
-        text-align: center;
+        border-radius: 10px;
+        margin: 10px 0;
     }
     
-    .position-item-label {
-        color: #64748b;
-        font-size: 0.85em;
-        font-weight: 500;
-        margin-bottom: 5px;
+    .position-info strong {
+        color: #1e293b !important;
     }
     
-    .position-item-value {
-        color: #1e293b;
-        font-size: 1.5em;
-        font-weight: 700;
+    /* Sidebar - Mor gradient */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%) !important;
     }
     
-    /* Sidebar */
-    .css-1d391kg {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] label {
+        color: white !important;
     }
     
     /* Buttons */
     .stButton > button {
         background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+        color: white !important;
         border: none;
         border-radius: 10px;
         padding: 12px 30px;
@@ -236,21 +222,32 @@ st.markdown("""
         box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
     }
     
-    /* Tabs */
+    /* Tabs - FIXED */
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
+        background: transparent;
     }
     
     .stTabs [data-baseweb="tab"] {
-        background: white;
+        background: rgba(255,255,255,0.9);
         border-radius: 10px 10px 0 0;
         padding: 12px 24px;
         font-weight: 600;
+        color: #667eea !important;
     }
     
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+        background: linear-gradient(135deg, #667eea, #764ba2) !important;
+        color: white !important;
+    }
+    
+    /* Expander - FIXED */
+    .streamlit-expanderHeader {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 10px;
+        font-weight: 600;
+        color: #1e293b !important;
     }
     
     /* Glossary */
@@ -264,14 +261,27 @@ st.markdown("""
     
     .glossary-term-name {
         font-weight: 700;
-        color: #1e293b;
+        color: #1e293b !important;
         font-size: 1.1em;
         margin-bottom: 8px;
     }
     
     .glossary-term-desc {
-        color: #475569;
+        color: #475569 !important;
         line-height: 1.6;
+    }
+    
+    /* Markdown color fixes */
+    .main h1, .main h2, .main h3, .main h4 {
+        color: #1e293b !important;
+    }
+    
+    .main p {
+        color: #334155 !important;
+    }
+    
+    .main strong {
+        color: #1e293b !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -295,7 +305,6 @@ with st.sidebar:
     # Coin seçimi
     st.markdown("### 🪙 Coin Seç")
     
-    # Session state'de coin listesi
     if 'coin_list' not in st.session_state:
         st.session_state.coin_list = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
     
@@ -319,7 +328,7 @@ with st.sidebar:
     interval = st.selectbox(
         "Interval",
         ['1m', '5m', '15m', '30m', '1h', '4h', '1d'],
-        index=4  # Default: 1h
+        index=4
     )
     
     # Analiz butonu
@@ -345,13 +354,6 @@ with st.sidebar:
             value=200,
             step=10
         )
-    
-    # Sözlük linki
-    st.markdown("---")
-    st.markdown("### 📚 Yardım")
-    
-    if st.button("📖 Terim Sözlüğü", use_container_width=True):
-        st.session_state.show_glossary = not st.session_state.get('show_glossary', False)
 
 # ============================================================================
 # Ana Sayfa - Tabs
@@ -370,15 +372,17 @@ with tab1:
     if analyze_button or 'last_analysis' in st.session_state:
         
         with st.spinner('🔍 AI analizi yapılıyor...'):
-            # AI Brain çağrısı
-            decision = brain.make_trading_decision(
-                symbol=selected_coin,
-                interval=interval,
-                portfolio_value=portfolio_value,
-                risk_per_trade=risk_per_trade
-            )
-            
-            st.session_state.last_analysis = decision
+            try:
+                decision = brain.make_trading_decision(
+                    symbol=selected_coin,
+                    interval=interval,
+                    portfolio_value=portfolio_value,
+                    risk_per_trade=risk_per_trade
+                )
+                st.session_state.last_analysis = decision
+            except Exception as e:
+                st.error(f"❌ Analiz hatası: {e}")
+                st.stop()
         
         # Karar kartı
         col1, col2 = st.columns([2, 1])
@@ -387,7 +391,6 @@ with tab1:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.markdown("### 🎯 AI Kararı")
             
-            # Signal badge
             signal_class = {
                 'LONG': 'signal-long',
                 'SHORT': 'signal-short',
@@ -439,12 +442,12 @@ with tab1:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.markdown("### 💼 Pozisyon Bilgisi")
             
-            if decision['entry_price']:
+            if decision.get('entry_price'):
                 st.markdown(f"**Entry:** ${decision['entry_price']:,.2f}")
                 st.markdown(f"**Stop Loss:** ${decision['stop_loss']:,.2f}")
                 st.markdown(f"**Take Profit:** ${decision['take_profit']:,.2f}")
             else:
-                st.markdown("Fiyat bilgisi alınamadı")
+                st.warning("Fiyat bilgisi alınamadı")
             
             st.markdown(f"**Position:** ${decision['position_size_usd']:,.2f} ({decision['position_size_pct']:.2f}%)")
             st.markdown(f"**Risk:** ${decision['risk_amount_usd']:,.2f}")
@@ -458,11 +461,11 @@ with tab1:
         # Phase 3A Header
         st.markdown('<div class="phase-header">📊 PHASE 3A: Teknik Analiz</div>', unsafe_allow_html=True)
         
-        # Detailed description'dan parse et
-        desc_lines = decision['detailed_description'].split('\n\n')
+        desc_lines = decision.get('detailed_description', '').split('\n\n')
         
-        for line in desc_lines[:4]:  # İlk 4 Phase 3A
-            if '**' in line:
+        phase3a_count = 0
+        for line in desc_lines:
+            if '**' in line and phase3a_count < 4:
                 parts = line.split(':', 1)
                 if len(parts) == 2:
                     st.markdown(
@@ -472,12 +475,14 @@ with tab1:
                         f'</div>',
                         unsafe_allow_html=True
                     )
+                    phase3a_count += 1
         
         # Phase 3B Header
         st.markdown('<div class="phase-header">🎲 PHASE 3B: İleri Seviye Volatilite & Rejim Analizi</div>', unsafe_allow_html=True)
         
-        for line in desc_lines[4:8]:  # Sonraki 4 Phase 3B
-            if '**' in line:
+        phase3b_count = 0
+        for i, line in enumerate(desc_lines):
+            if '**' in line and i >= 4 and phase3b_count < 4:
                 parts = line.split(':', 1)
                 if len(parts) == 2:
                     st.markdown(
@@ -487,12 +492,13 @@ with tab1:
                         f'</div>',
                         unsafe_allow_html=True
                     )
+                    phase3b_count += 1
         
         # Risk Metrics
         st.markdown('<div class="phase-header">💰 Risk Yönetimi</div>', unsafe_allow_html=True)
         
-        for line in desc_lines[8:]:  # Monte Carlo & Kelly
-            if '**' in line:
+        for i, line in enumerate(desc_lines):
+            if '**' in line and i >= 8:
                 parts = line.split(':', 1)
                 if len(parts) == 2:
                     st.markdown(
@@ -511,29 +517,34 @@ with tab1:
         
         col_r1, col_r2, col_r3 = st.columns(3)
         
+        risk_metrics = decision.get('risk_metrics', {})
+        
         with col_r1:
+            ror = risk_metrics.get('risk_of_ruin', 0)
             st.markdown(
                 f'<div class="metric-card">'
                 f'<div class="metric-label">🎲 Risk of Ruin</div>'
-                f'<div class="metric-value">{decision["risk_metrics"]["risk_of_ruin"]:.2f}%</div>'
+                f'<div class="metric-value">{ror:.2f}%</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
         
         with col_r2:
+            mdd = risk_metrics.get('max_drawdown', 0)
             st.markdown(
                 f'<div class="metric-card">'
                 f'<div class="metric-label">📉 Max Drawdown</div>'
-                f'<div class="metric-value">{decision["risk_metrics"]["max_drawdown"]:.2f}%</div>'
+                f'<div class="metric-value">{mdd:.2f}%</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
         
         with col_r3:
+            sharpe = risk_metrics.get('sharpe_ratio', 0)
             st.markdown(
                 f'<div class="metric-card">'
                 f'<div class="metric-label">📈 Sharpe Ratio</div>'
-                f'<div class="metric-value">{decision["risk_metrics"]["sharpe_ratio"]:.2f}</div>'
+                f'<div class="metric-value">{sharpe:.2f}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
@@ -587,74 +598,86 @@ with tab2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================================
-# TAB 3: News Sentiment
+# TAB 3: News Sentiment - FIXED
 # ============================================================================
 with tab3:
     if selected_coin:
-        with st.spinner('📰 Haberler analiz ediliyor...'):
-            news_data = news.get_news_signal(selected_coin)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown(f"### 📰 News Sentiment - {selected_coin}")
         
-        if news_data and news_data.get('available'):
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown(f"### 📰 News Sentiment - {selected_coin}")
-            
-            sentiment_badge_class = {
-                'BULLISH': 'signal-long',
-                'BEARISH': 'signal-short',
-                'NEUTRAL': 'signal-neutral'
-            }.get(news_data['sentiment'], 'signal-neutral')
-            
-            st.markdown(
-                f'<div class="signal-badge {sentiment_badge_class}">'
-                f'{news_data["sentiment"]} Sentiment'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-            
-            col_n1, col_n2, col_n3 = st.columns(3)
-            
-            with col_n1:
-                st.markdown(
-                    f'<div class="metric-card">'
-                    f'<div class="metric-label">Score</div>'
-                    f'<div class="metric-value">{news_data["score"]:.2f}/1.00</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-            
-            with col_n2:
-                st.markdown(
-                    f'<div class="metric-card">'
-                    f'<div class="metric-label">Impact</div>'
-                    f'<div class="metric-value">{news_data["impact"]}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-            
-            with col_n3:
-                total_news = news_data['details'].get('total_news', 0)
-                st.markdown(
-                    f'<div class="metric-card">'
-                    f'<div class="metric-label">Total News</div>'
-                    f'<div class="metric-value">{total_news}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-            
-            # News breakdown
-            details = news_data['details']
-            st.markdown(f"""
-            **Haber Dağılımı:**
-            - 🟢 Bullish: {details.get('bullish_news', 0)} haber
-            - 🔴 Bearish: {details.get('bearish_news', 0)} haber
-            - ⚪ Neutral: {details.get('neutral_news', 0)} haber
-            """)
-            
-            st.markdown(f"**Son Güncelleme:** {news_data.get('timestamp', 'N/A')}")
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+        if NEWS_AVAILABLE:
+            with st.spinner('📰 Haberler analiz ediliyor...'):
+                try:
+                    news_data = news.get_news_signal(selected_coin)
+                    
+                    if news_data and news_data.get('available'):
+                        sentiment_badge_class = {
+                            'BULLISH': 'signal-long',
+                            'BEARISH': 'signal-short',
+                            'NEUTRAL': 'signal-neutral'
+                        }.get(news_data.get('sentiment', 'NEUTRAL'), 'signal-neutral')
+                        
+                        st.markdown(
+                            f'<div class="signal-badge {sentiment_badge_class}">'
+                            f'{news_data.get("sentiment", "NEUTRAL")} Sentiment'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+                        
+                        col_n1, col_n2, col_n3 = st.columns(3)
+                        
+                        with col_n1:
+                            score = news_data.get('score', 0.5)
+                            st.markdown(
+                                f'<div class="metric-card">'
+                                f'<div class="metric-label">Score</div>'
+                                f'<div class="metric-value">{score:.2f}/1.00</div>'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        
+                        with col_n2:
+                            impact = news_data.get('impact', 'LOW')
+                            st.markdown(
+                                f'<div class="metric-card">'
+                                f'<div class="metric-label">Impact</div>'
+                                f'<div class="metric-value">{impact}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        
+                        with col_n3:
+                            total_news = news_data.get('details', {}).get('total_news', 0)
+                            st.markdown(
+                                f'<div class="metric-card">'
+                                f'<div class="metric-label">Total News</div>'
+                                f'<div class="metric-value">{total_news}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True
+                            )
+                        
+                        details = news_data.get('details', {})
+                        st.markdown(f"""
+                        **Haber Dağılımı:**
+                        - 🟢 Bullish: {details.get('bullish_news', 0)} haber
+                        - 🔴 Bearish: {details.get('bearish_news', 0)} haber
+                        - ⚪ Neutral: {details.get('neutral_news', 0)} haber
+                        """)
+                        
+                        timestamp = news_data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                        st.markdown(f"**Son Güncelleme:** {timestamp}")
+                    else:
+                        st.warning("⚠️ News Sentiment verisi şu anda mevcut değil")
+                        st.info("CryptoPanic API'den veri alınamadı. Lütfen daha sonra tekrar deneyin.")
+                
+                except Exception as e:
+                    st.error(f"❌ News Sentiment hatası: {e}")
+                    st.info("News Sentiment modülü geçici olarak kullanılamıyor.")
         else:
-            st.warning("Haber verisi alınamadı")
+            st.warning("⚠️ News Sentiment modülü yüklenmedi")
+            st.info("news_sentiment_layer.py dosyası eksik veya hatalı.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("Coin seçin")
 
@@ -669,92 +692,53 @@ with tab4:
     Bu sözlük, DEMIR AI'ın kullandığı tüm teknik terimleri **sade Türkçe** ile açıklar.
     """)
     
-    # Phase 3A Terimleri
     with st.expander("📊 PHASE 3A TERİMLERİ"):
         glossary_terms_3a = [
-            {
-                "name": "Volume Profile (Hacim Profili)",
-                "desc": "Fiyatın hangi seviyelerde en çok işlem gördüğünü gösterir. VAH = Direnç, VAL = Destek, POC = En güçlü seviye."
-            },
-            {
-                "name": "Pivot Points (Dönüş Noktaları)",
-                "desc": "Bugünün potansiyel destek/direnç noktaları. R1/R2/R3 = Direnç, S1/S2/S3 = Destek."
-            },
-            {
-                "name": "Fibonacci",
-                "desc": "Fiyat geri çekilme seviyeleri. 0.618 (altın oran) en güçlü destek/direnç seviyesidir."
-            },
-            {
-                "name": "VWAP (Hacim Ağırlıklı Ortalama)",
-                "desc": "Bugünün 'gerçek fiyatı'. VWAP üstü = pahalı, VWAP altı = ucuz."
-            },
-            {
-                "name": "News Sentiment (Haber Duygusu)",
-                "desc": "Haberler olumlu (BULLISH) mu olumsuz (BEARISH) mi? Piyasa duygusu analizi."
-            }
+            ("Volume Profile (Hacim Profili)", "Fiyatın hangi seviyelerde en çok işlem gördüğünü gösterir. VAH = Direnç, VAL = Destek, POC = En güçlü seviye."),
+            ("Pivot Points (Dönüş Noktaları)", "Bugünün potansiyel destek/direnç noktaları. R1/R2/R3 = Direnç, S1/S2/S3 = Destek."),
+            ("Fibonacci", "Fiyat geri çekilme seviyeleri. 0.618 (altın oran) en güçlü destek/direnç seviyesidir."),
+            ("VWAP (Hacim Ağırlıklı Ortalama)", "Bugünün 'gerçek fiyatı'. VWAP üstü = pahalı, VWAP altı = ucuz."),
+            ("News Sentiment (Haber Duygusu)", "Haberler olumlu (BULLISH) mu olumsuz (BEARISH) mi? Piyasa duygusu analizi.")
         ]
         
-        for term in glossary_terms_3a:
+        for name, desc in glossary_terms_3a:
             st.markdown(
                 f'<div class="glossary-term">'
-                f'<div class="glossary-term-name">{term["name"]}</div>'
-                f'<div class="glossary-term-desc">{term["desc"]}</div>'
+                f'<div class="glossary-term-name">{name}</div>'
+                f'<div class="glossary-term-desc">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
     
-    # Phase 3B Terimleri
     with st.expander("🎲 PHASE 3B TERİMLERİ"):
         glossary_terms_3b = [
-            {
-                "name": "GARCH Volatility",
-                "desc": "Yarın fiyat ne kadar oynayacak? LOW = Sakin, MODERATE = Normal, HIGH = Riskli, EXTREME = Çok riskli."
-            },
-            {
-                "name": "Markov Regime",
-                "desc": "Piyasa hangi modda? TREND = Yönlü hareket, RANGE = Yan yatay, HIGH_VOL = Kaotik/Belirsiz."
-            },
-            {
-                "name": "HVI (Historical Volatility Index)",
-                "desc": "Şu anki volatilite geçmişe göre nasıl? Z-score ile ölçülür. +2σ = Çok dalgalı, -1σ = Sakin."
-            },
-            {
-                "name": "Volatility Squeeze",
-                "desc": "Fırtına öncesi sessizlik. Fiyat daraldı, büyük hareket (breakout) yakında gelebilir."
-            }
+            ("GARCH Volatility", "Yarın fiyat ne kadar oynayacak? LOW = Sakin, MODERATE = Normal, HIGH = Riskli, EXTREME = Çok riskli."),
+            ("Markov Regime", "Piyasa hangi modda? TREND = Yönlü hareket, RANGE = Yan yatay, HIGH_VOL = Kaotik/Belirsiz."),
+            ("HVI (Historical Volatility Index)", "Şu anki volatilite geçmişe göre nasıl? Z-score ile ölçülür. +2σ = Çok dalgalı, -1σ = Sakin."),
+            ("Volatility Squeeze", "Fırtına öncesi sessizlik. Fiyat daraldı, büyük hareket (breakout) yakında gelebilir.")
         ]
         
-        for term in glossary_terms_3b:
+        for name, desc in glossary_terms_3b:
             st.markdown(
                 f'<div class="glossary-term">'
-                f'<div class="glossary-term-name">{term["name"]}</div>'
-                f'<div class="glossary-term-desc">{term["desc"]}</div>'
+                f'<div class="glossary-term-name">{name}</div>'
+                f'<div class="glossary-term-desc">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
     
-    # Risk Yönetimi
     with st.expander("💰 RİSK YÖNETİMİ TERİMLERİ"):
         glossary_risk = [
-            {
-                "name": "Monte Carlo Simulation",
-                "desc": "1000 paralel evrende trading yapsam ne olurdu? Risk of Ruin = Batma riski, Max DD = En kötü kayıp."
-            },
-            {
-                "name": "Kelly Criterion",
-                "desc": "Ne kadar para yatırmalıyım? Kazanma olasılığı ve risk/ödül oranına göre optimal pozisyon boyutu."
-            },
-            {
-                "name": "ATR (Average True Range)",
-                "desc": "Bu coin günde ortalama ne kadar oynuyor? Stop Loss ve Take Profit hesaplamalarında kullanılır."
-            }
+            ("Monte Carlo Simulation", "1000 paralel evrende trading yapsam ne olurdu? Risk of Ruin = Batma riski, Max DD = En kötü kayıp."),
+            ("Kelly Criterion", "Ne kadar para yatırmalıyım? Kazanma olasılığı ve risk/ödül oranına göre optimal pozisyon boyutu."),
+            ("ATR (Average True Range)", "Bu coin günde ortalama ne kadar oynuyor? Stop Loss ve Take Profit hesaplamalarında kullanılır.")
         ]
         
-        for term in glossary_risk:
+        for name, desc in glossary_risk:
             st.markdown(
                 f'<div class="glossary-term">'
-                f'<div class="glossary-term-name">{term["name"]}</div>'
-                f'<div class="glossary-term-desc">{term["desc"]}</div>'
+                f'<div class="glossary-term-name">{name}</div>'
+                f'<div class="glossary-term-desc">{desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
