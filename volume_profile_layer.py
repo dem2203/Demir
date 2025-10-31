@@ -1,345 +1,308 @@
 """
-DEMIR AI Trading Bot - Volume Profile Layer
-Phase 3A: Advanced Market Structure Analysis
+DEMIR AI Trading Bot - Volume Profile Layer (REAL DATA)
+Binance API kullanarak GERÇEK hacim profili hesaplar
 Tarih: 31 Ekim 2025
 
-Volume Profile (VPVR - Volume Profile Visible Range):
-- PoC (Point of Control): En yüksek volume seviyesi
-- VAH (Value Area High): %70 volume'ün üst sınırı
-- VAL (Value Area Low): %70 volume'ün alt sınırı
-- HVN (High Volume Nodes): Destek/Direnç seviyeleri
-- LVN (Low Volume Nodes): Breakout potansiyeli
-
-Kullanım Senaryoları:
-1. Price at PoC → Yüksek likidite, reversal beklenir
-2. Price at VAH → Resistance zone, short fırsatı
-3. Price at VAL → Support zone, long fırsatı
-4. Price in LVN → Hızlı hareket beklenir (breakout/breakdown)
+ÖZELLİKLER:
+✅ Binance'den gerçek OHLCV verisi
+✅ Volume dağılımı hesaplama
+✅ POC, VAH, VAL, HVN, LVN tespiti
+✅ Gerçek destek/direnç seviyeleri
 """
 
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from binance.client import Client
 import requests
-import os
+import pandas as pd
+import numpy as np
+from datetime import datetime
 
-# Binance API (optional - public data yeterli)
-BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
-BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET', '')
-
-try:
-    binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET) if BINANCE_API_KEY else None
-except:
-    binance_client = None
-
-
-def get_ohlcv_data(symbol, interval='1h', lookback=100):
+def get_binance_klines(symbol, interval='1h', limit=100):
     """
-    Binance'den OHLCV (fiyat + volume) data çeker
-    
-    Args:
-        symbol (str): BTCUSDT, ETHUSDT, etc.
-        interval (str): 1h, 4h, 1d
-        lookback (int): Kaç mum geriye gidilecek
-    
-    Returns:
-        pd.DataFrame: [timestamp, open, high, low, close, volume]
+    Binance'den gerçek OHLCV verisi çeker
     """
     try:
-        # Interval mapping
-        interval_map = {
-            '1h': Client.KLINE_INTERVAL_1HOUR if binance_client else '1h',
-            '4h': Client.KLINE_INTERVAL_4HOUR if binance_client else '4h',
-            '1d': Client.KLINE_INTERVAL_1DAY if binance_client else '1d'
+        url = f"https://fapi.binance.com/fapi/v1/klines"
+        params = {
+            'symbol': symbol,
+            'interval': interval,
+            'limit': limit
         }
         
-        if binance_client:
-            # Authenticated API
-            klines = binance_client.futures_klines(
-                symbol=symbol,
-                interval=interval_map[interval],
-                limit=lookback
-            )
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            df = pd.DataFrame(data, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_volume', 'trades', 'taker_buy_base',
+                'taker_buy_quote', 'ignore'
+            ])
+            
+            # Convert to numeric
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            return df
         else:
-            # Public API fallback
-            url = f"https://fapi.binance.com/fapi/v1/klines"
-            params = {
-                'symbol': symbol,
-                'interval': interval,
-                'limit': lookback
-            }
-            response = requests.get(url, params=params, timeout=10)
-            if response.status_code == 200:
-                klines = response.json()
-            else:
-                return None
-        
-        # Parse data
-        df = pd.DataFrame(klines, columns=[
-            'timestamp', 'open', 'high', 'low', 'close', 'volume',
-            'close_time', 'quote_volume', 'trades', 'taker_buy_base',
-            'taker_buy_quote', 'ignore'
-        ])
-        
-        # Convert to numeric
-        df['open'] = df['open'].astype(float)
-        df['high'] = df['high'].astype(float)
-        df['low'] = df['low'].astype(float)
-        df['close'] = df['close'].astype(float)
-        df['volume'] = df['volume'].astype(float)
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        
-        return df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+            print(f"❌ Binance API error: {response.status_code}")
+            return None
     
     except Exception as e:
-        print(f"❌ OHLCV data error: {e}")
+        print(f"❌ Binance connection error: {e}")
         return None
 
 
-def calculate_volume_profile(symbol, interval='1h', lookback=100, price_bins=50):
+def calculate_volume_profile(df, num_bins=20):
     """
-    Volume Profile (VPVR) hesaplar
-    
-    Args:
-        symbol (str): BTCUSDT, ETHUSDT
-        interval (str): Timeframe (1h, 4h, 1d)
-        lookback (int): Kaç mum analiz edilecek
-        price_bins (int): Fiyat aralıklarının sayısı (default: 50)
+    OHLCV verisinden Volume Profile hesaplar
     
     Returns:
         dict: {
-            'poc': float,           # Point of Control (en yüksek volume)
-            'vah': float,           # Value Area High (%70 volume üst sınır)
-            'val': float,           # Value Area Low (%70 volume alt sınır)
-            'hvn_zones': list,      # High Volume Nodes (destek/direnç)
-            'lvn_zones': list,      # Low Volume Nodes (breakout zones)
-            'price_levels': list,   # Tüm fiyat seviyeleri
-            'volume_dist': list     # Her fiyat seviyesindeki volume
+            'poc_price': float,
+            'vah_price': float,
+            'val_price': float,
+            'volume_by_price': dict
         }
     """
     
-    # 1. OHLCV data çek
-    df = get_ohlcv_data(symbol, interval, lookback)
-    if df is None or df.empty:
+    if df is None or len(df) == 0:
         return None
     
-    # 2. Fiyat aralığı belirle
+    # Fiyat aralığı
     price_min = df['low'].min()
     price_max = df['high'].max()
     
-    # Fiyat binleri oluştur (50 adet)
-    price_bins_array = np.linspace(price_min, price_max, price_bins + 1)
-    price_levels = (price_bins_array[:-1] + price_bins_array[1:]) / 2  # Orta noktalar
+    # Fiyat bin'leri oluştur
+    bins = np.linspace(price_min, price_max, num_bins + 1)
+    bin_centers = (bins[:-1] + bins[1:]) / 2
     
-    # 3. Her fiyat seviyesinde volume hesapla
-    volume_at_price = np.zeros(price_bins)
+    # Her bin için hacim topla
+    volume_by_bin = np.zeros(num_bins)
     
     for idx, row in df.iterrows():
-        # Her mum için: open, high, low, close arasındaki volume dağılımı
-        candle_range = row['high'] - row['low']
-        if candle_range == 0:
-            continue
+        # Her mum için fiyat aralığındaki bin'lere hacim dağıt
+        low, high, volume = row['low'], row['high'], row['volume']
         
-        # Volume'ü mum içindeki fiyat seviyelerine dağıt
-        for i, price_level in enumerate(price_levels):
-            if row['low'] <= price_level <= row['high']:
-                # Triangular distribution (mumun ortasına daha fazla volume)
-                distance_from_center = abs(price_level - (row['open'] + row['close']) / 2)
-                weight = max(0, 1 - (distance_from_center / (candle_range / 2)))
-                volume_at_price[i] += row['volume'] * weight
+        # Bu mumun hangi bin'lere düştüğünü bul
+        for i in range(num_bins):
+            bin_low = bins[i]
+            bin_high = bins[i + 1]
+            
+            # Overlap kontrolü
+            if low <= bin_high and high >= bin_low:
+                # Overlap oranına göre hacim dağıt
+                overlap_low = max(low, bin_low)
+                overlap_high = min(high, bin_high)
+                overlap_ratio = (overlap_high - overlap_low) / (high - low) if (high - low) > 0 else 1.0
+                
+                volume_by_bin[i] += volume * overlap_ratio
     
-    # 4. PoC (Point of Control) - En yüksek volume seviyesi
-    poc_index = np.argmax(volume_at_price)
-    poc = price_levels[poc_index]
+    # POC (Point of Control) - En yüksek hacimli fiyat
+    poc_idx = np.argmax(volume_by_bin)
+    poc_price = bin_centers[poc_idx]
     
-    # 5. Value Area (VA) - %70 volume'ün bulunduğu aralık
-    total_volume = volume_at_price.sum()
-    target_volume = total_volume * 0.70
+    # Value Area (toplam hacmin %70'i)
+    total_volume = volume_by_bin.sum()
+    value_area_volume = total_volume * 0.70
     
-    # PoC'tan başlayarak yukarı/aşağı genişle
-    cumulative_volume = volume_at_price[poc_index]
-    upper_idx = poc_index
-    lower_idx = poc_index
+    # POC'tan başlayarak value area genişlet
+    value_area_bins = [poc_idx]
+    current_volume = volume_by_bin[poc_idx]
     
-    while cumulative_volume < target_volume:
-        # Yukarı ve aşağı volume karşılaştır
-        upper_volume = volume_at_price[upper_idx + 1] if upper_idx + 1 < len(volume_at_price) else 0
-        lower_volume = volume_at_price[lower_idx - 1] if lower_idx - 1 >= 0 else 0
+    left_idx = poc_idx - 1
+    right_idx = poc_idx + 1
+    
+    while current_volume < value_area_volume:
+        left_vol = volume_by_bin[left_idx] if left_idx >= 0 else 0
+        right_vol = volume_by_bin[right_idx] if right_idx < num_bins else 0
         
-        if upper_volume > lower_volume:
-            upper_idx += 1
-            cumulative_volume += upper_volume
-        elif lower_volume > 0:
-            lower_idx -= 1
-            cumulative_volume += lower_volume
+        if left_vol == 0 and right_vol == 0:
+            break
+        
+        if left_vol >= right_vol and left_idx >= 0:
+            value_area_bins.append(left_idx)
+            current_volume += left_vol
+            left_idx -= 1
+        elif right_idx < num_bins:
+            value_area_bins.append(right_idx)
+            current_volume += right_vol
+            right_idx += 1
         else:
             break
     
-    vah = price_levels[upper_idx]
-    val = price_levels[lower_idx]
+    # VAH ve VAL
+    value_area_bins.sort()
+    vah_price = bin_centers[value_area_bins[-1]]  # Value Area High
+    val_price = bin_centers[value_area_bins[0]]   # Value Area Low
     
-    # 6. High Volume Nodes (HVN) - Volume > %80 of max volume
-    hvn_threshold = volume_at_price.max() * 0.80
-    hvn_zones = []
-    for i, vol in enumerate(volume_at_price):
-        if vol >= hvn_threshold:
-            hvn_zones.append(price_levels[i])
+    # HVN (High Volume Node) ve LVN (Low Volume Node)
+    volume_threshold_hvn = total_volume / num_bins * 1.5  # 1.5x ortalama
+    volume_threshold_lvn = total_volume / num_bins * 0.5  # 0.5x ortalama
     
-    # 7. Low Volume Nodes (LVN) - Volume < %20 of max volume
-    lvn_threshold = volume_at_price.max() * 0.20
-    lvn_zones = []
-    for i, vol in enumerate(volume_at_price):
-        if vol <= lvn_threshold and vol > 0:
-            lvn_zones.append(price_levels[i])
+    hvn_prices = [bin_centers[i] for i in range(num_bins) if volume_by_bin[i] > volume_threshold_hvn]
+    lvn_prices = [bin_centers[i] for i in range(num_bins) if volume_by_bin[i] < volume_threshold_lvn]
+    
+    # Volume by price dict
+    volume_by_price = {round(bin_centers[i], 2): round(volume_by_bin[i], 2) for i in range(num_bins)}
     
     return {
-        'symbol': symbol,
-        'interval': interval,
-        'lookback': lookback,
-        'poc': round(poc, 2),
-        'vah': round(vah, 2),
-        'val': round(val, 2),
-        'hvn_zones': [round(x, 2) for x in hvn_zones],
-        'lvn_zones': [round(x, 2) for x in lvn_zones],
-        'price_levels': price_levels.tolist(),
-        'volume_dist': volume_at_price.tolist(),
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        'poc_price': round(poc_price, 2),
+        'vah_price': round(vah_price, 2),
+        'val_price': round(val_price, 2),
+        'hvn_prices': [round(p, 2) for p in hvn_prices],
+        'lvn_prices': [round(p, 2) for p in lvn_prices],
+        'volume_by_price': volume_by_price,
+        'total_volume': round(total_volume, 2)
     }
 
 
-def get_volume_profile_signal(symbol, interval='1h', current_price=None):
+def get_volume_profile_signal(symbol, interval='1h', lookback=100):
     """
-    Mevcut fiyata göre volume profile sinyali üretir
-    
-    Args:
-        symbol (str): BTCUSDT, ETHUSDT
-        interval (str): Timeframe
-        current_price (float): Güncel fiyat (None ise API'den çekilir)
+    Volume Profile sinyali üretir (GERÇEK VERİ)
     
     Returns:
         dict: {
             'signal': 'LONG' | 'SHORT' | 'NEUTRAL',
+            'zone': 'POC' | 'VAH' | 'VAL' | 'HVN' | 'LVN' | 'UNKNOWN',
             'strength': 0.0-1.0,
-            'zone': 'POC' | 'VAH' | 'VAL' | 'HVN' | 'LVN' | 'OUTSIDE',
-            'description': str
+            'description': str,
+            'available': bool
         }
     """
     
-    vp = calculate_volume_profile(symbol, interval)
-    if not vp:
-        return None
+    print(f"\n🔍 Volume Profile: {symbol} {interval} (REAL DATA)")
     
-    # Current price al
-    if current_price is None:
-        try:
-            url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={symbol}"
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                current_price = float(response.json()['price'])
-        except:
-            return None
+    # Binance'den veri çek
+    df = get_binance_klines(symbol, interval, lookback)
     
-    # Fiyatın hangi zoneda olduğunu belirle
-    poc = vp['poc']
-    vah = vp['vah']
-    val = vp['val']
+    if df is None or len(df) == 0:
+        print(f"❌ No data available for {symbol}")
+        return {
+            'signal': 'NEUTRAL',
+            'zone': 'UNKNOWN',
+            'strength': 0.0,
+            'description': f'No volume profile data available [{symbol}]',
+            'available': False
+        }
     
-    # Zone detection
-    zone = 'OUTSIDE'
-    signal = 'NEUTRAL'
-    strength = 0.5
-    description = ""
+    # Volume Profile hesapla
+    vp = calculate_volume_profile(df)
     
-    # Price at PoC
-    if abs(current_price - poc) / poc < 0.01:  # %1 tolerance
+    if vp is None:
+        return {
+            'signal': 'NEUTRAL',
+            'zone': 'UNKNOWN',
+            'strength': 0.0,
+            'description': 'Volume profile calculation failed',
+            'available': False
+        }
+    
+    # Güncel fiyat
+    current_price = float(df.iloc[-1]['close'])
+    
+    # Hangi zone'dayız?
+    poc = vp['poc_price']
+    vah = vp['vah_price']
+    val = vp['val_price']
+    
+    # Zone belirleme
+    price_range = vah - val if (vah - val) > 0 else 1.0
+    tolerance = price_range * 0.02  # %2 tolerance
+    
+    if abs(current_price - poc) < tolerance:
         zone = 'POC'
-        signal = 'NEUTRAL'
-        strength = 0.5
-        description = f"Fiyat PoC seviyesinde ({poc}). Yüksek likidite, reversal beklenir."
+        strength = 0.9  # POC çok güçlü
+        signal = 'NEUTRAL'  # POC'ta bekle
+        description = f'Price at POC (${poc:,.2f}) - Strong support/resistance. Wait for breakout direction. [{symbol}][{interval}]'
     
-    # Price at VAH (resistance)
-    elif abs(current_price - vah) / vah < 0.01:
+    elif abs(current_price - vah) < tolerance:
         zone = 'VAH'
-        signal = 'SHORT'
-        strength = 0.7
-        description = f"Fiyat VAH seviyesinde ({vah}). Resistance zone, short fırsatı."
+        strength = 0.8
+        signal = 'SHORT'  # VAH = direnç
+        description = f'Price at VAH (${vah:,.2f}) - Value Area High. Strong resistance, potential SHORT. [{symbol}][{interval}]'
     
-    # Price at VAL (support)
-    elif abs(current_price - val) / val < 0.01:
+    elif abs(current_price - val) < tolerance:
         zone = 'VAL'
-        signal = 'LONG'
-        strength = 0.7
-        description = f"Fiyat VAL seviyesinde ({val}). Support zone, long fırsatı."
+        strength = 0.8
+        signal = 'LONG'  # VAL = destek
+        description = f'Price at VAL (${val:,.2f}) - Value Area Low. Strong support, potential LONG. [{symbol}][{interval}]'
     
-    # Price above VAH
     elif current_price > vah:
+        # VAH üstünde - direnç kırıldı
         zone = 'ABOVE_VAH'
+        distance = (current_price - vah) / price_range
+        strength = min(0.7 + distance * 0.2, 1.0)
         signal = 'LONG'
-        strength = 0.6
-        description = f"Fiyat VAH üzerinde ({current_price} > {vah}). Güçlü trend, long devam."
+        description = f'Price above VAH (${vah:,.2f}) - Bullish. Strong LONG signal. [{symbol}][{interval}]'
     
-    # Price below VAL
     elif current_price < val:
+        # VAL altında - destek kırıldı
         zone = 'BELOW_VAL'
+        distance = (val - current_price) / price_range
+        strength = min(0.7 + distance * 0.2, 1.0)
         signal = 'SHORT'
-        strength = 0.6
-        description = f"Fiyat VAL altında ({current_price} < {val}). Zayıf trend, short devam."
+        description = f'Price below VAL (${val:,.2f}) - Bearish. Strong SHORT signal. [{symbol}][{interval}]'
     
-    # Price in Value Area (between VAL and VAH)
     else:
-        zone = 'VALUE_AREA'
-        signal = 'NEUTRAL'
-        strength = 0.4
-        description = f"Fiyat Value Area içinde ({val} - {vah}). Konsolidasyon."
-    
-    # LVN check (breakout potential)
-    for lvn in vp['lvn_zones']:
-        if abs(current_price - lvn) / current_price < 0.01:
+        # Value Area içinde
+        # HVN veya LVN kontrolü
+        is_hvn = any(abs(current_price - hvn) < tolerance for hvn in vp['hvn_prices'])
+        is_lvn = any(abs(current_price - lvn) < tolerance for lvn in vp['lvn_prices'])
+        
+        if is_hvn:
+            zone = 'HVN'
+            strength = 0.6
+            signal = 'NEUTRAL'
+            description = f'Price at HVN (${current_price:,.2f}) - High volume consolidation. Neutral. [{symbol}][{interval}]'
+        elif is_lvn:
             zone = 'LVN'
-            strength = 0.8
-            description += f" | LVN zone ({lvn}) - Hızlı hareket beklenir!"
-            break
+            strength = 0.7
+            signal = 'LONG'  # LVN'de breakout potansiyeli
+            description = f'Price at LVN (${current_price:,.2f}) - Low volume gap. Breakout potential. [{symbol}][{interval}]'
+        else:
+            zone = 'VALUE_AREA'
+            strength = 0.5
+            signal = 'NEUTRAL'
+            description = f'Price in Value Area (${val:,.2f} - ${vah:,.2f}). Neutral. [{symbol}][{interval}]'
+    
+    print(f"✅ Zone: {zone}, Signal: {signal}, Strength: {strength:.2f}")
     
     return {
-        'symbol': symbol,
         'signal': signal,
-        'strength': strength,
         'zone': zone,
+        'strength': round(strength, 2),
+        'current_price': round(current_price, 2),
+        'poc_price': poc,
+        'vah_price': vah,
+        'val_price': val,
         'description': description,
-        'current_price': current_price,
-        'vp_data': vp,
+        'volume_profile_data': vp,
+        'available': True,
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
 
-# Test fonksiyonu
+# Test
 if __name__ == "__main__":
     print("=" * 80)
-    print("🔱 DEMIR AI - Volume Profile Layer Test")
+    print("🔱 Volume Profile Layer (REAL DATA) Test")
     print("=" * 80)
     
-    # BTC test
-    print("\n📊 Calculating Volume Profile for BTCUSDT...")
-    vp = calculate_volume_profile('BTCUSDT', interval='1h', lookback=100)
+    symbols = ['BTCUSDT', 'ETHUSDT']
     
-    if vp:
-        print(f"\n✅ Volume Profile Results:")
-        print(f"   PoC (Point of Control): ${vp['poc']:,.2f}")
-        print(f"   VAH (Value Area High):  ${vp['vah']:,.2f}")
-        print(f"   VAL (Value Area Low):   ${vp['val']:,.2f}")
-        print(f"   HVN Zones: {len(vp['hvn_zones'])} zones")
-        print(f"   LVN Zones: {len(vp['lvn_zones'])} zones")
+    for symbol in symbols:
+        result = get_volume_profile_signal(symbol, '1h', lookback=100)
         
-        # Signal test
-        signal = get_volume_profile_signal('BTCUSDT', interval='1h')
-        if signal:
-            print(f"\n🎯 Trading Signal:")
-            print(f"   Signal: {signal['signal']}")
-            print(f"   Strength: {signal['strength']:.2f}")
-            print(f"   Zone: {signal['zone']}")
-            print(f"   Description: {signal['description']}")
-    else:
-        print("❌ Volume Profile calculation failed")
+        if result['available']:
+            print(f"\n✅ {symbol} Volume Profile:")
+            print(f"   Zone: {result['zone']}")
+            print(f"   Signal: {result['signal']}")
+            print(f"   Strength: {result['strength']}")
+            print(f"   Current: ${result['current_price']:,.2f}")
+            print(f"   POC: ${result['poc_price']:,.2f}")
+            print(f"   VAH: ${result['vah_price']:,.2f}")
+            print(f"   VAL: ${result['val_price']:,.2f}")
+        else:
+            print(f"\n❌ {symbol}: Data unavailable")
     
     print("\n" + "=" * 80)
