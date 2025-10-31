@@ -1,22 +1,30 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v5
-ULTIMATE EDITION: Detaylı Analiz + Yardım Butonu + Zengin UI
+🔱 DEMIR AI TRADING BOT - DASHBOARD v6
+PHASE 2 COMPLETE: Multi-Coin Watchlist + One-Click Copy + Mobile Responsive
 Tarih: 1 Kasım 2025
 
-YENİ ÖZELLİKLER:
+YENİ ÖZELLİKLER (v5 → v6):
+✅ Multi-Coin Watchlist (10 coin aynı anda)
+✅ One-Click Copy butonları (Entry/SL/TP)
+✅ Mobile Responsive design
+✅ Quick analyze (her coin için)
+✅ Clipboard API entegrasyonu
+
+ÖNCEDEN OLAN:
 ✅ 11 Layer detaylı skorlar
 ✅ Component breakdown
 ✅ Yardım/Glossary butonu
-✅ TradingView kaldırıldı (canlı fiyatlar büyütüldü)
 ✅ Entry/SL/TP her zaman göster
 ✅ Görsel score progress bar'lar
-✅ Detaylı "Reason" açıklamaları
+✅ Trade history + Performance tracking
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 from datetime import datetime
 import time
+import pandas as pd
 
 # Phase 1 imports
 import trade_history_db as db
@@ -33,9 +41,10 @@ except:
 # Page Config
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Dashboard v5",
+    page_title="🔱 DEMIR AI Dashboard v6",
     page_icon="🔱",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ============================================================================
@@ -60,6 +69,27 @@ def get_binance_price(symbol):
         pass
     return {'price': 0, 'change_24h': 0, 'volume': 0, 'high_24h': 0, 'low_24h': 0, 'available': False}
 
+def get_quick_signal(symbol, interval='1h'):
+    """Hızlı AI sinyali al (sadece karar, detay yok)"""
+    try:
+        if not AI_AVAILABLE:
+            return {'signal': 'N/A', 'score': 0, 'confidence': 0}
+        
+        decision = brain.make_trading_decision(
+            symbol=symbol,
+            interval=interval,
+            portfolio_value=10000,
+            risk_per_trade=200
+        )
+        
+        return {
+            'signal': decision.get('decision', 'NEUTRAL'),
+            'score': decision.get('final_score', 0),
+            'confidence': decision.get('confidence', 0) * 100
+        }
+    except:
+        return {'signal': 'ERROR', 'score': 0, 'confidence': 0}
+
 def render_progress_bar(value, max_val=100, color='#667eea'):
     """Progress bar HTML"""
     pct = (value / max_val) * 100
@@ -72,8 +102,31 @@ def render_progress_bar(value, max_val=100, color='#667eea'):
     </div>
     """
 
+def copy_to_clipboard_button(text, label="📋 Kopyala", key=None):
+    """Clipboard'a kopyalama butonu"""
+    # JavaScript ile clipboard API kullan
+    copy_js = f"""
+    <button onclick="navigator.clipboard.writeText('{text}').then(function() {{
+        alert('Kopyalandı: {text}');
+    }}, function(err) {{
+        alert('Kopyalama hatası');
+    }});" 
+    style="background: linear-gradient(135deg, #667eea, #764ba2); 
+           color: white; 
+           border: none; 
+           padding: 6px 12px; 
+           border-radius: 6px; 
+           cursor: pointer; 
+           font-size: 0.85em;
+           font-weight: 600;
+           margin: 2px;">
+        {label}
+    </button>
+    """
+    return copy_js
+
 # ============================================================================
-# CSS
+# CSS (Mobile Responsive!)
 # ============================================================================
 st.markdown("""
 <style>
@@ -112,6 +165,10 @@ st.markdown("""
         padding: 15px;
         margin: 10px 0;
         border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
     }
     .stat-box {
         background: linear-gradient(135deg, #11998e, #38ef7d);
@@ -151,6 +208,53 @@ st.markdown("""
         background: linear-gradient(135deg, #6b7280, #4b5563);
         color: white;
     }
+    
+    /* ✅ Mobile Responsive */
+    @media (max-width: 768px) {
+        .price-big {
+            font-size: 1.8em;
+        }
+        .stat-value {
+            font-size: 1.5em;
+        }
+        .tp-box {
+            padding: 10px;
+        }
+        .card {
+            padding: 15px;
+        }
+    }
+    
+    /* Watchlist table */
+    .watchlist-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+    }
+    .watchlist-table th {
+        background: #667eea;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+    .watchlist-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .watchlist-table tr:hover {
+        background: #f9fafb;
+    }
+    
+    @media (max-width: 768px) {
+        .watchlist-table {
+            font-size: 0.85em;
+        }
+        .watchlist-table th,
+        .watchlist-table td {
+            padding: 8px 4px;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -159,8 +263,8 @@ st.markdown("""
 # ============================================================================
 st.markdown("""
 <div class="card" style="text-align: center;">
-    <h1 style="color: #667eea; margin: 0;">🔱 DEMIR AI TRADING BOT v5</h1>
-    <p style="color: #666;">ULTIMATE EDITION: Detaylı Analiz + 11 Layer Breakdown + Performance Tracking</p>
+    <h1 style="color: #667eea; margin: 0;">🔱 DEMIR AI TRADING BOT v6</h1>
+    <p style="color: #666;">PHASE 2: Multi-Coin Watchlist + One-Click Copy + Mobile Responsive</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -170,7 +274,8 @@ st.markdown("""
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
     
-    selected_coin = st.selectbox("Coin Seç", ['BTCUSDT', 'ETHUSDT', 'LTCUSDT'], key='coin')
+    selected_coin = st.selectbox("Coin Seç", ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT', 'SOLUSDT', 
+                                                'ADAUSDT', 'DOGEUSDT', 'XRPUSDT', 'DOTUSDT', 'MATICUSDT'], key='coin')
     interval = st.selectbox("Timeframe", ['1m', '5m', '15m', '1h', '4h', '1d'], index=3)
     
     st.markdown("### 💰 Portfolio")
@@ -221,12 +326,12 @@ with st.sidebar:
     # Analyze button
     analyze_btn = st.button("🔍 AI ANALİZ YAP", use_container_width=True, type="primary")
     
-    # ✅ YARDIM BUTONU (YENİ!)
+    # ✅ YARDIM BUTONU
     st.markdown("---")
     show_help = st.checkbox("❓ Terimler Rehberi", help="Tüm terimlerin açıklamasını göster")
 
 # ============================================================================
-# YARDIM/GLOSSARY EXPANDER (YENİ!)
+# YARDIM/GLOSSARY EXPANDER
 # ============================================================================
 if show_help:
     with st.expander("📚 TERİMLER KILAVUZU - Tıklayın", expanded=True):
@@ -259,31 +364,19 @@ if show_help:
         **Profit Factor**: Toplam kar / Toplam zarar (>2 = çok iyi)  
         **Max Drawdown**: En büyük portfolio düşüşü (<20% = iyi)  
         
-        ### 🧠 AI Layer'ları
-        
-        **Volume Profile**: POC, VAH, VAL seviyelerini analiz eder  
-        **Pivot Points**: Önceki gün H/L/C'den destek/direnç hesaplar  
-        **Fibonacci**: 0.236, 0.382, 0.618, 0.786 retracement seviyeleri  
-        **VWAP**: Volume-weighted average price + std dev bantları  
-        **News Sentiment**: Fear & Greed Index + volume trend  
-        **GARCH**: Volatilite tahmini (GARCH(1,1) modeli)  
-        **Markov**: Piyasa rejimi (TREND/RANGE/HIGH_VOL)  
-        **HVI**: Historical volatility index (σ score)  
-        **Volatility Squeeze**: BB + KC squeeze detection  
-        
         Daha fazla detay için: **GLOSSARY_DASHBOARD_TR.md** dosyasını inceleyin!
         """)
 
 # ============================================================================
 # Main Content - Tabs
 # ============================================================================
-tab1, tab2 = st.tabs(["📈 Live Dashboard", "📜 Trade History"])
+tab1, tab2, tab3 = st.tabs(["📈 Live Dashboard", "🔍 Multi-Coin Watchlist", "📜 Trade History"])
 
 # ============================================================================
 # TAB 1: Live Dashboard
 # ============================================================================
 with tab1:
-    # ✅ CANLI FİYATLAR (TradingView kaldırıldı - daha büyük)
+    # ✅ CANLI FİYATLAR
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📊 Canlı Fiyatlar")
     
@@ -340,6 +433,7 @@ with tab1:
                 # ✅ Database'e kaydet
                 trade_id = db.log_trade(decision)
                 st.session_state.last_trade_id = trade_id
+                st.session_state.last_decision = decision  # ✅ Store for copy buttons
                 
                 # ✅ Signal Badge
                 signal = decision['decision']
@@ -371,7 +465,7 @@ with tab1:
                 st.markdown(f"**💡 Karar Gerekçesi:**")
                 st.info(decision['reason'])
                 
-                # ✅ LAYER BREAKDOWN (YENİ!)
+                # ✅ LAYER BREAKDOWN
                 st.markdown("---")
                 st.markdown("### 🧠 11 Layer Detaylı Analiz")
                 
@@ -420,9 +514,9 @@ with tab1:
                             idx += 1
                 
                 else:
-                    st.warning("⚠️ Component scores mevcut değil (decision dict'te 'component_scores' key'i eksik)")
+                    st.warning("⚠️ Component scores mevcut değil")
                 
-                # ✅ POZİSYON PLANI + TP (HER ZAMAN GÖSTER)
+                # ✅ POZİSYON PLANI + ONE-CLICK COPY!
                 st.markdown("---")
                 st.markdown("### 💼 Pozisyon Planı")
                 
@@ -431,14 +525,20 @@ with tab1:
                     
                     with col1:
                         st.metric("📍 Entry", f"${decision['entry_price']:,.2f}")
+                        # ✅ Copy button for Entry
+                        components.html(copy_to_clipboard_button(str(decision['entry_price']), "📋 Entry"), height=40)
+                        
                         st.metric("💰 Position", f"${decision['position_size_usd']:,.2f}")
                     
                     with col2:
                         sl_pct = ((decision['stop_loss'] - decision['entry_price']) / decision['entry_price'] * 100)
                         st.metric("🛡️ Stop Loss", f"${decision['stop_loss']:,.2f}", f"{sl_pct:.2f}%")
+                        # ✅ Copy button for SL
+                        components.html(copy_to_clipboard_button(str(decision['stop_loss']), "📋 SL"), height=40)
+                        
                         st.metric("⚠️ Risk", f"${decision['risk_amount_usd']:,.2f}")
                     
-                    # TP Levels
+                    # TP Levels + COPY BUTTONS!
                     st.markdown("---")
                     st.markdown("### 🎯 Take Profit Seviyeleri")
                     
@@ -457,25 +557,48 @@ with tab1:
                     tp2_pct = ((tp2 - decision['entry_price']) / decision['entry_price'] * 100)
                     tp3_pct = ((tp3 - decision['entry_price']) / decision['entry_price'] * 100)
                     
+                    # TP1
                     st.markdown(f"""
                     <div class="tp-box">
-                        <strong style="font-size: 1.1em;">🎯 TP1:</strong> ${tp1:,.2f} ({tp1_pct:+.2f}%) [R/R: 1:1]<br>
-                        <span style="font-size: 0.9em; color: #666;">→ Close 50% of position | Kar garantiye al</span>
-                    </div>
-                    <div class="tp-box">
-                        <strong style="font-size: 1.1em;">🎯 TP2:</strong> ${tp2:,.2f} ({tp2_pct:+.2f}%) [R/R: 1:1.62]<br>
-                        <span style="font-size: 0.9em; color: #666;">→ Close 30% of position | Fibonacci golden ratio</span>
-                    </div>
-                    <div class="tp-box">
-                        <strong style="font-size: 1.1em;">🎯 TP3:</strong> ${tp3:,.2f} ({tp3_pct:+.2f}%) [R/R: 1:2.62]<br>
-                        <span style="font-size: 0.9em; color: #666;">→ Close 20% of position | Maksimum kar hedefi</span>
+                        <div>
+                            <strong style="font-size: 1.1em;">🎯 TP1:</strong> ${tp1:,.2f} ({tp1_pct:+.2f}%) [R/R: 1:1]<br>
+                            <span style="font-size: 0.9em; color: #666;">→ Close 50% of position | Kar garantiye al</span>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
+                    components.html(copy_to_clipboard_button(str(tp1), "📋 TP1"), height=40)
+                    
+                    # TP2
+                    st.markdown(f"""
+                    <div class="tp-box">
+                        <div>
+                            <strong style="font-size: 1.1em;">🎯 TP2:</strong> ${tp2:,.2f} ({tp2_pct:+.2f}%) [R/R: 1:1.62]<br>
+                            <span style="font-size: 0.9em; color: #666;">→ Close 30% of position | Fibonacci golden ratio</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    components.html(copy_to_clipboard_button(str(tp2), "📋 TP2"), height=40)
+                    
+                    # TP3
+                    st.markdown(f"""
+                    <div class="tp-box">
+                        <div>
+                            <strong style="font-size: 1.1em;">🎯 TP3:</strong> ${tp3:,.2f} ({tp3_pct:+.2f}%) [R/R: 1:2.62]<br>
+                            <span style="font-size: 0.9em; color: #666;">→ Close 20% of position | Maksimum kar hedefi</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    components.html(copy_to_clipboard_button(str(tp3), "📋 TP3"), height=40)
+                    
+                    # ✅ COPY ALL BUTTON
+                    all_text = f"Entry: {decision['entry_price']}, SL: {decision['stop_loss']}, TP1: {tp1:.2f}, TP2: {tp2:.2f}, TP3: {tp3:.2f}"
+                    st.markdown("---")
+                    components.html(copy_to_clipboard_button(all_text, "📋 HEPSİNİ KOPYALA", key="copy_all"), height=50)
                     
                     st.info("**📈 Trailing Stop Stratejisi:** TP1 sonrası SL'i entry'e çek (breakeven). TP2 sonrası SL'i TP1 seviyesine çek.")
                 
                 else:
-                    st.warning("⚠️ Pozisyon planı mevcut değil - Entry price hesaplanamadı veya sinyal WAIT/NEUTRAL")
+                    st.warning("⚠️ Pozisyon planı mevcut değil")
             
             except Exception as e:
                 st.error(f"❌ Analiz hatası: {e}")
@@ -484,9 +607,74 @@ with tab1:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================================================================
-# TAB 2: Trade History
+# TAB 2: MULTI-COIN WATCHLIST (YENİ!)
 # ============================================================================
 with tab2:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 🔍 Multi-Coin Watchlist (10 Coins)")
+    
+    st.info("💡 10 coin'i aynı anda izleyin! Her coin için hızlı AI sinyali. Detaylı analiz için coin'e tıklayın.")
+    
+    # Watchlist coins
+    watchlist_coins = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 
+                       'DOGEUSDT', 'XRPUSDT', 'DOTUSDT', 'MATICUSDT', 'LTCUSDT']
+    
+    with st.spinner("📊 10 coin analiz ediliyor..."):
+        watchlist_data = []
+        
+        for coin in watchlist_coins:
+            price_data = get_binance_price(coin)
+            signal_data = get_quick_signal(coin, interval)
+            
+            if price_data['available']:
+                watchlist_data.append({
+                    'Coin': coin.replace('USDT', ''),
+                    'Price': f"${price_data['price']:,.2f}",
+                    '24h %': f"{price_data['change_24h']:+.2f}%",
+                    'Signal': signal_data['signal'],
+                    'Score': f"{signal_data['score']:.0f}/100",
+                    'Confidence': f"{signal_data['confidence']:.0f}%"
+                })
+        
+        # Display as table
+        if watchlist_data:
+            df = pd.DataFrame(watchlist_data)
+            
+            # Color code signals
+            def color_signal(val):
+                if val == 'LONG':
+                    return 'background-color: #d1fae5; color: #065f46;'
+                elif val == 'SHORT':
+                    return 'background-color: #fee2e2; color: #991b1b;'
+                elif val == 'NEUTRAL':
+                    return 'background-color: #f3f4f6; color: #374151;'
+                return ''
+            
+            styled_df = df.style.applymap(color_signal, subset=['Signal'])
+            st.dataframe(styled_df, use_container_width=True)
+            
+            # Quick analyze buttons
+            st.markdown("---")
+            st.markdown("**🔍 Detaylı Analiz İçin Coin Seçin:**")
+            
+            cols = st.columns(5)
+            for idx, coin in enumerate(watchlist_coins):
+                col_idx = idx % 5
+                with cols[col_idx]:
+                    if st.button(coin.replace('USDT', ''), key=f"watch_{coin}", use_container_width=True):
+                        st.session_state.coin = coin
+                        st.session_state.analyze_watchlist = True
+                        st.rerun()
+        
+        else:
+            st.error("❌ Watchlist verisi alınamadı")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ============================================================================
+# TAB 3: Trade History
+# ============================================================================
+with tab3:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📜 Trade History")
     
@@ -563,8 +751,8 @@ with tab2:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: white; padding: 20px;'>
-    <p><strong>🔱 DEMIR AI Trading Bot v5 - ULTIMATE EDITION</strong></p>
-    <p style='font-size: 0.9em; opacity: 0.8;'>Detaylı Analiz + 11 Layer Breakdown + Performance Tracking | © 2025</p>
+    <p><strong>🔱 DEMIR AI Trading Bot v6 - PHASE 2 COMPLETE</strong></p>
+    <p style='font-size: 0.9em; opacity: 0.8;'>Multi-Coin Watchlist + One-Click Copy + Mobile Responsive | © 2025</p>
 </div>
 """, unsafe_allow_html=True)
 
