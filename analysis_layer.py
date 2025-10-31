@@ -1,18 +1,38 @@
 """
-DEMIR - Analysis Layer
+DEMIR - Analysis Layer (v50.0)
+Binance Futures API Integration
 """
 
 import pandas as pd
 import numpy as np
 import requests
 from typing import Dict, Tuple, Optional
-# ... geri kalan import'lar
+from scipy.fft import fft
+from math import sqrt, log, log2
+
+# Gerekli kütüphaneler
+try:
+    from arch import arch_model
+except ImportError:
+    arch_model = None
+
+try:
+    import statsmodels.api as sm
+except ImportError:
+    sm = None
+
+try:
+    from ta.trend import EMAIndicator, MACD, ADXIndicator
+    from ta.volatility import BollingerBands, AverageTrueRange
+    from ta.momentum import RSIIndicator, StochasticOscillator
+    from ta.volume import OnBalanceVolumeIndicator, ChaikinMoneyFlowIndicator
+except ImportError:
+    pass
 
 def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd.DataFrame:
     """
-    Binance FUTURES (Perpetual) verisini çek - GÜNCELLENMİŞ
+    Binance FUTURES (Perpetual) verisini çek
     """
-    # FUTURES API endpoint (değiştirildi!)
     url = "https://fapi.binance.com/fapi/v1/klines"
     
     params = {
@@ -37,7 +57,6 @@ def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd
         for col in ['open', 'high', 'low', 'close', 'volume']:
             df[col] = df[col].astype(float)
         
-        # Kolon isimlerini büyük harfe çevir (run_technical_analysis için)
         df.rename(columns={
             'open': 'Open',
             'high': 'High',
@@ -50,7 +69,7 @@ def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd
         return df
         
     except Exception as e:
-        print(f"❌ Binance FUTURES data hatası ({symbol}): {e}")
+        print(f"❌ Binance FUTURES data error ({symbol}): {e}")
         return pd.DataFrame()
 
 
