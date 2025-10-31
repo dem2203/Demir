@@ -1,6 +1,6 @@
 """
-DEMIR - Analysis Layer (v50.0)
-Binance Futures API Integration
+DEMIR - Analysis Layer (v3.0)
+Binance Futures API Integration + Technical Analysis
 """
 
 import pandas as pd
@@ -26,8 +26,10 @@ try:
     from ta.volatility import BollingerBands, AverageTrueRange
     from ta.momentum import RSIIndicator, StochasticOscillator
     from ta.volume import OnBalanceVolumeIndicator, ChaikinMoneyFlowIndicator
+    import pandas_ta as ta
 except ImportError:
     pass
+
 
 def get_binance_data(symbol: str, timeframe: str = '1h', limit: int = 100) -> pd.DataFrame:
     """
