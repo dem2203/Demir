@@ -4,7 +4,8 @@ Phase 2 UPDATE: News Sentiment Integration
 Tarih: 31 Ekim 2025
 
 GÜNCELLEMELER:
-- News Sentiment bölümü eklendi
+- News Sentiment bölümü eklendi (coin-specific)
+- Entry Price eklendi
 - CryptoPanic API entegrasyonu
 - Real-time haber analizi
 """
@@ -190,26 +191,28 @@ with col1:
             """, unsafe_allow_html=True)
 
 with col2:
-    # Position Details (Mevcut)
+    # Position Details (YENİ: Entry Price eklendi)
     st.markdown("### 💼 Pozisyon")
     
+    # YENİ: Entry Price
+    st.metric("Entry", "$108,450.00", delta="Current Price")
     st.metric("Pozisyon", "$200")
-    st.metric("Stop", "$108324.00")
-    st.metric("Target", "$113752.81")
+    st.metric("Stop", "$108,324.00")
+    st.metric("Target", "$113,752.81")
     st.metric("R/R", "1:3.82")
 
 # ============================================================================
-# YENİ: News Sentiment Section
+# YENİ: News Sentiment Section (COIN-SPECIFIC)
 # ============================================================================
 if NEWS_AVAILABLE and news_enabled:
     st.markdown("---")
-    st.markdown("## 📰 News Sentiment Analysis")
+    st.markdown(f"## 📰 News Sentiment Analysis - {coin}")  # Coin ismi eklendi
     
     # News verisini çek
     if analyze_btn or st.session_state.get('show_news'):
-        with st.spinner("📡 Haberler yükleniyor..."):
+        with st.spinner(f"📡 {coin} haberleri yükleniyor..."):
             try:
-                # News sentiment sinyali al
+                # YENİ: Seçilen coin için news sentiment sinyali al
                 news_signal = news_sentiment_layer.get_news_signal(coin)
                 
                 # Sentiment'e göre renk seç
@@ -228,6 +231,7 @@ if NEWS_AVAILABLE and news_enabled:
                 st.markdown(f"""
                 <div class="{card_class}">
                     <h3>{emoji} {sentiment} Sentiment</h3>
+                    <p><strong>Coin:</strong> {news_signal['symbol']}</p>
                     <p><strong>Score:</strong> {news_signal['score']:.2f} / 1.00</p>
                     <p><strong>Impact:</strong> {news_signal['impact']}</p>
                     <hr style="border-color: rgba(255,255,255,0.3);">
@@ -240,8 +244,8 @@ if NEWS_AVAILABLE and news_enabled:
                 """, unsafe_allow_html=True)
                 
                 # Detaylı haber listesi (opsiyonel - genişletilebilir)
-                with st.expander("📜 Son Haberler (Top 10)"):
-                    coin_symbol = coin.replace('USDT', '')
+                with st.expander(f"📜 Son Haberler - {coin} (Top 10)"):
+                    coin_symbol = coin.replace('USDT', '').replace('BUSD', '')
                     news_list = news_sentiment_layer.fetch_news(currencies=coin_symbol, limit=10)
                     
                     if news_list:
@@ -267,7 +271,7 @@ if NEWS_AVAILABLE and news_enabled:
                             👍 {positive} | 👎 {negative} | ⏰ {published_at}
                             """)
                     else:
-                        st.info("Haber bulunamadı.")
+                        st.info(f"❌ {coin_symbol} için haber bulunamadı.")
                 
                 st.session_state['show_news'] = True
                 
