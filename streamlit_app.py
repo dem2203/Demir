@@ -41,37 +41,15 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stApp { background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%); }
-    .main-title {
-        font-size: 3.5rem; font-weight: 800;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        text-align: center; margin-bottom: 0.5rem;
-    }
+    .main-title { font-size: 3.5rem; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0.5rem; }
     .sub-title { text-align: center; color: #8b92a7; font-size: 1.1rem; margin-bottom: 2rem; }
-    .price-ticker {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem; border-radius: 15px; margin-bottom: 1.5rem;
-    }
+    .price-ticker { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 15px; margin-bottom: 1.5rem; }
     .ticker-coin { display: inline-block; margin-right: 2rem; color: white; font-weight: 600; }
-    .signal-card-buy {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        padding: 1.5rem; border-radius: 15px; color: white; margin-bottom: 1rem;
-        animation: pulse 2s infinite;
-    }
-    .signal-card-sell {
-        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
-        padding: 1.5rem; border-radius: 15px; color: white; margin-bottom: 1rem;
-        animation: pulse 2s infinite;
-    }
-    .signal-card-hold {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        padding: 1.5rem; border-radius: 15px; color: white; margin-bottom: 1rem;
-    }
+    .signal-card-buy { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 1.5rem; border-radius: 15px; color: white; margin-bottom: 1rem; animation: pulse 2s infinite; }
+    .signal-card-sell { background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); padding: 1.5rem; border-radius: 15px; color: white; margin-bottom: 1rem; animation: pulse 2s infinite; }
+    .signal-card-hold { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1.5rem; border-radius: 15px; color: white; margin-bottom: 1rem; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-    .metric-card {
-        background: rgba(255, 255, 255, 0.08); padding: 1.2rem;
-        border-radius: 12px; border-left: 4px solid #667eea; margin-bottom: 1rem;
-    }
+    .metric-card { background: rgba(255, 255, 255, 0.08); padding: 1.2rem; border-radius: 12px; border-left: 4px solid #667eea; margin-bottom: 1rem; }
     .metric-value { font-size: 2rem; font-weight: 700; color: #667eea; }
     .metric-label { color: #8b92a7; font-size: 0.9rem; margin-bottom: 0.3rem; }
     .metric-hint { color: #8b92a7; font-size: 0.8rem; font-style: italic; margin-top: 0.3rem; }
