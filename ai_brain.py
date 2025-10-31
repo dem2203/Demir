@@ -1,41 +1,35 @@
 """
-DEMIR AI Trading Bot - AI Brain v3 ENHANCED
-Phase 3A: Detailed Output with All Indicators
+DEMIR AI Trading Bot - AI Brain v3 ENHANCED DEBUG
+Phase 3A: Detailed Output with All Indicators + DEBUG
 Tarih: 31 Ekim 2025
-
-ENHANCED OUTPUT:
-- Volume Profile zone details
-- Pivot Points levels
-- Fibonacci levels
-- VWAP deviation info
-- Monte Carlo metrics
-- Kelly sizing
 """
 
 from datetime import datetime
 
 # Import layers
 try:
-    import strategy_layer_v3 as strategy
+    import strategy_layer as strategy
     STRATEGY_AVAILABLE = True
-except:
-    try:
-        import strategy_layer as strategy
-        STRATEGY_AVAILABLE = True
-    except:
-        STRATEGY_AVAILABLE = False
+    print("✅ DEBUG (AI Brain): strategy_layer imported")
+except Exception as e:
+    STRATEGY_AVAILABLE = False
+    print(f"⚠️ DEBUG (AI Brain): strategy_layer import failed: {e}")
 
 try:
     import monte_carlo_layer as mc
     MC_AVAILABLE = True
-except:
+    print("✅ DEBUG (AI Brain): monte_carlo_layer imported")
+except Exception as e:
     MC_AVAILABLE = False
+    print(f"⚠️ DEBUG (AI Brain): monte_carlo_layer import failed: {e}")
 
 try:
     import kelly_enhanced_layer as kelly
     KELLY_AVAILABLE = True
-except:
+    print("✅ DEBUG (AI Brain): kelly_enhanced_layer imported")
+except Exception as e:
     KELLY_AVAILABLE = False
+    print(f"⚠️ DEBUG (AI Brain): kelly_enhanced_layer import failed: {e}")
 
 
 def make_trading_decision(
@@ -48,21 +42,43 @@ def make_trading_decision(
     AI Brain - Final trading decision with DETAILED component breakdown
     """
     
+    print(f"\n🧠 DEBUG (AI Brain): make_trading_decision starting")
+    print(f"   Symbol: {symbol}")
+    print(f"   Interval: {interval}")
+    print(f"   Portfolio: ${portfolio_value:,.0f}")
+    
     # 1. Strategy Layer v3 - Comprehensive score
     if STRATEGY_AVAILABLE:
         try:
+            print(f"\n🔍 DEBUG: Calling strategy.calculate_comprehensive_score...")
             strategy_result = strategy.calculate_comprehensive_score(symbol, interval)
+            
+            print(f"✅ DEBUG: Strategy result received")
+            print(f"   Final Score: {strategy_result['final_score']}")
+            print(f"   Signal: {strategy_result['signal']}")
+            print(f"   Confidence: {strategy_result['confidence']}")
+            
             final_score = strategy_result['final_score']
             signal = strategy_result['signal']
             confidence = strategy_result['confidence']
             components = strategy_result['components']
-        except:
+            
+            print(f"\n📊 DEBUG: Component availability check:")
+            for comp_name, comp_data in components.items():
+                available = comp_data.get('available', False)
+                print(f"   {comp_name}: {available}")
+                
+        except Exception as e:
+            print(f"❌ DEBUG: Strategy error: {e}")
+            import traceback
+            traceback.print_exc()
             # Fallback
             final_score = 50
             signal = 'NEUTRAL'
             confidence = 0.5
             components = {}
     else:
+        print(f"⚠️ DEBUG: Strategy not available - using fallback")
         final_score = 50
         signal = 'NEUTRAL'
         confidence = 0.5
@@ -71,6 +87,7 @@ def make_trading_decision(
     # 2. Monte Carlo risk assessment
     if MC_AVAILABLE:
         try:
+            print(f"\n🔍 DEBUG: Calling mc.get_monte_carlo_risk_assessment...")
             win_rate = 0.55
             avg_win = 2.0
             avg_loss = 1.0
@@ -85,11 +102,18 @@ def make_trading_decision(
             risk_of_ruin = mc_assessment['risk_assessment']['risk_of_ruin_pct']
             max_drawdown = mc_assessment['drawdown_assessment']['worst_case_pct']
             sharpe = mc_assessment['sharpe_assessment']['ratio']
-        except:
+            
+            print(f"✅ DEBUG: Monte Carlo result:")
+            print(f"   Risk of Ruin: {risk_of_ruin}%")
+            print(f"   Max DD: {max_drawdown}%")
+            print(f"   Sharpe: {sharpe}")
+        except Exception as e:
+            print(f"❌ DEBUG: Monte Carlo error: {e}")
             risk_of_ruin = 5.0
             max_drawdown = 20.0
             sharpe = 1.5
     else:
+        print(f"⚠️ DEBUG: Monte Carlo not available - using defaults")
         risk_of_ruin = 5.0
         max_drawdown = 20.0
         sharpe = 1.5
@@ -97,6 +121,7 @@ def make_trading_decision(
     # 3. Kelly Criterion position sizing
     if KELLY_AVAILABLE:
         try:
+            print(f"\n🔍 DEBUG: Calling kelly.calculate_dynamic_kelly...")
             kelly_result = kelly.calculate_dynamic_kelly(
                 win_rate=0.55,
                 avg_win=2.0,
@@ -108,16 +133,23 @@ def make_trading_decision(
             position_size_usd = kelly_result['position_size_usd']
             position_size_pct = kelly_result['position_size_pct']
             risk_amount = kelly_result['risk_amount_usd']
-        except:
+            
+            print(f"✅ DEBUG: Kelly result:")
+            print(f"   Position: ${position_size_usd:,.2f} ({position_size_pct}%)")
+            print(f"   Risk: ${risk_amount:,.2f}")
+        except Exception as e:
+            print(f"❌ DEBUG: Kelly error: {e}")
             position_size_usd = risk_per_trade
             position_size_pct = (risk_per_trade / portfolio_value) * 100
             risk_amount = risk_per_trade
     else:
+        print(f"⚠️ DEBUG: Kelly not available - using defaults")
         position_size_usd = risk_per_trade
         position_size_pct = (risk_per_trade / portfolio_value) * 100
         risk_amount = risk_per_trade
     
     # 4. Build detailed description text
+    print(f"\n🔍 DEBUG: Building detailed description...")
     description_parts = []
     
     # Volume Profile
@@ -126,8 +158,10 @@ def make_trading_decision(
         zone = vp.get('zone', 'UNKNOWN')
         desc = vp.get('description', 'N/A')
         description_parts.append(f"📊 **Volume Profile:** {zone} - {desc}")
+        print(f"   ✅ VP added to description")
     else:
         description_parts.append("📊 **Volume Profile:** Not available")
+        print(f"   ⚠️ VP not available")
     
     # Pivot Points
     if components.get('pivot_points', {}).get('available'):
@@ -135,8 +169,10 @@ def make_trading_decision(
         zone = pp.get('zone', 'UNKNOWN')
         desc = pp.get('description', 'N/A')
         description_parts.append(f"📍 **Pivot Points:** {zone} - {desc}")
+        print(f"   ✅ PP added to description")
     else:
         description_parts.append("📍 **Pivot Points:** Not available")
+        print(f"   ⚠️ PP not available")
     
     # Fibonacci
     if components.get('fibonacci', {}).get('available'):
@@ -144,8 +180,10 @@ def make_trading_decision(
         level = fib.get('level', 'UNKNOWN')
         desc = fib.get('description', 'N/A')
         description_parts.append(f"📐 **Fibonacci:** {level} - {desc}")
+        print(f"   ✅ Fib added to description")
     else:
         description_parts.append("📐 **Fibonacci:** Not available")
+        print(f"   ⚠️ Fib not available")
     
     # VWAP
     if components.get('vwap', {}).get('available'):
@@ -153,8 +191,10 @@ def make_trading_decision(
         zone = vwap.get('zone', 'UNKNOWN')
         desc = vwap.get('description', 'N/A')
         description_parts.append(f"📈 **VWAP:** {zone} - {desc}")
+        print(f"   ✅ VWAP added to description")
     else:
         description_parts.append("📈 **VWAP:** Not available")
+        print(f"   ⚠️ VWAP not available")
     
     # Monte Carlo
     description_parts.append(f"🎲 **Monte Carlo:** Risk of Ruin: {risk_of_ruin:.2f}% | Max DD: -{max_drawdown:.2f}%")
@@ -164,6 +204,7 @@ def make_trading_decision(
     
     # Combine all descriptions
     detailed_description = "\n\n".join(description_parts)
+    print(f"\n✅ DEBUG: Detailed description built ({len(description_parts)} components)")
     
     # 5. Risk adjustments
     if components.get('volume_profile', {}).get('available'):
@@ -172,9 +213,11 @@ def make_trading_decision(
         if vp_zone == 'POC':
             position_size_usd *= 0.8
             risk_amount *= 0.8
+            print(f"   📉 VP POC: Position size reduced by 20%")
         elif vp_zone == 'LVN':
             position_size_usd *= 1.2
             risk_amount *= 1.2
+            print(f"   📈 VP LVN: Position size increased by 20%")
     
     if components.get('vwap', {}).get('available'):
         vwap_zone = components['vwap'].get('zone', 'UNKNOWN')
@@ -182,14 +225,17 @@ def make_trading_decision(
         if vwap_zone in ['+3STD', '-3STD']:
             position_size_usd *= 0.7
             risk_amount *= 0.7
+            print(f"   📉 VWAP extreme: Position size reduced by 30%")
     
     if risk_of_ruin > 10:
         position_size_usd *= 0.5
         risk_amount *= 0.5
+        print(f"   ⚠️ High Risk of Ruin: Position size halved")
     
     max_position = portfolio_value * 0.10
     if position_size_usd > max_position:
         position_size_usd = max_position
+        print(f"   🚫 Position capped at 10% of portfolio")
     
     # 6. Entry/Stop/Target calculation
     try:
@@ -198,10 +244,13 @@ def make_trading_decision(
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             current_price = float(response.json()['price'])
+            print(f"\n✅ DEBUG: Current price fetched: ${current_price:,.2f}")
         else:
             current_price = None
-    except:
+            print(f"\n⚠️ DEBUG: Price fetch failed: status {response.status_code}")
+    except Exception as e:
         current_price = None
+        print(f"\n❌ DEBUG: Price fetch error: {e}")
     
     if current_price:
         atr_multiplier_stop = 2.0
@@ -255,6 +304,9 @@ def make_trading_decision(
     else:
         reason = f"Score: {final_score}/100, Confidence: {confidence*100:.0f}%"
     
+    print(f"\n🎯 DEBUG: Final decision: {decision}")
+    print(f"   Reason: {reason}\n")
+    
     return {
         'symbol': symbol,
         'interval': interval,
@@ -275,7 +327,7 @@ def make_trading_decision(
             'sharpe_ratio': sharpe
         },
         'reason': reason,
-        'detailed_description': detailed_description,  # YENİ: Detaylı açıklama
+        'detailed_description': detailed_description,
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
@@ -283,7 +335,7 @@ def make_trading_decision(
 # Test fonksiyonu
 if __name__ == "__main__":
     print("=" * 80)
-    print("🔱 DEMIR AI - AI Brain v3 Enhanced Test")
+    print("🔱 DEMIR AI - AI Brain v3 Enhanced DEBUG Test")
     print("=" * 80)
     
     symbol = 'BTCUSDT'
