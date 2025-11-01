@@ -1,22 +1,18 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v7.3 FIXED
+🔱 DEMIR AI TRADING BOT - DASHBOARD v8.0 COMPLETE
 Date: 1 Kasım 2025
 
-v7.3 FIX'LER:
-✅ Component scores kontrolü düzeltildi (sadece veri varsa gösterilir)
-✅ AI Analiz başlığına coin ismi eklendi (örn: "BTC AI Analiz Sonucu")
-✅ "Component scores yükleniyor" mesajı sadece gerçekten boşsa gösterilir
+v8.0 NEW FEATURES:
+✅ PHASE 3.2: Backtest Module (TAB 5)
+✅ Historical data testing
+✅ Performance metrics (Win Rate, Sharpe, Drawdown, PF)
+✅ Equity curve visualization (Plotly chart)
+✅ Trade-by-trade results
 
-v7.2 ÖZELLİKLER:
-✅ Dark Mode - Koyu tema
-✅ AI Comment bölümü (detaylı açıklamalar)
-✅ Kontrast düzeltildi
-✅ NEUTRAL sinyal nedenleri
-
-PHASE 3.1 ÖZELLİKLER:
+v7.3 ÖZELLİKLER:
+✅ Dark Mode + AI Comments
 ✅ Telegram Alert System  
-✅ Coin Manager
-✅ Multi-Coin Watchlist
+✅ Coin Manager + Watchlist
 ✅ Trade History + Performance
 """
 
@@ -25,9 +21,17 @@ import streamlit.components.v1 as components
 import requests
 from datetime import datetime
 import pandas as pd
+import plotly.graph_objects as go
 
 import trade_history_db as db
 import win_rate_calculator as wrc
+
+# PHASE 3.2: Backtest Engine
+try:
+    from backtest_engine import BacktestEngine
+    BACKTEST_AVAILABLE = True
+except:
+    BACKTEST_AVAILABLE = False
 
 try:
     from telegram_alert_system import TelegramAlertSystem
@@ -50,7 +54,7 @@ except:
     AI_AVAILABLE = False
 
 st.set_page_config(
-    page_title="🔱 DEMIR AI v7.3",
+    page_title="🔱 DEMIR AI v8.0",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -60,6 +64,8 @@ if 'watchlist_coins' not in st.session_state:
     st.session_state.watchlist_coins = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT', 'SOLUSDT']
 if 'telegram_alerts_enabled' not in st.session_state:
     st.session_state.telegram_alerts_enabled = True
+if 'backtest_results' not in st.session_state:
+    st.session_state.backtest_results = None
 
 def get_binance_price(symbol):
     try:
@@ -126,7 +132,6 @@ def generate_ai_comment(decision):
     
     comments = []
     
-    # Confidence yorumu
     if confidence < 30:
         comments.append(f"🔴 **Çok Düşük Güven ({confidence:.0f}%):** Piyasa çok belirsiz. Bu koşullarda trade açmak yüksek risk taşır.")
     elif confidence < 50:
@@ -136,7 +141,6 @@ def generate_ai_comment(decision):
     else:
         comments.append(f"🟢 **Yüksek Güven ({confidence:.0f}%):** Güçlü sinyal! AI birden fazla layer'dan pozitif sinyal algıladı.")
     
-    # Score yorumu
     if score < 40:
         comments.append(f"📊 **Düşük Skor ({score:.1f}/100):** Çoğu teknik gösterge olumsuz. Piyasa trend göstermiyor.")
     elif score < 60:
@@ -144,7 +148,6 @@ def generate_ai_comment(decision):
     else:
         comments.append(f"📊 **İyi Skor ({score:.1f}/100):** Teknik göstergeler {signal} yönünde güçlü sinyaller veriyor.")
     
-    # Sinyal yorumu
     if signal == 'NEUTRAL':
         comments.append("⏸️ **NEUTRAL Sinyal:** AI belirsizlik tespit etti. Şu an piyasada net bir yön yok. Bekleme modunda kalmak en güvenli seçenek.")
     elif signal == 'WAIT':
@@ -156,16 +159,39 @@ def generate_ai_comment(decision):
     
     return "\n\n".join(comments)
 
+def create_equity_curve_chart(equity_curve):
+    """Equity curve chart oluştur (Plotly)"""
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        y=equity_curve,
+        mode='lines',
+        name='Portfolio Value',
+        line=dict(color='#10b981', width=3),
+        fill='tozeroy',
+        fillcolor='rgba(16, 185, 129, 0.2)'
+    ))
+    
+    fig.update_layout(
+        title='Equity Curve - Portfolio Growth',
+        xaxis_title='Trade Number',
+        yaxis_title='Portfolio Value ($)',
+        template='plotly_dark',
+        hovermode='x unified',
+        height=450,
+        showlegend=False
+    )
+    
+    return fig
+
 # DARK MODE CSS
 st.markdown("""<style>
-/* DARK MODE - KOYU TEMA */
 .main{background: #1a1a1a !important;}
 .stApp{background: #1a1a1a !important;}
 [data-testid="stAppViewContainer"]{background: #1a1a1a !important;}
 [data-testid="stHeader"]{background: #0f0f0f !important;}
 [data-testid="stSidebar"]{background: #0f0f0f !important;}
 
-/* KARTLAR - KOYU GRİ + BEYAZ YAZI */
 .card{background: #2d2d2d; border-radius: 15px; padding: 20px; margin: 10px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.5); color: #e5e5e5;}
 .price-card{background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 12px; padding: 20px; margin: 10px 0;}
 .price-big{font-size: 2.5em; font-weight: 700; margin: 10px 0; color: white;}
@@ -179,11 +205,9 @@ st.markdown("""<style>
 .badge-short{background: linear-gradient(135deg, #ef4444, #dc2626); color: white;}
 .badge-neutral{background: linear-gradient(135deg, #6b7280, #4b5563); color: white;}
 
-/* AI COMMENT BOX */
 .ai-comment{background: #374151; border-left: 4px solid #3b82f6; padding: 20px; margin: 15px 0; border-radius: 10px; color: #e5e5e5; font-size: 0.95em; line-height: 1.7;}
 .ai-comment strong{color: #10b981;}
 
-/* TEXT COLORS */
 h1, h2, h3, h4, h5, h6, p, span, div{color: #e5e5e5 !important;}
 .stMarkdown{color: #e5e5e5 !important;}
 label{color: #e5e5e5 !important;}
@@ -191,8 +215,8 @@ label{color: #e5e5e5 !important;}
 @media (max-width: 768px){.price-big{font-size: 1.8em;} .stat-value{font-size: 1.5em;} .tp-box, .card{padding: 10px;}}</style>""", unsafe_allow_html=True)
 
 st.markdown("""<div class="card" style="text-align: center; background: linear-gradient(135deg, #10b981, #059669);">
-<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v7.3</h1>
-<p style="color: white !important;">DARK MODE + AI COMMENTS + COIN NAME FIX</p></div>""", unsafe_allow_html=True)
+<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v8.0</h1>
+<p style="color: white !important;">BACKTEST ENGINE + DARK MODE + AI COMMENTS</p></div>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
@@ -242,10 +266,11 @@ with st.sidebar:
 if show_help:
     with st.expander("📚 TERİMLER", expanded=True):
         st.markdown("""**LONG**: Al | **SHORT**: Sat | **Confidence**: AI güven | **Score**: Final puan | **R/R**: Risk/Reward  
-**Entry**: Açılış | **SL**: Stop Loss | **TP**: Take Profit""")
+**Entry**: Açılış | **SL**: Stop Loss | **TP**: Take Profit | **Sharpe**: Risk-adjusted return | **Drawdown**: Max düşüş""")
 
-tab1, tab2, tab3, tab4 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "⚙️ Coin Manager", "📜 Trade History"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "⚙️ Coin Manager", "📜 Trade History", "📊 Backtest"])
 
+# TAB 1: LIVE DASHBOARD
 with tab1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📊 Canlı Fiyatlar")
@@ -289,7 +314,6 @@ with tab1:
                 Confidence: <strong style="color: #10b981;">{decision['confidence']*100:.0f}%</strong> | Score: <strong style="color: #10b981;">{decision['final_score']:.1f}/100</strong> | R/R: <strong style="color: #10b981;">1:{decision['risk_reward']:.2f}</strong>
                 </div><div style="font-size: 0.95em; color: #9ca3af;">Trade ID: #{trade_id} | ✅ Database'e kaydedildi</div></div>""", unsafe_allow_html=True)
                 
-                # AI COMMENT
                 ai_comment = generate_ai_comment(decision)
                 st.markdown(f"""<div class="ai-comment">
                 <h4 style="color: #3b82f6 !important; margin: 0 0 15px 0;">🤖 AI Yorumu</h4>
@@ -376,6 +400,7 @@ with tab1:
                 st.error(f"❌ Hata: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
+# TAB 2: WATCHLIST
 with tab2:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f"### 🔍 Watchlist ({len(st.session_state.watchlist_coins)} Coins)")
@@ -393,8 +418,21 @@ with tab2:
     if watchlist_data:
         df = pd.DataFrame(watchlist_data)
         st.dataframe(df, use_container_width=True)
+        st.markdown("---")
+        st.markdown("**🔍 Detaylı Analiz:**")
+        cols_per_row = 5
+        for i in range(0, len(st.session_state.watchlist_coins), cols_per_row):
+            cols = st.columns(cols_per_row)
+            for j, coin in enumerate(st.session_state.watchlist_coins[i:i+cols_per_row]):
+                with cols[j]:
+                    btn_label = coin.replace('USDT', '')
+                    if coin in ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']: btn_label = f"🔒 {btn_label}"
+                    if st.button(btn_label, key=f"watch_{coin}", use_container_width=True):
+                        st.session_state.coin = coin
+                        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# TAB 3: COIN MANAGER
 with tab3:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### ⚙️ Coin Manager")
@@ -406,26 +444,124 @@ with tab3:
             st.rerun()
     st.markdown("---")
     for coin in st.session_state.watchlist_coins:
-        col1, col2 = st.columns([3, 1])
+        col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             st.markdown(f"**🔒 {coin}**" if coin in ['BTCUSDT', 'ETHUSDT', 'LTCUSDT'] else f"**{coin}**")
         with col2:
+            price_data = get_binance_price(coin)
+            if price_data['available']:
+                change_icon = '↗' if price_data['change_24h'] >= 0 else '↘'
+                st.markdown(f"${price_data['price']:,.2f} ({price_data['change_24h']:+.2f}% {change_icon})")
+        with col3:
             if coin not in ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']:
                 if st.button("🗑️", key=f"rm_{coin}"):
                     remove_coin_from_watchlist(coin)
                     st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# TAB 4: TRADE HISTORY
 with tab4:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📜 Trade History")
     trades_df = db.get_all_trades()
     if not trades_df.empty:
-        st.dataframe(trades_df, use_container_width=True)
+        col1, col2, col3, col4 = st.columns(4)
+        with col1: st.metric("Total Trades", len(trades_df))
+        with col2: st.metric("Pending", len(trades_df[trades_df['status'] == 'PENDING']))
+        with col3: 
+            closed = len(trades_df[trades_df['status'].isin(['WIN', 'LOSS', 'BREAKEVEN'])])
+            st.metric("Closed", closed)
+        with col4:
+            if closed > 0:
+                wins = len(trades_df[trades_df['status'] == 'WIN'])
+                st.metric("Win Rate", f"{(wins / closed * 100):.1f}%")
+            else:
+                st.metric("Win Rate", "N/A")
+        st.markdown("---")
+        st.dataframe(trades_df[['id', 'timestamp', 'symbol', 'signal', 'confidence', 'final_score', 
+                                'entry_price', 'stop_loss', 'position_size_usd', 'status', 'pnl_usd', 'pnl_pct']], use_container_width=True)
     else:
         st.info("📊 Trade kaydı yok")
     st.markdown('</div>', unsafe_allow_html=True)
 
+# TAB 5: BACKTEST
+with tab5:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 📊 Backtest Engine")
+    
+    if not BACKTEST_AVAILABLE or not AI_AVAILABLE:
+        st.error("❌ Backtest Engine veya AI Brain yüklenemedi!")
+    else:
+        st.info("💡 **Backtest:** AI stratejisini geçmiş verilerle test edin. Performans metriklerini görün.")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            bt_lookback = st.selectbox("Test Süresi (Gün)", [7, 14, 30, 60], index=2, key='bt_lookback')
+        with col2:
+            bt_max_trades = st.number_input("Max Trades", min_value=10, max_value=200, value=50, step=10)
+        with col3:
+            bt_capital = st.number_input("Initial Capital ($)", min_value=1000, max_value=100000, value=10000, step=1000)
+        
+        if st.button("🚀 RUN BACKTEST", type="primary", use_container_width=True):
+            with st.spinner(f"⏳ Backtest çalışıyor... {bt_lookback} günlük veri analiz ediliyor..."):
+                try:
+                    engine = BacktestEngine(selected_coin, bt_capital, risk)
+                    results = engine.run_backtest(brain, interval, bt_lookback, bt_max_trades)
+                    
+                    if 'error' not in results:
+                        st.session_state.backtest_results = results
+                        st.success(f"✅ Backtest tamamlandı! {results['total_trades']} trade analiz edildi.")
+                    else:
+                        st.error(f"❌ Hata: {results['error']}")
+                except Exception as e:
+                    st.error(f"❌ Backtest hatası: {str(e)}")
+        
+        if st.session_state.backtest_results:
+            results = st.session_state.backtest_results
+            
+            st.markdown("---")
+            st.markdown("### 📈 Performance Metrics")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                wr_color = '#10b981' if results['win_rate'] >= 50 else '#ef4444'
+                st.markdown(f"""<div class="stat-box" style="background: {wr_color};">
+                <div style="color: white; opacity: 0.9;">Win Rate</div>
+                <div class="stat-value" style="color: white;">{results['win_rate']:.1f}%</div>
+                <div style="color: white; font-size: 0.85em;">{results['winning_trades']}W / {results['losing_trades']}L</div></div>""", unsafe_allow_html=True)
+            
+            with col2:
+                pnl_color = '#10b981' if results['total_pnl'] >= 0 else '#ef4444'
+                st.markdown(f"""<div class="stat-box" style="background: {pnl_color};">
+                <div style="color: white; opacity: 0.9;">Total PNL</div>
+                <div class="stat-value" style="color: white;">${results['total_pnl']:+,.2f}</div>
+                <div style="color: white; font-size: 0.85em;">{results['total_pnl_pct']:+.2f}%</div></div>""", unsafe_allow_html=True)
+            
+            with col3:
+                st.markdown(f"""<div class="stat-box">
+                <div style="color: white; opacity: 0.9;">Profit Factor</div>
+                <div class="stat-value" style="color: white;">{results['profit_factor']:.2f}</div>
+                <div style="color: white; font-size: 0.85em;">Sharpe: {results['sharpe_ratio']:.2f}</div></div>""", unsafe_allow_html=True)
+            
+            with col4:
+                dd_color = '#ef4444' if results['max_drawdown'] < -10 else '#10b981'
+                st.markdown(f"""<div class="stat-box" style="background: {dd_color};">
+                <div style="color: white; opacity: 0.9;">Max Drawdown</div>
+                <div class="stat-value" style="color: white;">{results['max_drawdown']:.2f}%</div>
+                <div style="color: white; font-size: 0.85em;">Final: ${results['final_capital']:,.0f}</div></div>""", unsafe_allow_html=True)
+            
+            st.markdown("---")
+            st.markdown("### 📈 Equity Curve")
+            fig = create_equity_curve_chart(results['equity_curve'])
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown("---")
+            st.markdown("### 📜 Trade List")
+            if not results['trades_df'].empty:
+                st.dataframe(results['trades_df'][['timestamp', 'signal', 'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'result']], use_container_width=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #10b981; padding: 20px; background: #2d2d2d; border-radius: 12px;'>
-<p><strong>🔱 DEMIR AI v7.3 DARK MODE</strong></p></div>""", unsafe_allow_html=True)
+<p><strong>🔱 DEMIR AI v8.0 - BACKTEST ENGINE COMPLETE</strong></p></div>""", unsafe_allow_html=True)
