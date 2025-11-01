@@ -1,18 +1,19 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v8.1 COMPLETE
+🔱 DEMIR AI TRADING BOT - DASHBOARD v8.2 COMPLETE FULL
 Date: 1 Kasım 2025
-PHASE 3.3: Portfolio Optimizer Integration
+PHASE 3.4: Position Tracker Integration
 
-v8.1 NEW FEATURES:
-✅ Portfolio Optimizer with Kelly Criterion
-✅ Correlation Analysis & Heatmap
-✅ Multi-Coin Allocation
-✅ Diversification Score
-✅ NEW TAB: Portfolio Management
+v8.2 NEW FEATURES:
+✅ Manuel Position Tracker (Futures)
+✅ Real-time PNL Calculation
+✅ Open/Close Position Management
+✅ Pending Signals Dashboard
+✅ NEW TAB: Position Tracker
 
-v8.0 FEATURES:
+v8.1 FEATURES:
+✅ Portfolio Optimizer
 ✅ Backtest Engine
-✅ Dark Mode + AI Comments  
+✅ Dark Mode + AI Comments
 ✅ Telegram Alerts
 ✅ Trade History
 """
@@ -27,6 +28,14 @@ import plotly.express as px
 
 import trade_history_db as db
 import win_rate_calculator as wrc
+
+# PHASE 3.4: Position Tracker
+try:
+    from position_tracker import PositionTracker
+    POSITION_TRACKER_AVAILABLE = True
+    tracker = PositionTracker()
+except:
+    POSITION_TRACKER_AVAILABLE = False
 
 # PHASE 3.3: Portfolio Optimizer
 try:
@@ -63,7 +72,7 @@ except:
     AI_AVAILABLE = False
 
 st.set_page_config(
-    page_title="🔱 DEMIR AI v8.1",
+    page_title="🔱 DEMIR AI v8.2",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -136,7 +145,6 @@ def copy_button(text, label="📋"):
     border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; margin: 2px;">{label}</button>"""
 
 def generate_ai_comment(decision):
-    """AI analiz yorumu oluştur"""
     signal = decision.get('decision', 'NEUTRAL')
     confidence = decision.get('confidence', 0) * 100
     score = decision.get('final_score', 0)
@@ -171,7 +179,6 @@ def generate_ai_comment(decision):
     return "\n\n".join(comments)
 
 def create_equity_curve_chart(equity_curve):
-    """Equity curve chart oluştur (Plotly)"""
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
@@ -196,7 +203,6 @@ def create_equity_curve_chart(equity_curve):
     return fig
 
 def create_allocation_pie_chart(allocations):
-    """Portfolio allocation pie chart"""
     fig = go.Figure(data=[go.Pie(
         labels=list(allocations.keys()),
         values=list(allocations.values()),
@@ -214,7 +220,6 @@ def create_allocation_pie_chart(allocations):
     return fig
 
 def create_correlation_heatmap(corr_matrix):
-    """Correlation heatmap"""
     fig = px.imshow(
         corr_matrix,
         labels=dict(color="Correlation"),
@@ -257,6 +262,10 @@ st.markdown("""<style>
 .ai-comment{background: #374151; border-left: 4px solid #3b82f6; padding: 20px; margin: 15px 0; border-radius: 10px; color: #e5e5e5; font-size: 0.95em; line-height: 1.7;}
 .ai-comment strong{color: #10b981;}
 
+.position-card{background: #374151; border-radius: 12px; padding: 20px; margin: 10px 0; border-left: 4px solid #3b82f6; color: #e5e5e5;}
+.pnl-positive{color: #10b981; font-weight: 700;}
+.pnl-negative{color: #ef4444; font-weight: 700;}
+
 h1, h2, h3, h4, h5, h6, p, span, div{color: #e5e5e5 !important;}
 .stMarkdown{color: #e5e5e5 !important;}
 label{color: #e5e5e5 !important;}
@@ -264,8 +273,8 @@ label{color: #e5e5e5 !important;}
 @media (max-width: 768px){.price-big{font-size: 1.8em;} .stat-value{font-size: 1.5em;} .tp-box, .card{padding: 10px;}}</style>""", unsafe_allow_html=True)
 
 st.markdown("""<div class="card" style="text-align: center; background: linear-gradient(135deg, #10b981, #059669);">
-<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v8.1</h1>
-<p style="color: white !important;">PORTFOLIO OPTIMIZER + BACKTEST + DARK MODE</p></div>""", unsafe_allow_html=True)
+<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v8.2</h1>
+<p style="color: white !important;">POSITION TRACKER + PORTFOLIO + BACKTEST</p></div>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
@@ -274,6 +283,22 @@ with st.sidebar:
     st.markdown("### 💰 Portfolio")
     portfolio = st.number_input("Portfolio ($)", value=10000, step=100)
     risk = st.number_input("Risk/Trade ($)", value=200, step=10)
+    st.markdown("---")
+    
+    # PHASE 3.4: POSITION TRACKER SUMMARY
+    if POSITION_TRACKER_AVAILABLE:
+        st.markdown("### 📝 Position Tracker")
+        summary = tracker.get_position_summary()
+        st.markdown(f"""<div class="stat-box">
+        <div style="color: white; font-size: 0.9em;">Open Positions</div>
+        <div class="stat-value" style="color: white;">{summary['open_positions']}</div></div>""", unsafe_allow_html=True)
+        
+        pnl_color = '#10b981' if summary['total_pnl'] >= 0 else '#ef4444'
+        st.markdown(f"""<div class="stat-box" style="background: linear-gradient(135deg, {pnl_color}, #059669);">
+        <div style="color: white; font-size: 0.9em;">Total PNL (Closed)</div>
+        <div class="stat-value" style="color: white;">${summary['total_pnl']:+,.2f}</div></div>""", unsafe_allow_html=True)
+    else:
+        st.info("💡 Position Tracker: Yükleniyor...")
     st.markdown("---")
     
     # PHASE 3.3: PORTFOLIO OPTIMIZER WIDGET
@@ -364,10 +389,10 @@ if show_help:
         st.markdown("""**LONG**: Al | **SHORT**: Sat | **Confidence**: AI güven | **Score**: Final puan | **R/R**: Risk/Reward  
 **Entry**: Açılış | **SL**: Stop Loss | **TP**: Take Profit | **Sharpe**: Risk-adjusted return | **Drawdown**: Max düşüş | **Kelly**: Optimal position size""")
 
-# 6 TABS - PORTFOLIO ADDED!
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "💼 Portfolio", "⚙️ Coin Manager", "📜 Trade History", "📊 Backtest"])
+# 7 TABS - ALL COMPLETE!
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "💼 Portfolio", "📝 Positions", "⚙️ Coin Manager", "📜 Trade History", "📊 Backtest"])
 
-# TAB 1: LIVE DASHBOARD
+# TAB 1: LIVE DASHBOARD (COMPLETE - same as v8.1)
 with tab1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📊 Canlı Fiyatlar")
@@ -497,7 +522,7 @@ with tab1:
                 st.error(f"❌ Hata: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 2: WATCHLIST
+# TAB 2: WATCHLIST (COMPLETE)
 with tab2:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(f"### 🔍 Watchlist ({len(st.session_state.watchlist_coins)} Coins)")
@@ -517,7 +542,7 @@ with tab2:
         st.dataframe(df, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 3: PORTFOLIO (NEW!)
+# TAB 3: PORTFOLIO (COMPLETE)
 with tab3:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 💼 Portfolio Allocation")
@@ -554,8 +579,77 @@ with tab3:
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 4: COIN MANAGER
+# TAB 4: POSITION TRACKER (NEW! COMPLETE)
 with tab4:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 📝 Position Tracker - Futures Manuel Tracking")
+    
+    if not POSITION_TRACKER_AVAILABLE:
+        st.error("❌ Position Tracker yüklenemedi!")
+    else:
+        pending = tracker.get_pending_signals()
+        open_positions = tracker.get_open_positions()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 📊 Pending AI Signals")
+            if pending:
+                for sig in pending:
+                    signal_color = '#10b981' if sig['signal'] == 'LONG' else '#ef4444'
+                    st.markdown(f"""<div class="position-card" style="border-left-color: {signal_color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 1.1em;">{sig['symbol'].replace('USDT', '')} {sig['signal']}</strong>
+                    <span style="background: {signal_color}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em;">#{sig['id']}</span>
+                    </div>
+                    <div style="margin: 10px 0; font-size: 0.9em;">
+                    📍 Entry: ${sig['entry_price']:,.2f} | 🛡️ SL: ${sig['stop_loss']:,.2f}<br>
+                    💰 Position: ${sig['position_size']:,.0f} | 🎯 Confidence: {sig['confidence']:.0f}%
+                    </div>
+                    <div style="font-size: 0.8em; color: #9ca3af;">🕐 {sig['timestamp']}</div>
+                    </div>""", unsafe_allow_html=True)
+                    
+                    if st.button(f"✅ Binance'de Açtım (#{sig['id']})", key=f"open_{sig['id']}"):
+                        if tracker.mark_position_opened(sig['id']):
+                            st.success(f"✅ Position marked as OPEN!")
+                            st.rerun()
+            else:
+                st.info("💡 AI henüz trade önerisi vermedi. 'AI Analiz Yap' butonuna basın.")
+        
+        with col2:
+            st.markdown("#### 🔴 Open Positions (Real-time)")
+            if open_positions:
+                for pos in open_positions:
+                    pnl_class = 'pnl-positive' if pos['pnl_usd'] >= 0 else 'pnl-negative'
+                    pnl_emoji = '📈' if pos['pnl_usd'] >= 0 else '📉'
+                    
+                    st.markdown(f"""<div class="position-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 1.1em;">{pos['symbol'].replace('USDT', '')} {pos['side']}</strong>
+                    <span class="{pnl_class}">{pnl_emoji} ${pos['pnl_usd']:+,.2f} ({pos['pnl_pct']:+.2f}%)</span>
+                    </div>
+                    <div style="margin: 10px 0; font-size: 0.9em;">
+                    📍 Entry: ${pos['entry_price']:,.2f} | 💲 Current: ${pos['current_price']:,.2f}<br>
+                    🛡️ SL: ${pos['stop_loss']:,.2f} | 📏 Distance: {pos['sl_distance_pct']:.2f}%
+                    </div>
+                    <div style="font-size: 0.8em; color: #9ca3af;">🕐 Opened: {pos['opened_at']}</div>
+                    </div>""", unsafe_allow_html=True)
+                    
+                    col_a, col_b = st.columns([3, 1])
+                    with col_a:
+                        exit_price = st.number_input(f"Exit Price (#{pos['id']})", value=float(pos['current_price']), step=0.01, key=f"exit_{pos['id']}")
+                    with col_b:
+                        if st.button(f"🔒 Close", key=f"close_{pos['id']}"):
+                            if tracker.close_position(pos['id'], exit_price):
+                                st.success(f"✅ Position closed!")
+                                st.rerun()
+            else:
+                st.info("💡 Açık pozisyon yok. AI sinyalleri bekliyor...")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# TAB 5: COIN MANAGER (COMPLETE)
+with tab5:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### ⚙️ Coin Manager")
     st.info("💡 BTC+ETH+LTC sabit")
@@ -581,8 +675,8 @@ with tab4:
                     st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 5: TRADE HISTORY
-with tab5:
+# TAB 6: TRADE HISTORY (COMPLETE)
+with tab6:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📜 Trade History")
     trades_df = db.get_all_trades()
@@ -606,8 +700,8 @@ with tab5:
         st.info("📊 Trade kaydı yok")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 6: BACKTEST
-with tab6:
+# TAB 7: BACKTEST (COMPLETE)
+with tab7:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📊 Backtest Engine")
     
@@ -686,4 +780,4 @@ with tab6:
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #10b981; padding: 20px; background: #2d2d2d; border-radius: 12px;'>
-<p><strong>🔱 DEMIR AI v8.1 - PORTFOLIO OPTIMIZER COMPLETE</strong></p></div>""", unsafe_allow_html=True)
+<p><strong>🔱 DEMIR AI v8.2 - POSITION TRACKER COMPLETE - FULL VERSION</strong></p></div>""", unsafe_allow_html=True)
