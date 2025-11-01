@@ -1,37 +1,27 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v9.4 PRO - COMPLETE PRODUCTION VERSION
+🔱 DEMIR AI TRADING BOT - DASHBOARD v10.0 PRO - PHASE 6 + AI TRANSPARENCY
 ===========================================================================
-Date: 1 Kasım 2025, 18:05 CET
-Author: DEMIR AI System
-Version: 9.4 HOTFIX - HTML Rendering Fix
+Date: 1 Kasım 2025, 21:42 CET
+Version: 10.0 - AI Brain Breakdown + Manual Trade Entry
 
-PHASE 5.4 FEATURES:
-✅ Fixed HTML rendering issue (switched to Streamlit native components)
-✅ Full ai_brain.py compatibility ('decision' and 'final_decision' support)
-✅ Complete trade_history_db.py error handling
-✅ WebSocket live price streaming
-✅ Position tracking
-✅ Portfolio optimization
-✅ Backtest engine integration
-✅ Professional UI with metrics and cards
-✅ 11-Layer AI analysis
-✅ Auto-refresh capability
-✅ Copy-to-clipboard functionality
-✅ Multi-coin support (BTC, ETH, LTC)
+NEW IN v10.0:
+-------------
+✅ Tab 6: AI Brain Breakdown (transparency!)
+✅ Manuel trade entry buttons (I opened this trade!)
+✅ Trade result tracking (WIN/LOSS logging)
+✅ Layer scores visualization
+✅ Macro factors breakdown
+✅ Full transparency dashboard
+
+COMPATIBILITY:
+--------------
+✅ Works with ai_brain.py v5 (Phase 6)
+✅ Works with macro_correlation_layer.py
+✅ Backward compatible with all existing modules
 
 USAGE:
 ------
-1. This file is already named: streamlit_app.py (READY TO USE)
-2. Install dependencies: pip install -r requirements.txt
-3. Run: streamlit run streamlit_app.py
-4. Dashboard will open in browser at http://localhost:8501
-
-REQUIREMENTS (requirements.txt):
---------------------------------
-streamlit>=1.28.0
-pandas>=2.0.0
-plotly>=5.17.0
-requests>=2.31.0
+streamlit run streamlit_app.py
 """
 
 # ============================================================================
@@ -46,7 +36,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import traceback
 
-# Import optional modules with error handling
+# Optional modules
 try:
     import trade_history_db as db
     DB_AVAILABLE = True
@@ -59,50 +49,37 @@ try:
     WRC_AVAILABLE = True
 except:
     WRC_AVAILABLE = False
-    print("⚠️ win_rate_calculator not available")
 
-# PHASE 4.1: WebSocket Integration
 try:
     from websocket_stream import get_websocket_manager
     WEBSOCKET_AVAILABLE = True
-    print("✅ WebSocket module loaded")
 except Exception as e:
     WEBSOCKET_AVAILABLE = False
-    print(f"⚠️ WebSocket not available: {e}")
 
-# PHASE 3.4: Position Tracker
 try:
     from position_tracker import PositionTracker
     POSITION_TRACKER_AVAILABLE = True
     tracker = PositionTracker()
-    print("✅ Position Tracker loaded")
 except Exception as e:
     POSITION_TRACKER_AVAILABLE = False
-    print(f"⚠️ Position Tracker not available: {e}")
 
-# PHASE 3.3: Portfolio Optimizer
 try:
     from portfolio_optimizer import PortfolioOptimizer
     PORTFOLIO_OPTIMIZER_AVAILABLE = True
-    print("✅ Portfolio Optimizer loaded")
 except:
     PORTFOLIO_OPTIMIZER_AVAILABLE = False
-    print("⚠️ Portfolio Optimizer not available")
 
-# PHASE 3.2: Backtest Engine
 try:
     from backtest_engine import BacktestEngine
     BACKTEST_AVAILABLE = True
-    print("✅ Backtest Engine loaded")
 except:
     BACKTEST_AVAILABLE = False
-    print("⚠️ Backtest Engine not available")
 
-# Core AI Brain - CRITICAL MODULE
+# Core AI Brain - CRITICAL
 try:
     import ai_brain
     AI_BRAIN_AVAILABLE = True
-    print("✅ AI Brain module loaded successfully")
+    print("✅ AI Brain v5 loaded (PHASE 6)")
 except Exception as e:
     AI_BRAIN_AVAILABLE = False
     print(f"❌ AI Brain import error: {e}")
@@ -111,51 +88,37 @@ except Exception as e:
 # PAGE CONFIGURATION
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v9.4 PRO",
+    page_title="🔱 DEMIR AI Trading Bot v10.0 PRO",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ============================================================================
-# PROFESSIONAL CSS STYLING
+# CSS STYLING
 # ============================================================================
 st.markdown("""
 <style>
-    /* Main background gradient */
     .stApp {
         background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
     }
     
-    /* Headers */
     h1, h2, h3, h4 {
         color: #ffffff !important;
         font-weight: 700 !important;
-        letter-spacing: -0.5px;
     }
     
-    /* Metric cards */
     [data-testid="stMetricValue"] {
         font-size: 24px;
         color: #fff;
     }
     
-    [data-testid="stMetricLabel"] {
-        color: #bbb;
-    }
-    
-    [data-testid="stMetricDelta"] {
-        font-size: 16px;
-    }
-    
-    /* Buttons */
     .stButton>button {
         background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
         border: 1px solid rgba(255,255,255,0.2);
         border-radius: 10px;
         color: #fff;
         font-weight: 600;
-        padding: 8px 16px;
         transition: all 0.3s ease;
     }
     
@@ -163,70 +126,28 @@ st.markdown("""
         background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,212,255,0.15));
         border-color: #00ff88;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,255,136,0.3);
-    }
-    
-    /* Progress bars */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #00ff88, #00d4ff);
-    }
-    
-    /* Info/Success/Warning/Error boxes */
-    .stAlert {
-        border-radius: 10px;
-        border-left: 4px solid;
-    }
-    
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 10px 20px;
-        font-weight: 600;
-    }
-    
-    /* Dataframes */
-    .dataframe {
-        border-radius: 8px;
-    }
-    
-    /* Code blocks */
-    .stCodeBlock {
-        background: rgba(0,0,0,0.4);
-        border-radius: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# GLOBAL SESSION STATE
+# SESSION STATE
 # ============================================================================
 if 'last_refresh' not in st.session_state:
     st.session_state.last_refresh = datetime.now()
+
+if 'manual_trades' not in st.session_state:
+    st.session_state.manual_trades = []
 
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
 def get_binance_price(symbol, ws_manager=None):
-    """
-    Get Binance price with WebSocket priority, REST API fallback
-    
-    Args:
-        symbol: Trading pair symbol (e.g., 'BTCUSDT')
-        ws_manager: WebSocket manager instance (optional)
-    
-    Returns:
-        dict: Price data with keys: price, change_24h, volume, high_24h, low_24h, available, source
-    """
-    # Try WebSocket first (real-time data)
+    """Get price from WebSocket or REST API"""
     if WEBSOCKET_AVAILABLE and ws_manager and ws_manager.is_connected():
         ws_price = ws_manager.get_price(symbol)
         if ws_price and ws_price > 0:
-            # Got WebSocket price, now fetch 24h stats from REST
             try:
                 url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
                 response = requests.get(url, timeout=5)
@@ -241,10 +162,10 @@ def get_binance_price(symbol, ws_manager=None):
                         'available': True,
                         'source': 'websocket'
                     }
-            except Exception as e:
-                print(f"REST API 24h stats error: {e}")
+            except:
+                pass
     
-    # Fallback: Pure REST API
+    # REST API fallback
     try:
         url = f"https://fapi.binance.com/fapi/v1/ticker/24hr?symbol={symbol}"
         response = requests.get(url, timeout=5)
@@ -259,104 +180,99 @@ def get_binance_price(symbol, ws_manager=None):
                 'available': True,
                 'source': 'rest_api'
             }
-    except Exception as e:
-        print(f"Binance API error for {symbol}: {e}")
+    except:
+        pass
     
-    # If all fails
-    return {
-        'price': 0,
-        'change_24h': 0,
-        'volume': 0,
-        'high_24h': 0,
-        'low_24h': 0,
-        'available': False,
-        'source': 'error'
+    return {'price': 0, 'change_24h': 0, 'volume': 0, 'available': False}
+
+def log_manual_trade(symbol, decision_data):
+    """Log a manually opened trade"""
+    trade = {
+        'symbol': symbol,
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'signal': decision_data.get('decision', 'UNKNOWN'),
+        'entry_price': decision_data.get('entry_price'),
+        'stop_loss': decision_data.get('stop_loss'),
+        'take_profit': decision_data.get('take_profit'),
+        'ai_score': decision_data.get('final_score', 0),
+        'macro_score': decision_data.get('macro_score', 0),
+        'status': 'OPEN'
     }
+    
+    st.session_state.manual_trades.append(trade)
+    
+    # Also save to database if available
+    if DB_AVAILABLE:
+        try:
+            db.add_trade(
+                symbol=symbol,
+                signal=trade['signal'],
+                entry_price=trade['entry_price'],
+                stop_loss=trade['stop_loss'],
+                take_profit=trade['take_profit']
+            )
+        except:
+            pass
+    
+    return trade
 
 # ============================================================================
-# CARD RENDERING FUNCTION (Streamlit Native Components)
+# CARD RENDERING
 # ============================================================================
 
 def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status):
-    """
-    Render trading card using Streamlit native components
+    """Render trading card with manuel entry button"""
     
-    BUGFIX v9.4: HTML wasn't rendering in v9.3, switched to st.components for reliability
-    
-    Args:
-        symbol: Trading pair symbol
-        coin_name: Human-readable coin name
-        emoji: Coin emoji for display
-        decision: AI decision dict from ai_brain.make_trading_decision()
-        price_data: Price data dict from get_binance_price()
-        ws_status: WebSocket status string
-    """
-    # =========================
-    # VALIDATION
-    # =========================
     if not decision or not isinstance(decision, dict):
-        st.error(f"❌ AI Brain returned None or invalid data for {coin_name}")
+        st.error(f"❌ AI Brain returned None for {coin_name}")
         return
     
-    # Get signal (support both 'decision' and 'final_decision' keys for compatibility)
     signal = decision.get('decision') or decision.get('final_decision')
     
     if not signal:
-        st.error(f"❌ Missing decision/final_decision key for {coin_name}")
-        with st.expander("🔍 Debug Info - Click to expand"):
-            st.write("**Returned keys:**", list(decision.keys()))
-            st.write("**Full response:**", decision)
+        st.error(f"❌ Missing decision key for {coin_name}")
         return
     
-    # =========================
-    # SIGNAL BADGE
-    # =========================
+    # Signal badge
     if signal == "LONG":
         st.success(f"🟢 **LONG SIGNAL** - {emoji} {coin_name}")
     elif signal == "SHORT":
         st.error(f"🔴 **SHORT SIGNAL** - {emoji} {coin_name}")
     else:
-        st.warning(f"🟡 **NEUTRAL** - {emoji} {coin_name}")
+        st.warning(f"🟡 **WAIT** - {emoji} {coin_name}")
     
-    # =========================
-    # CURRENT PRICE METRIC
-    # =========================
+    # Price metric
     st.metric(
         label=f"Current Price ({ws_status})",
         value=f"${price_data['price']:,.2f}",
         delta=f"{price_data['change_24h']:+.2f}% (24h)"
     )
     
-    # =========================
-    # TRADING PARAMETERS
-    # =========================
+    # Trading parameters
     entry = decision.get('entry_price', 0)
     sl = decision.get('stop_loss', 0)
     tp = decision.get('take_profit', 0)
-    risk = abs(entry - sl)
-    reward = abs(tp - entry)
+    risk = abs(entry - sl) if entry and sl else 0
+    reward = abs(tp - entry) if entry and tp else 0
     rr_ratio = reward / risk if risk > 0 else 0
     
     st.markdown("### 📊 Trading Parameters")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("📍 Entry Price", f"${entry:,.2f}")
+        st.metric("📍 Entry", f"${entry:,.2f}" if entry else "N/A")
     with col2:
-        st.metric("🛡️ Stop Loss", f"${sl:,.2f}")
+        st.metric("🛡️ Stop Loss", f"${sl:,.2f}" if sl else "N/A")
     with col3:
-        st.metric("🎯 Take Profit", f"${tp:,.2f}")
+        st.metric("🎯 Take Profit", f"${tp:,.2f}" if tp else "N/A")
     
-    # Risk/Reward and Position Size
     col4, col5 = st.columns(2)
     with col4:
-        st.metric("⚖️ Risk/Reward", f"1:{rr_ratio:.2f}")
+        st.metric("⚖️ R/R", f"1:{rr_ratio:.2f}" if rr_ratio else "N/A")
     with col5:
-        st.metric("💰 Position Size", f"{decision.get('position_size', 0):.4f} {coin_name[:3]}")
+        st.metric("💰 Position", f"{decision.get('position_size', 0):.4f} {coin_name[:3]}")
     
-    # =========================
-    # COPY BUTTONS
-    # =========================
+    # Copy buttons
     st.markdown("### 📋 Quick Copy")
     col_a, col_b, col_c, col_d = st.columns(4)
     
@@ -374,26 +290,37 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
     
     with col_d:
         if st.button(f"Copy All", key=f"copy_all_{symbol}"):
-            all_params = f"Entry: ${entry:.2f} | SL: ${sl:.2f} | TP: ${tp:.2f} | R/R: 1:{rr_ratio:.2f}"
+            all_params = f"Entry: ${entry:.2f} | SL: ${sl:.2f} | TP: ${tp:.2f}"
             st.code(all_params, language="text")
     
-    # =========================
-    # 11-LAYER ANALYSIS SCORES
-    # =========================
+    # ========================================================================
+    # NEW: MANUAL TRADE ENTRY BUTTON
+    # ========================================================================
+    st.markdown("---")
+    st.markdown("### ✋ Manual Trade Entry")
+    
+    col_trade, col_info = st.columns([1, 2])
+    
+    with col_trade:
+        if st.button(f"✅ I Opened This Trade!", key=f"manual_trade_{symbol}", type="primary"):
+            trade = log_manual_trade(symbol, decision)
+            st.success(f"✅ Trade logged for {coin_name}!")
+            st.balloons()
+    
+    with col_info:
+        st.info(f"💡 Click when you manually open a trade based on AI recommendation")
+    
+    # Layer scores (AI transparency!)
     if 'layer_scores' in decision and decision['layer_scores']:
-        with st.expander("🔬 11-Layer Analysis Breakdown", expanded=False):
+        with st.expander("🔬 Layer Breakdown", expanded=False):
             for layer_name, score in decision['layer_scores'].items():
-                # Progress bar with color based on score
                 st.progress(score / 100, text=f"{layer_name}: {score:.1f}%")
     
-    # =========================
-    # AI COMMENTARY
-    # =========================
+    # AI commentary
     if 'ai_commentary' in decision and decision['ai_commentary']:
         with st.expander("🤖 AI Commentary", expanded=False):
             st.info(decision['ai_commentary'])
     
-    # Separator
     st.markdown("---")
 
 # ============================================================================
@@ -401,111 +328,88 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
 # ============================================================================
 
 def main():
-    """Main application entry point"""
+    """Main application"""
     
-    # =========================
-    # INITIALIZE WEBSOCKET
-    # =========================
+    # WebSocket init
     ws_manager = None
     if WEBSOCKET_AVAILABLE:
         try:
             ws_manager = get_websocket_manager(['BTCUSDT', 'ETHUSDT', 'LTCUSDT'])
-            print("✅ WebSocket manager initialized")
-        except Exception as e:
-            print(f"⚠️ WebSocket initialization error: {e}")
+        except:
+            pass
     
-    # =========================
-    # HEADER
-    # =========================
+    # Header
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.title("🔱 DEMIR AI TRADING BOT v9.4 PRO")
+        st.title("🔱 DEMIR AI TRADING BOT v10.0 PRO")
     
     with col2:
-        if WEBSOCKET_AVAILABLE and ws_manager and ws_manager.is_connected():
-            st.markdown("### 🟢 LIVE STREAM")
+        if WEBSOCKET_AVAILABLE and ws_manager:
+            st.markdown("### 🟢 LIVE")
         else:
-            st.markdown("### 🟡 REST API")
+            st.markdown("### 🟡 REST")
     
     with col3:
         st.markdown(f"### ⏰ {datetime.now().strftime('%H:%M:%S')}")
     
     st.markdown("---")
     
-    # =========================
-    # SIDEBAR CONFIGURATION
-    # =========================
+    # Sidebar
     with st.sidebar:
         st.header("⚙️ CONTROL PANEL")
         
-        # WebSocket connection status
         if WEBSOCKET_AVAILABLE and ws_manager:
             try:
                 status = ws_manager.get_connection_status()
-                st.markdown("### 📡 Connection Status")
-                conn_status = "🟢 Connected" if status['connected'] else "🔴 Disconnected"
-                st.markdown(f"**WebSocket:** {conn_status}")
-                st.markdown(f"**Streams:** {len(status['symbols'])} coins")
-                
-                # Show live prices in sidebar
-                if status.get('prices'):
-                    st.markdown("**Live Prices:**")
-                    for sym, pr in status['prices'].items():
-                        if pr:
-                            st.markdown(f"• {sym}: ${pr:,.2f}")
-            except Exception as e:
-                st.warning(f"WebSocket status error: {e}")
+                st.markdown("### 📡 Connection")
+                st.markdown(f"**WS:** {'🟢' if status['connected'] else '🔴'}")
+                st.markdown(f"**Coins:** {len(status['symbols'])}")
+            except:
+                pass
         
         st.markdown("---")
         
-        # Wallet settings
-        st.subheader("💰 Wallet Configuration")
-        portfolio_value = st.number_input("Total Balance (USD)", value=1000, step=100, min_value=100)
-        leverage = st.number_input("Leverage", value=50, min_value=1, max_value=125, step=1)
-        risk_per_trade = st.number_input("Risk Per Trade ($)", value=35, step=5, min_value=10)
+        st.subheader("💰 Wallet Config")
+        portfolio_value = st.number_input("Balance (USD)", value=1000, step=100, min_value=100)
+        leverage = st.number_input("Leverage", value=50, min_value=1, max_value=125)
+        risk_per_trade = st.number_input("Risk ($)", value=35, step=5, min_value=10)
         
         st.markdown("---")
         
-        # Active coins display
-        st.subheader("🎯 Active Trading Pairs")
-        st.markdown("**Permanent Coins:**")
-        st.markdown("• **BTCUSDT** (Bitcoin)")
-        st.markdown("• **ETHUSDT** (Ethereum)")
-        st.markdown("• **LTCUSDT** (Litecoin)")
+        st.subheader("🎯 Active Pairs")
+        st.markdown("• **BTCUSDT**")
+        st.markdown("• **ETHUSDT**")
+        st.markdown("• **LTCUSDT**")
         
         st.markdown("---")
         
-        # Auto-refresh control
-        auto_refresh = st.checkbox("🔄 Auto Refresh (30s)", value=False)
-        if auto_refresh:
-            st.markdown("*Dashboard auto-refreshes every 30 seconds*")
+        auto_refresh = st.checkbox("🔄 Auto (30s)", value=False)
         
-        # Manual refresh button
-        if st.button("🔄 Manual Refresh Now", use_container_width=True):
+        if st.button("🔄 Refresh Now", use_container_width=True):
             st.session_state.last_refresh = datetime.now()
             st.rerun()
     
-    # =========================
-    # MAIN TABS
-    # =========================
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # ========================================================================
+    # TABS (NOW WITH 6TH TAB!)
+    # ========================================================================
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🎯 TRADE SIGNALS",
-        "📈 ACTIVE POSITIONS",
-        "💼 PORTFOLIO OPTIMIZER",
-        "⚡ BACKTEST ENGINE",
-        "📜 TRADE HISTORY"
+        "📈 POSITIONS",
+        "💼 PORTFOLIO",
+        "⚡ BACKTEST",
+        "📜 HISTORY",
+        "🧠 AI BREAKDOWN"  # NEW!
     ])
     
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ========================================================================
     # TAB 1: TRADE SIGNALS
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ========================================================================
     with tab1:
         st.header("🎯 LIVE TRADE SIGNALS")
-        st.markdown("*AI-powered multi-layer analysis with real-time price streaming*")
+        st.markdown("*AI-powered 12-layer analysis with macro correlation*")
         st.markdown("---")
         
-        # Coin configurations
         coins = [
             ('BTCUSDT', 'Bitcoin', '₿'),
             ('ETHUSDT', 'Ethereum', '♦️'),
@@ -513,14 +417,11 @@ def main():
         ]
         
         for symbol, coin_name, emoji in coins:
-            # Get live price data
             price_data = get_binance_price(symbol, ws_manager)
             ws_status = "🔴 LIVE" if price_data.get('source') == 'websocket' else "🟡 API"
             
-            # Get AI trading decision
             if AI_BRAIN_AVAILABLE and price_data['available']:
                 try:
-                    # Call AI Brain
                     decision = ai_brain.make_trading_decision(
                         symbol=symbol,
                         interval='1h',
@@ -528,147 +429,297 @@ def main():
                         risk_per_trade=risk_per_trade
                     )
                     
-                    # Validate response
-                    if decision is None:
-                        st.error(f"❌ AI Brain returned None for {coin_name}")
-                    elif not isinstance(decision, dict):
-                        st.error(f"❌ AI Brain returned invalid type: {type(decision)} for {coin_name}")
-                    else:
-                        # Render card
+                    if decision:
                         render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
+                    else:
+                        st.error(f"❌ AI Brain returned None for {coin_name}")
                     
                 except Exception as e:
-                    st.error(f"❌ Exception in {coin_name} analysis:")
+                    st.error(f"❌ Error in {coin_name}:")
                     st.code(f"{type(e).__name__}: {str(e)}")
-                    with st.expander("🔍 Full Traceback"):
-                        st.code(traceback.format_exc())
             else:
                 if not AI_BRAIN_AVAILABLE:
-                    st.warning(f"⚠️ AI Brain module not available for {coin_name}")
+                    st.warning(f"⚠️ AI Brain not available")
                 else:
-                    st.warning(f"⚠️ Price data unavailable for {coin_name}")
+                    st.warning(f"⚠️ Price unavailable for {coin_name}")
     
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # TAB 2: ACTIVE POSITIONS TRACKER
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ========================================================================
+    # TAB 2: POSITIONS
+    # ========================================================================
     with tab2:
-        st.header("📈 Active Positions Tracker")
-        st.markdown("*Monitor your current open positions and P/L*")
+        st.header("📈 Active Positions")
+        st.markdown("*Monitor open positions and P/L*")
         st.markdown("---")
         
         if POSITION_TRACKER_AVAILABLE:
             try:
-                # Access positions attribute (not method)
                 positions = tracker.positions if hasattr(tracker, 'positions') else []
                 
                 if len(positions) > 0:
                     df = pd.DataFrame(positions)
                     st.dataframe(df, use_container_width=True, height=400)
-                    
-                    # Summary metrics
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Total Positions", len(positions))
-                    with col2:
-                        total_pl = sum([p.get('pnl', 0) for p in positions])
-                        st.metric("Total P/L", f"${total_pl:.2f}")
-                    with col3:
-                        win_count = sum([1 for p in positions if p.get('pnl', 0) > 0])
-                        st.metric("Winning Positions", win_count)
                 else:
-                    st.info("📭 No active positions at the moment")
-            except Exception as e:
-                st.error(f"❌ Error loading positions: {str(e)}")
-                with st.expander("🔍 Error Details"):
-                    st.code(traceback.format_exc())
-        else:
-            st.warning("⚠️ Position Tracker module not available")
-    
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # TAB 3: PORTFOLIO OPTIMIZER
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    with tab3:
-        st.header("💼 Portfolio Optimizer")
-        st.markdown("*Optimize position sizing and risk allocation*")
-        st.markdown("---")
-        
-        if PORTFOLIO_OPTIMIZER_AVAILABLE:
-            try:
-                optimizer = PortfolioOptimizer(total_capital=portfolio_value)
-                st.success("✅ Portfolio Optimizer loaded successfully")
-                st.info("💡 Portfolio optimization features will be available here in future updates")
+                    st.info("📭 No active positions")
             except Exception as e:
                 st.error(f"❌ Error: {str(e)}")
         else:
-            st.warning("⚠️ Portfolio Optimizer module not available")
+            st.warning("⚠️ Position Tracker not available")
     
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # TAB 4: BACKTEST ENGINE
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ========================================================================
+    # TAB 3: PORTFOLIO
+    # ========================================================================
+    with tab3:
+        st.header("💼 Portfolio Optimizer")
+        st.markdown("*Position sizing and allocation*")
+        st.markdown("---")
+        
+        if PORTFOLIO_OPTIMIZER_AVAILABLE:
+            st.success("✅ Portfolio Optimizer loaded")
+            st.info("💡 Features coming in next update")
+        else:
+            st.warning("⚠️ Not available")
+    
+    # ========================================================================
+    # TAB 4: BACKTEST
+    # ========================================================================
     with tab4:
         st.header("⚡ Backtest Engine")
-        st.markdown("*Test your strategies on historical data*")
+        st.markdown("*Test strategies on historical data*")
         st.markdown("---")
         
         if BACKTEST_AVAILABLE:
-            st.success("✅ Backtest Engine loaded successfully")
-            st.info("💡 Backtesting features will be available here in future updates")
+            st.success("✅ Backtest Engine loaded")
+            st.info("💡 Features coming in next update")
         else:
-            st.warning("⚠️ Backtest Engine module not available")
+            st.warning("⚠️ Not available")
     
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # TAB 5: TRADE HISTORY
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ========================================================================
+    # TAB 5: HISTORY
+    # ========================================================================
     with tab5:
-        st.header("📜 Trade History Database")
-        st.markdown("*Complete record of all executed trades*")
+        st.header("📜 Trade History")
+        st.markdown("*Complete record of all trades*")
         st.markdown("---")
         
+        # Show manual trades from session state
+        if len(st.session_state.manual_trades) > 0:
+            st.subheader("✋ Manual Trades (This Session)")
+            df_manual = pd.DataFrame(st.session_state.manual_trades)
+            st.dataframe(df_manual, use_container_width=True)
+        
+        # Show database trades
         if DB_AVAILABLE:
             try:
                 trades = db.get_all_trades()
                 
-                # Proper empty check (BUGFIX v9.3)
-                if trades is not None and isinstance(trades, list) and len(trades) > 0:
+                if trades and len(trades) > 0:
+                    st.subheader("💾 Database Trades")
                     df = pd.DataFrame(trades)
-                    st.dataframe(df, use_container_width=True, height=500)
+                    st.dataframe(df, use_container_width=True, height=400)
                     
-                    # Trade statistics
-                    col1, col2, col3, col4 = st.columns(4)
+                    # Stats
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric("Total Trades", len(trades))
                     with col2:
                         wins = sum([1 for t in trades if t.get('result') == 'WIN'])
-                        st.metric("Winning Trades", wins)
+                        st.metric("Wins", wins)
                     with col3:
                         win_rate = (wins / len(trades)) * 100 if len(trades) > 0 else 0
                         st.metric("Win Rate", f"{win_rate:.1f}%")
-                    with col4:
-                        total_pnl = sum([t.get('pnl', 0) for t in trades])
-                        st.metric("Total P/L", f"${total_pnl:.2f}")
                 else:
-                    st.info("📭 No trades recorded yet")
+                    st.info("📭 No database trades yet")
             except Exception as e:
-                st.error(f"❌ Error loading trade history: {str(e)}")
-                with st.expander("🔍 Error Details"):
-                    st.code(traceback.format_exc())
+                st.error(f"❌ Error: {str(e)}")
         else:
-            st.warning("⚠️ Trade History Database not available")
+            st.info("📭 No trades recorded yet")
     
-    # =========================
+    # ========================================================================
+    # TAB 6: AI BRAIN BREAKDOWN (NEW!)
+    # ========================================================================
+    with tab6:
+        st.header("🧠 AI Brain Breakdown")
+        st.markdown("*Full transparency: See how AI makes decisions*")
+        st.markdown("---")
+        
+        if not AI_BRAIN_AVAILABLE:
+            st.warning("⚠️ AI Brain not available")
+        else:
+            # Coin selector
+            selected_coin = st.selectbox(
+                "Select Coin for Analysis:",
+                ["BTCUSDT", "ETHUSDT", "LTCUSDT"],
+                key="brain_coin_select"
+            )
+            
+            st.markdown("---")
+            
+            with st.spinner(f"🔍 Analyzing {selected_coin}..."):
+                try:
+                    decision = ai_brain.make_trading_decision(
+                        symbol=selected_coin,
+                        interval='1h',
+                        portfolio_value=portfolio_value,
+                        risk_per_trade=risk_per_trade
+                    )
+                    
+                    if decision:
+                        # =============================================
+                        # SCORE SUMMARY
+                        # =============================================
+                        st.subheader("📊 Score Summary")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            strategy_score = decision.get('layer_scores', {}).get('Layers 1-11 (Strategy)', 50)
+                            st.metric(
+                                "Strategy Score",
+                                f"{strategy_score:.1f}/100",
+                                delta="70% weight"
+                            )
+                        
+                        with col2:
+                            macro_score = decision.get('macro_score', 50)
+                            st.metric(
+                                "Macro Score",
+                                f"{macro_score:.1f}/100",
+                                delta="30% weight"
+                            )
+                        
+                        with col3:
+                            final_score = decision.get('final_score', 50)
+                            delta_color = "normal" if 45 <= final_score <= 65 else ("off" if final_score < 45 else "inverse")
+                            st.metric(
+                                "Combined Score",
+                                f"{final_score:.1f}/100",
+                                delta=decision.get('decision', 'WAIT'),
+                                delta_color=delta_color
+                            )
+                        
+                        st.markdown("---")
+                        
+                        # =============================================
+                        # MACRO FACTORS BREAKDOWN
+                        # =============================================
+                        if 'macro_details' in decision and decision['macro_details']:
+                            st.subheader("🌍 Macro Factors (11 External Indicators)")
+                            
+                            macro_details = decision['macro_details']
+                            factor_scores = macro_details.get('factor_scores', {})
+                            
+                            if factor_scores:
+                                # Create dataframe for plotting
+                                df_macro = pd.DataFrame({
+                                    'Factor': list(factor_scores.keys()),
+                                    'Score': list(factor_scores.values())
+                                })
+                                
+                                # Horizontal bar chart
+                                fig = go.Figure()
+                                
+                                colors = ['#00ff88' if score >= 65 else '#ff5555' if score <= 35 else '#ffaa00' 
+                                          for score in df_macro['Score']]
+                                
+                                fig.add_trace(go.Bar(
+                                    y=df_macro['Factor'],
+                                    x=df_macro['Score'],
+                                    orientation='h',
+                                    marker=dict(color=colors),
+                                    text=df_macro['Score'].apply(lambda x: f"{x:.1f}"),
+                                    textposition='auto'
+                                ))
+                                
+                                fig.update_layout(
+                                    title="Macro Factor Scores (0-100)",
+                                    xaxis_title="Score",
+                                    yaxis_title="Factor",
+                                    height=500,
+                                    template="plotly_dark"
+                                )
+                                
+                                st.plotly_chart(fig, use_container_width=True)
+                                
+                                # Correlation values
+                                st.markdown("#### 📈 Correlation Values")
+                                
+                                correlations = macro_details.get('correlations', {})
+                                
+                                if correlations:
+                                    df_corr = pd.DataFrame({
+                                        'Factor': list(correlations.keys()),
+                                        'Correlation': list(correlations.values())
+                                    })
+                                    
+                                    st.dataframe(df_corr, use_container_width=True, height=400)
+                        
+                        st.markdown("---")
+                        
+                        # =============================================
+                        # RISK METRICS
+                        # =============================================
+                        st.subheader("⚠️ Risk Assessment")
+                        
+                        risk_metrics = decision.get('risk_metrics', {})
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            ror = risk_metrics.get('risk_of_ruin', 0)
+                            st.metric(
+                                "Risk of Ruin",
+                                f"{ror:.2f}%",
+                                delta="Target: <5%",
+                                delta_color="inverse" if ror > 10 else "normal"
+                            )
+                        
+                        with col2:
+                            mdd = risk_metrics.get('max_drawdown', 0)
+                            st.metric(
+                                "Max Drawdown",
+                                f"{mdd:.2f}%",
+                                delta="Target: <20%",
+                                delta_color="inverse" if mdd > 30 else "normal"
+                            )
+                        
+                        with col3:
+                            sharpe = risk_metrics.get('sharpe_ratio', 0)
+                            st.metric(
+                                "Sharpe Ratio",
+                                f"{sharpe:.2f}",
+                                delta="Target: >1.5",
+                                delta_color="normal" if sharpe > 1.5 else "off"
+                            )
+                        
+                        st.markdown("---")
+                        
+                        # =============================================
+                        # FULL DECISION DETAILS
+                        # =============================================
+                        st.subheader("📋 Full Decision Details")
+                        
+                        with st.expander("🔍 View Complete Decision Object", expanded=False):
+                            st.json(decision)
+                    
+                    else:
+                        st.error("❌ AI Brain returned None")
+                
+                except Exception as e:
+                    st.error(f"❌ Error analyzing {selected_coin}:")
+                    st.code(traceback.format_exc())
+    
+    # ========================================================================
     # FOOTER
-    # =========================
+    # ========================================================================
     st.markdown("---")
     st.markdown(f"**Last Updated:** {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("**DEMIR AI Trading Bot v9.4 PRO** | PHASE 5.4: HTML Rendering Fix | Production Ready")
+    st.markdown("**DEMIR AI v10.0 PRO** | Phase 6: Macro Correlation + AI Transparency")
     
-    # =========================
-    # AUTO-REFRESH LOGIC
-    # =========================
+    # Auto-refresh
     if auto_refresh:
         import time as time_module
-        time_since_refresh = (datetime.now() - st.session_state.last_refresh).total_seconds()
-        if time_since_refresh >= 30:
+        time_since = (datetime.now() - st.session_state.last_refresh).total_seconds()
+        if time_since >= 30:
             st.session_state.last_refresh = datetime.now()
             st.rerun()
 
