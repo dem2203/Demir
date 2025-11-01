@@ -1,14 +1,17 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v7.2 DARK MODE + AI COMMENTS
+🔱 DEMIR AI TRADING BOT - DASHBOARD v7.3 FIXED
 Date: 1 Kasım 2025
 
-v7.2 MAJOR FIX:
-✅ Dark Mode - Koyu tema (göz yormaz, profesyonel)
-✅ AI Comment bölümü eklendi (detaylı açıklamalar)
-✅ Kontrast düzeltildi (beyaz yazılar koyu arka plan)
-✅ NEUTRAL sinyal nedenleri açıklanıyor
-✅ Her layer için AI yorumu
-✅ Piyasa durumu analizi
+v7.3 FIX'LER:
+✅ Component scores kontrolü düzeltildi (sadece veri varsa gösterilir)
+✅ AI Analiz başlığına coin ismi eklendi (örn: "BTC AI Analiz Sonucu")
+✅ "Component scores yükleniyor" mesajı sadece gerçekten boşsa gösterilir
+
+v7.2 ÖZELLİKLER:
+✅ Dark Mode - Koyu tema
+✅ AI Comment bölümü (detaylı açıklamalar)
+✅ Kontrast düzeltildi
+✅ NEUTRAL sinyal nedenleri
 
 PHASE 3.1 ÖZELLİKLER:
 ✅ Telegram Alert System  
@@ -47,7 +50,7 @@ except:
     AI_AVAILABLE = False
 
 st.set_page_config(
-    page_title="🔱 DEMIR AI v7.2",
+    page_title="🔱 DEMIR AI v7.3",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -188,8 +191,8 @@ label{color: #e5e5e5 !important;}
 @media (max-width: 768px){.price-big{font-size: 1.8em;} .stat-value{font-size: 1.5em;} .tp-box, .card{padding: 10px;}}</style>""", unsafe_allow_html=True)
 
 st.markdown("""<div class="card" style="text-align: center; background: linear-gradient(135deg, #10b981, #059669);">
-<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v7.2</h1>
-<p style="color: white !important;">DARK MODE + AI COMMENTS</p></div>""", unsafe_allow_html=True)
+<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v7.3</h1>
+<p style="color: white !important;">DARK MODE + AI COMMENTS + COIN NAME FIX</p></div>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
@@ -265,7 +268,8 @@ with tab1:
     
     if analyze_btn and AI_AVAILABLE:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("### 🎯 AI Analiz Sonucu")
+        coin_name = selected_coin.replace('USDT', '')
+        st.markdown(f"### 🎯 {coin_name} AI Analiz Sonucu")
         with st.spinner('🧠 AI analizi yapılıyor...'):
             try:
                 decision = brain.make_trading_decision(selected_coin, interval, portfolio, risk)
@@ -297,7 +301,7 @@ with tab1:
                 
                 st.markdown("---")
                 st.markdown("### 🧠 11 Layer Detaylı Analiz")
-                if 'component_scores' in decision and decision.get('component_scores'):
+                if 'component_scores' in decision and decision.get('component_scores') and len(decision.get('component_scores', {})) > 0:
                     scores = decision['component_scores']
                     col1, col2 = st.columns(2)
                     layer_info = {
@@ -329,7 +333,7 @@ with tab1:
                                 <div style="font-size: 0.8em; color: #6b7280; margin-top: 5px;">Weight: {info['weight']*100:.0f}%</div></div>""", unsafe_allow_html=True)
                             idx += 1
                 else:
-                    st.info("💡 Component scores yükleniyor...")
+                    st.info("💡 Component scores yükleniyor... AI Brain ilk analizini yapıyor.")
                 
                 st.markdown("---")
                 st.markdown("### 💼 Pozisyon Planı")
@@ -424,4 +428,4 @@ with tab4:
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #10b981; padding: 20px; background: #2d2d2d; border-radius: 12px;'>
-<p><strong>🔱 DEMIR AI v7.2 DARK MODE</strong></p></div>""", unsafe_allow_html=True)
+<p><strong>🔱 DEMIR AI v7.3 DARK MODE</strong></p></div>""", unsafe_allow_html=True)
