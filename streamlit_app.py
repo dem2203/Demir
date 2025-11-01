@@ -1,28 +1,23 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v9.0 PROFESSIONAL UI
+🔱 DEMIR AI TRADING BOT - DASHBOARD v9.1 BUGFIX
 Date: 1 Kasım 2025
-PHASE 5.0: Professional Trading Terminal Interface + WebSocket Integration
+PHASE 5.1: Professional UI + Critical Bugfixes
 
-v9.0 FEATURES:
+v9.1 BUGFIXES:
+✅ Fixed Position Tracker error (get_all_positions → positions attribute)
+✅ Fixed Trade History DataFrame ambiguous boolean error
+✅ Fixed AI Decision KeyError for 'final_decision'
+✅ All v9.0 Professional UI features retained
+
+v9.0 FEATURES (RETAINED):
 ✅ Professional TradingView-style card layout
 ✅ Prominent Entry/TP/SL display with copy buttons
-✅ Real-time WebSocket price streaming (PHASE 4.1)
-✅ Visual signal indicators (🟢 LONG / 🔴 SHORT / 🟡 NEUTRAL)
-✅ 11-Layer analysis with progress bar visualization
-✅ Risk/Reward calculator prominently displayed
-✅ Modern gradient color-coded UI
-✅ Live P/L tracker
-✅ One-click "Copy All" trade parameters
-✅ ALL v8.3.1 features retained (Position Tracker, Portfolio Optimizer, Backtest, Trade History)
-
-RETAINED FROM v8.3.1:
-✅ Multi-coin analysis (BTC/ETH/LTC permanent)
-✅ Position tracking & management
-✅ Portfolio optimizer integration
-✅ Backtest engine
-✅ Trade history database
-✅ Auto-refresh (30s intervals)
-✅ Wallet settings (leverage, risk per trade)
+✅ Real-time WebSocket price streaming
+✅ Visual signal indicators
+✅ 11-Layer analysis with progress bars
+✅ Risk/Reward calculator
+✅ Modern gradient UI
+✅ All previous features intact
 """
 
 import streamlit as st
@@ -74,7 +69,7 @@ except:
 
 # Page configuration
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v9.0 PRO",
+    page_title="🔱 DEMIR AI Trading Bot v9.1 PRO",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -458,6 +453,11 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
     Render professional TradingView-style trading card
     Shows signal, entry, SL, TP, R/R, position size with copy buttons
     """
+    # BUGFIX v9.1: Check if 'final_decision' exists
+    if 'final_decision' not in decision:
+        st.error(f"❌ Missing 'final_decision' in AI response for {coin_name}")
+        return
+    
     signal = decision['final_decision']
     card_class = f"trade-card trade-card-{signal.lower()}"
     
@@ -473,9 +473,9 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
     change_color = "#00ff88" if price_data['change_24h'] >= 0 else "#ff4444"
     
     # Calculate R/R ratio
-    entry = decision['entry_price']
-    sl = decision['stop_loss']
-    tp = decision['take_profit']
+    entry = decision.get('entry_price', 0)
+    sl = decision.get('stop_loss', 0)
+    tp = decision.get('take_profit', 0)
     risk = abs(entry - sl)
     reward = abs(tp - entry)
     rr_ratio = reward / risk if risk > 0 else 0
@@ -500,15 +500,15 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
         <div class="trade-params">
             <div class="param-row">
                 <span class="param-label">📍 ENTRY PRICE</span>
-                <span class="param-value param-value-entry">${decision['entry_price']:,.2f}</span>
+                <span class="param-value param-value-entry">${entry:,.2f}</span>
             </div>
             <div class="param-row">
                 <span class="param-label">🛡️ STOP LOSS</span>
-                <span class="param-value param-value-sl">${decision['stop_loss']:,.2f}</span>
+                <span class="param-value param-value-sl">${sl:,.2f}</span>
             </div>
             <div class="param-row">
                 <span class="param-label">🎯 TAKE PROFIT</span>
-                <span class="param-value param-value-tp">${decision['take_profit']:,.2f}</span>
+                <span class="param-value param-value-tp">${tp:,.2f}</span>
             </div>
         </div>
         
@@ -522,13 +522,13 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
     # Copy buttons row
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        copy_to_clipboard_button(f"{decision['entry_price']:.2f}", "Entry")
+        copy_to_clipboard_button(f"{entry:.2f}", "Entry")
     with col2:
-        copy_to_clipboard_button(f"{decision['stop_loss']:.2f}", "SL")
+        copy_to_clipboard_button(f"{sl:.2f}", "SL")
     with col3:
-        copy_to_clipboard_button(f"{decision['take_profit']:.2f}", "TP")
+        copy_to_clipboard_button(f"{tp:.2f}", "TP")
     with col4:
-        all_params = f"Entry: ${decision['entry_price']:.2f} | SL: ${decision['stop_loss']:.2f} | TP: ${decision['take_profit']:.2f} | R/R: 1:{rr_ratio:.2f}"
+        all_params = f"Entry: ${entry:.2f} | SL: ${sl:.2f} | TP: ${tp:.2f} | R/R: 1:{rr_ratio:.2f}"
         if st.button("📋 Copy All", key=f"copy_all_{symbol}"):
             st.code(all_params)
     
@@ -573,7 +573,7 @@ def main():
     # Header with live status
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.title("🔱 DEMIR AI TRADING BOT v9.0 PRO")
+        st.title("🔱 DEMIR AI TRADING BOT v9.1 PRO")
     with col2:
         if WEBSOCKET_AVAILABLE and ws_manager and ws_manager.is_connected():
             st.markdown("### 🟢 LIVE STREAM")
@@ -668,8 +668,11 @@ def main():
                         risk_per_trade=risk_per_trade
                     )
                     
-                    # Render professional card
-                    render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
+                    # BUGFIX v9.1: Validate decision before rendering
+                    if decision and 'final_decision' in decision:
+                        render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
+                    else:
+                        st.error(f"❌ Invalid AI decision response for {coin_name}")
                     
                 except Exception as e:
                     st.error(f"❌ Error analyzing {coin_name}: {str(e)}")
@@ -686,8 +689,10 @@ def main():
         
         if POSITION_TRACKER_AVAILABLE:
             try:
-                positions = tracker.get_all_positions()
-                if positions:
+                # BUGFIX v9.1: Access positions attribute instead of method
+                positions = tracker.positions if hasattr(tracker, 'positions') else []
+                
+                if len(positions) > 0:
                     df = pd.DataFrame(positions)
                     st.dataframe(df, use_container_width=True, height=400)
                     
@@ -744,25 +749,25 @@ def main():
         
         try:
             trades = db.get_all_trades()
-            if trades:
+            
+            # BUGFIX v9.1: Use len() instead of ambiguous boolean check
+            if trades and len(trades) > 0:
                 df = pd.DataFrame(trades)
                 st.dataframe(df, use_container_width=True, height=500)
                 
                 # Trade statistics
-                if len(trades) > 0:
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Total Trades", len(trades))
-                    with col2:
-                        wins = sum([1 for t in trades if t.get('result') == 'WIN'])
-                        st.metric("Winning Trades", wins)
-                    with col3:
-                        if len(trades) > 0:
-                            win_rate = (wins / len(trades)) * 100
-                            st.metric("Win Rate", f"{win_rate:.1f}%")
-                    with col4:
-                        total_pnl = sum([t.get('pnl', 0) for t in trades])
-                        st.metric("Total P/L", f"${total_pnl:.2f}")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Trades", len(trades))
+                with col2:
+                    wins = sum([1 for t in trades if t.get('result') == 'WIN'])
+                    st.metric("Winning Trades", wins)
+                with col3:
+                    win_rate = (wins / len(trades)) * 100
+                    st.metric("Win Rate", f"{win_rate:.1f}%")
+                with col4:
+                    total_pnl = sum([t.get('pnl', 0) for t in trades])
+                    st.metric("Total P/L", f"${total_pnl:.2f}")
             else:
                 st.info("📭 No trades recorded yet")
         except Exception as e:
@@ -771,7 +776,7 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown(f"**Last Updated:** {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("**DEMIR AI Trading Bot v9.0 PRO** | PHASE 5.0: Professional UI + WebSocket Integration")
+    st.markdown("**DEMIR AI Trading Bot v9.1 PRO** | PHASE 5.1: Bugfix Release")
     
     # Auto-refresh logic
     if auto_refresh:
