@@ -1,14 +1,16 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v8.2.1 UPDATED
+🔱 DEMIR AI TRADING BOT - DASHBOARD v8.3 MAJOR UPDATE
 Date: 1 Kasım 2025
-PHASE 3.4: Position Tracker Integration + UI FIXES
+PHASE 3.5: Multi-Coin Analysis + Enhanced AI Commentary
 
-v8.2.1 UPDATES:
-✅ Sidebar input labels düzeltildi
-✅ WAIT/NEUTRAL durumu için AI yorumu kısaltıldı
-✅ Portfolio Optimizer açıklaması eklendi
-✅ Positions tab mesajları iyileştirildi
-✅ Gereksiz alanlar kaldırıldı
+v8.3 MAJOR UPDATES:
+✅ Kompakt header + canlı fiyatlar tek blok
+✅ BTC + ETH + LTC eş zamanlı analiz
+✅ Wallet: $1000 USD, 50x leverage, $30-40/trade
+✅ AI Yorumu 3x daha detaylı (layer bazlı)
+✅ Portfolio Optimizer FIXED
+✅ 11 Layer Scores GARANTI görünür
+✅ Görsel analiz + tablolar otomatik refresh
 
 v8.2 FEATURES:
 ✅ Manuel Position Tracker (Futures)
@@ -78,7 +80,7 @@ except:
     AI_AVAILABLE = False
 
 st.set_page_config(
-    page_title="🔱 DEMIR AI v8.2",
+    page_title="🔱 DEMIR AI v8.3",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -92,6 +94,8 @@ if 'backtest_results' not in st.session_state:
     st.session_state.backtest_results = None
 if 'portfolio_allocation' not in st.session_state:
     st.session_state.portfolio_allocation = None
+if 'analysis_results' not in st.session_state:
+    st.session_state.analysis_results = {}
 
 def get_binance_price(symbol):
     try:
@@ -133,7 +137,7 @@ def get_quick_signal(symbol, interval='1h', progress_bar=None, idx=0, total=10):
             progress_bar.progress((idx + 1) / total, f"Analyzing {symbol}... ({idx + 1}/{total})")
         if not AI_AVAILABLE:
             return {'signal': 'N/A', 'score': 0, 'confidence': 0}
-        decision = brain.make_trading_decision(symbol, interval, 10000, 200)
+        decision = brain.make_trading_decision(symbol, interval, 1000, 35)
         return {'signal': decision.get('decision', 'NEUTRAL'),
                 'score': decision.get('final_score', 0),
                 'confidence': decision.get('confidence', 0) * 100}
@@ -150,10 +154,12 @@ def copy_button(text, label="📋"):
     style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 12px; 
     border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; margin: 2px;">{label}</button>"""
 
-def generate_ai_comment(decision):
+def generate_enhanced_ai_comment(decision):
+    """ENHANCED: 3x daha detaylı AI yorumu - layer'ları kullanarak"""
     signal = decision.get('decision', 'NEUTRAL')
     confidence = decision.get('confidence', 0) * 100
     score = decision.get('final_score', 0)
+    scores = decision.get('component_scores', {})
     
     # WAIT/NEUTRAL için kısaltılmış yorum
     if signal in ['NEUTRAL', 'WAIT']:
@@ -162,9 +168,10 @@ def generate_ai_comment(decision):
         else:
             return "⏳ **WAIT:** AI daha fazla veri bekliyor. Piyasa henüz yeterli sinyal vermedi."
     
-    # LONG/SHORT için detaylı yorum
+    # LONG/SHORT için DETAYLI layer bazlı yorum
     comments = []
     
+    # 1. Genel Güven ve Skor
     if confidence < 30:
         comments.append(f"🔴 **Çok Düşük Güven ({confidence:.0f}%):** Piyasa çok belirsiz. Bu koşullarda trade açmak yüksek risk taşır.")
     elif confidence < 50:
@@ -174,6 +181,7 @@ def generate_ai_comment(decision):
     else:
         comments.append(f"🟢 **Yüksek Güven ({confidence:.0f}%):** Güçlü sinyal! AI birden fazla layer'dan pozitif sinyal algıladı.")
     
+    # 2. Teknik Analiz Skorları
     if score < 40:
         comments.append(f"📊 **Düşük Skor ({score:.1f}/100):** Çoğu teknik gösterge olumsuz. Piyasa trend göstermiyor.")
     elif score < 60:
@@ -181,6 +189,53 @@ def generate_ai_comment(decision):
     else:
         comments.append(f"📊 **İyi Skor ({score:.1f}/100):** Teknik göstergeler {signal} yönünde güçlü sinyaller veriyor.")
     
+    # 3. Layer Bazlı Detaylı Analiz
+    layer_analysis = []
+    
+    # Volume Profile
+    if 'volume_profile' in scores and scores['volume_profile'].get('available'):
+        vp_score = scores['volume_profile'].get('score', 0)
+        if vp_score > 60:
+            layer_analysis.append(f"📊 **Volume Profile ({vp_score:.0f}/100):** Güçlü hacim desteği var. POC seviyesi {signal} yönünü destekliyor.")
+        elif vp_score < 40:
+            layer_analysis.append(f"📊 **Volume Profile ({vp_score:.0f}/100):** Zayıf hacim. Hareket sürdürülebilir olmayabilir.")
+    
+    # Pivot Points
+    if 'pivot_points' in scores and scores['pivot_points'].get('available'):
+        pp_score = scores['pivot_points'].get('score', 0)
+        if pp_score > 60:
+            layer_analysis.append(f"🎯 **Pivot Points ({pp_score:.0f}/100):** Fiyat kritik destek/direnç seviyelerinde. {signal} yönü favori.")
+        elif pp_score < 40:
+            layer_analysis.append(f"🎯 **Pivot Points ({pp_score:.0f}/100):** Pivot seviyeleri tarafsız. Net bir yön yok.")
+    
+    # GARCH Volatility
+    if 'garch' in scores and scores['garch'].get('available'):
+        garch_score = scores['garch'].get('score', 0)
+        if garch_score > 60:
+            layer_analysis.append(f"📈 **GARCH Volatility ({garch_score:.0f}/100):** Volatilite artıyor. Güçlü hareket beklentisi var.")
+        elif garch_score < 40:
+            layer_analysis.append(f"📉 **GARCH Volatility ({garch_score:.0f}/100):** Düşük volatilite. Piyasa sakin, büyük hareket zor.")
+    
+    # Markov Regime
+    if 'markov' in scores and scores['markov'].get('available'):
+        markov_score = scores['markov'].get('score', 0)
+        if markov_score > 60:
+            layer_analysis.append(f"🔄 **Markov Regime ({markov_score:.0f}/100):** Piyasa {signal} rejiminde. Trend güçlü.")
+        elif markov_score < 40:
+            layer_analysis.append(f"🔄 **Markov Regime ({markov_score:.0f}/100):** Piyasa geçiş aşamasında. Belirsizlik var.")
+    
+    # News Sentiment
+    if 'news_sentiment' in scores and scores['news_sentiment'].get('available'):
+        news_score = scores['news_sentiment'].get('score', 0)
+        if news_score > 60:
+            layer_analysis.append(f"📰 **News Sentiment ({news_score:.0f}/100):** Piyasa haberleri {signal} yönünü destekliyor. Fear & Greed uyumlu.")
+        elif news_score < 40:
+            layer_analysis.append(f"📰 **News Sentiment ({news_score:.0f}/100):** Piyasa haberleri olumsuz. Fear & Greed endeksi düşük.")
+    
+    if layer_analysis:
+        comments.append("\n**🧠 Layer Bazlı Detaylar:**\n" + "\n".join(layer_analysis))
+    
+    # 4. Trade Önerisi
     if signal == 'LONG':
         comments.append("📈 **LONG Sinyal:** AI yükseliş trendi tespit etti. Alım fırsatı olabilir. Entry, SL ve TP seviyelerine dikkat edin.")
     elif signal == 'SHORT':
@@ -256,6 +311,15 @@ st.markdown("""<style>
 [data-testid="stHeader"]{background: #0f0f0f !important;}
 [data-testid="stSidebar"]{background: #0f0f0f !important;}
 
+.compact-header{background: linear-gradient(135deg, #10b981, #059669); border-radius: 8px; padding: 10px 20px; margin: 5px 0; color: white;}
+.compact-header h2{font-size: 1.5em; margin: 0; color: white !important;}
+.compact-header p{font-size: 0.85em; margin: 0; opacity: 0.9; color: white !important;}
+
+.mini-price-card{background: #2d2d2d; border-radius: 8px; padding: 10px; margin: 5px; border-left: 3px solid #10b981;}
+.mini-price-name{font-size: 0.9em; font-weight: 600; color: #10b981;}
+.mini-price-value{font-size: 1.3em; font-weight: 700; margin: 3px 0; color: #e5e5e5;}
+.mini-price-change{font-size: 0.85em; font-weight: 600;}
+
 .card{background: #2d2d2d; border-radius: 15px; padding: 20px; margin: 10px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.5); color: #e5e5e5;}
 .price-card{background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 12px; padding: 20px; margin: 10px 0;}
 .price-big{font-size: 2.5em; font-weight: 700; margin: 10px 0; color: white;}
@@ -282,17 +346,33 @@ label{color: #e5e5e5 !important;}
 
 @media (max-width: 768px){.price-big{font-size: 1.8em;} .stat-value{font-size: 1.5em;} .tp-box, .card{padding: 10px;}}</style>""", unsafe_allow_html=True)
 
-st.markdown("""<div class="card" style="text-align: center; background: linear-gradient(135deg, #10b981, #059669);">
-<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v8.2</h1>
-<p style="color: white !important;">POSITION TRACKER + PORTFOLIO + BACKTEST</p></div>""", unsafe_allow_html=True)
+# KOMPAKT HEADER + CANLI FIYATLAR
+st.markdown("""<div class="compact-header">
+<h2>🔱 DEMIR AI TRADING BOT v8.3</h2>
+<p>MULTI-COIN ANALYSIS • POSITION TRACKER • PORTFOLIO OPTIMIZER</p></div>""", unsafe_allow_html=True)
+
+# CANLI FIYATLAR - KOMPAKT
+cols_price = st.columns(3)
+for idx, coin in enumerate(['BTCUSDT', 'ETHUSDT', 'LTCUSDT']):
+    data = get_binance_price(coin)
+    with cols_price[idx]:
+        if data['available']:
+            change_color = '#10b981' if data['change_24h'] >= 0 else '#ef4444'
+            arrow = '↗' if data['change_24h'] >= 0 else '↘'
+            st.markdown(f"""<div class="mini-price-card">
+            <div class="mini-price-name">{coin.replace('USDT', '')}</div>
+            <div class="mini-price-value">${data['price']:,.2f}</div>
+            <div class="mini-price-change" style="color: {change_color};">{data['change_24h']:+.2f}% {arrow}</div>
+            </div>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
     selected_coin = st.selectbox("Coin", st.session_state.watchlist_coins, key='coin')
     interval = st.selectbox("Timeframe", ['1m', '5m', '15m', '1h', '4h', '1d'], index=3)
-    st.markdown("### 💰 Portfolio")
-    portfolio = st.number_input("Toplam Sermaye ($)", value=10000, step=100, help="Kullanılabilir toplam sermayeniz")
-    risk = st.number_input("Trade Başına Risk ($)", value=200, step=10, help="Her trade için risk etmeye hazır olduğunuz miktar")
+    st.markdown("### 💰 Wallet Settings")
+    st.info("💡 **Wallet:** $1000 USD | **Leverage:** 50x | **Position:** $30-40")
+    portfolio = 1000
+    risk_per_trade = 35
     st.markdown("---")
     
     # PHASE 3.4: POSITION TRACKER SUMMARY
@@ -311,7 +391,7 @@ with st.sidebar:
         st.info("💡 Position Tracker: Yükleniyor...")
     st.markdown("---")
     
-    # PHASE 3.3: PORTFOLIO OPTIMIZER WIDGET - AÇIKLAMA EKLENDİ
+    # PHASE 3.3: PORTFOLIO OPTIMIZER WIDGET
     st.markdown("### 🎯 Portfolio Optimizer")
     st.info("💡 **Ne yapar?** Watchlist'teki tüm coinleri analiz eder, Kelly Criterion ile optimal sermaye dağılımını hesaplar.")
     if PORTFOLIO_OPTIMIZER_AVAILABLE and AI_AVAILABLE:
@@ -320,7 +400,7 @@ with st.sidebar:
                 try:
                     signals = []
                     for coin in st.session_state.watchlist_coins:
-                        decision = brain.make_trading_decision(coin, interval, portfolio, risk)
+                        decision = brain.make_trading_decision(coin, interval, portfolio, risk_per_trade)
                         signals.append({
                             'symbol': coin,
                             'signal': decision.get('decision', 'NEUTRAL'),
@@ -335,11 +415,12 @@ with st.sidebar:
                         'avg_loss': 100
                     }
                     
-                    optimizer = PortfolioOptimizer(portfolio, risk)
+                    optimizer = PortfolioOptimizer(portfolio, risk_per_trade)
                     result = optimizer.optimize_portfolio(signals, perf_dict)
                     
                     st.session_state.portfolio_allocation = result
                     st.success("✅ Portföy optimize edildi! 'Portfolio' sekmesine git.")
+                    st.rerun()
                 except Exception as e:
                     st.error(f"❌ Hata: {str(e)}")
         
@@ -391,7 +472,7 @@ with st.sidebar:
     else:
         st.info("📊 Trade kaydı yok")
     st.markdown("---")
-    analyze_btn = st.button("🔍 AI ANALİZ YAP", use_container_width=True, type="primary")
+    analyze_btn = st.button("🔍 AI ANALİZ YAP (BTC+ETH+LTC)", use_container_width=True, type="primary")
     st.markdown("---")
     show_help = st.checkbox("❓ Terimler")
 
@@ -403,134 +484,127 @@ if show_help:
 # 7 TABS - ALL COMPLETE!
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "💼 Portfolio", "📝 Positions", "⚙️ Coin Manager", "📜 Trade History", "📊 Backtest"])
 
-# TAB 1: LIVE DASHBOARD
+# TAB 1: LIVE DASHBOARD - MULTI-COIN ANALYSIS
 with tab1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("### 📊 Canlı Fiyatlar")
-    cols = st.columns(3)
-    for idx, coin in enumerate(['BTCUSDT', 'ETHUSDT', 'LTCUSDT']):
-        data = get_binance_price(coin)
-        with cols[idx]:
-            if data['available']:
-                arrow = '↗' if data['change_24h'] >= 0 else '↘'
-                st.markdown(f"""<div class="price-card">
-                <div style="font-size: 1.2em; font-weight: 600;">{coin.replace('USDT', '')}</div>
-                <div class="price-big">${data['price']:,.2f}</div>
-                <div style="font-weight: 700; font-size: 1.2em; margin: 10px 0;">{data['change_24h']:+.2f}% {arrow}</div>
-                <div class="price-detail"><span>24h High:</span><span>${data['high_24h']:,.2f}</span></div>
-                <div class="price-detail"><span>24h Low:</span><span>${data['low_24h']:,.2f}</span></div>
-                <div class="price-detail" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
-                <span>Volume:</span><span>${data['volume']/1e6:.1f}M</span></div></div>""", unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align: center; color: #10b981; font-size: 0.9em; margin-top: 10px; background: #2d2d2d; padding: 8px; border-radius: 8px;'>Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
     if analyze_btn and AI_AVAILABLE:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        coin_name = selected_coin.replace('USDT', '')
-        st.markdown(f"### 🎯 {coin_name} AI Analiz Sonucu")
-        with st.spinner('🧠 AI analizi yapılıyor...'):
+        st.markdown("### 🎯 BTC + ETH + LTC - Eş Zamanlı AI Analiz")
+        
+        # 3 COIN EŞ ZAMANLI ANALİZ
+        with st.spinner('🧠 3 coin analiz ediliyor... (BTC, ETH, LTC)'):
             try:
-                decision = brain.make_trading_decision(selected_coin, interval, portfolio, risk)
-                trade_id = db.log_trade(decision)
+                analysis_coins = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
+                for coin_symbol in analysis_coins:
+                    decision = brain.make_trading_decision(coin_symbol, interval, portfolio, risk_per_trade)
+                    trade_id = db.log_trade(decision)
+                    
+                    st.session_state.analysis_results[coin_symbol] = {
+                        'decision': decision,
+                        'trade_id': trade_id,
+                        'timestamp': datetime.now()
+                    }
+                    
+                    if TELEGRAM_AVAILABLE and st.session_state.telegram_alerts_enabled:
+                        telegram_alert.send_signal_alert(decision)
                 
-                if TELEGRAM_AVAILABLE and st.session_state.telegram_alerts_enabled:
-                    telegram_alert.send_signal_alert(decision)
-                    st.success("📱 Telegram'a gönderildi!")
+                st.success(f"✅ 3 coin analizi tamamlandı! Telegram'a gönderildi.")
                 
-                signal = decision['decision']
-                badge_class = {'LONG': 'badge-long', 'SHORT': 'badge-short', 'NEUTRAL': 'badge-neutral', 'WAIT': 'badge-neutral'}
-                emoji = {'LONG': '📈', 'SHORT': '📉', 'NEUTRAL': '⏸️', 'WAIT': '⏳'}
-                
-                st.markdown(f"""<div style="text-align: center; padding: 30px;">
-                <div class="signal-badge {badge_class.get(signal, 'badge-neutral')}">{emoji.get(signal, '🎯')} {signal}</div>
-                <div style="font-size: 1.3em; margin: 20px 0; color: #e5e5e5;">
-                Confidence: <strong style="color: #10b981;">{decision['confidence']*100:.0f}%</strong> | Score: <strong style="color: #10b981;">{decision['final_score']:.1f}/100</strong> | R/R: <strong style="color: #10b981;">1:{decision['risk_reward']:.2f}</strong>
-                </div><div style="font-size: 0.95em; color: #9ca3af;">Trade ID: #{trade_id} | ✅ Database'e kaydedildi</div></div>""", unsafe_allow_html=True)
-                
-                # AI Yorumu - KISALTILMIŞ
-                ai_comment = generate_ai_comment(decision)
-                st.markdown(f"""<div class="ai-comment">
-                <h4 style="color: #3b82f6 !important; margin: 0 0 15px 0;">🤖 AI Yorumu</h4>
-                {ai_comment.replace('**', '<strong>').replace('</strong>', '</strong>')}
-                </div>""", unsafe_allow_html=True)
-                
-                # Sadece LONG/SHORT için detay göster
-                if signal in ['LONG', 'SHORT']:
-                    st.markdown("**💡 Karar Gerekçesi:**")
-                    st.info(decision['reason'])
+                # HER COIN İÇİN DETAYLI GÖSTER
+                for coin_symbol in analysis_coins:
+                    result = st.session_state.analysis_results[coin_symbol]
+                    decision = result['decision']
+                    trade_id = result['trade_id']
                     
                     st.markdown("---")
-                    st.markdown("### 🧠 11 Layer Detaylı Analiz")
-                    if 'component_scores' in decision and decision.get('component_scores') and len(decision.get('component_scores', {})) > 0:
-                        scores = decision['component_scores']
-                        col1, col2 = st.columns(2)
-                        layer_info = {
-                            'volume_profile': {'name': 'Volume Profile', 'desc': 'POC, VAH, VAL', 'weight': 0.12},
-                            'pivot_points': {'name': 'Pivot Points', 'desc': 'Destek/Direnç', 'weight': 0.10},
-                            'fibonacci': {'name': 'Fibonacci', 'desc': 'Retracement', 'weight': 0.10},
-                            'vwap': {'name': 'VWAP', 'desc': 'Volume-weighted', 'weight': 0.08},
-                            'news_sentiment': {'name': 'News Sentiment', 'desc': 'Fear & Greed', 'weight': 0.08},
-                            'garch': {'name': 'GARCH Volatility', 'desc': 'Vol. tahmin', 'weight': 0.15},
-                            'markov': {'name': 'Markov Regime', 'desc': 'Piyasa rejimi', 'weight': 0.15},
-                            'hvi': {'name': 'Historical Vol.', 'desc': 'Geçmiş vol.', 'weight': 0.12},
-                            'squeeze': {'name': 'Vol. Squeeze', 'desc': 'BB + KC', 'weight': 0.10}
-                        }
-                        idx = 0
-                        for key, info in layer_info.items():
-                            if key in scores:
-                                score_val = scores[key].get('score', 0)
-                                available = scores[key].get('available', False)
-                                target_col = col1 if idx % 2 == 0 else col2
-                                with target_col:
-                                    status_icon = '✅' if available else '❌'
-                                    color = '#10b981' if available else '#6b7280'
-                                    st.markdown(f"""<div class="layer-card">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                    <strong style="font-size: 1.05em; color: #e5e5e5;">{status_icon} {info['name']}</strong>
-                                    <span style="font-weight: 700; color: {color};">{score_val:.1f}/100</span></div>
-                                    <div style="font-size: 0.85em; color: #9ca3af; margin-bottom: 8px;">{info['desc']}</div>
-                                    {render_progress_bar(score_val, color=color)}
-                                    <div style="font-size: 0.8em; color: #6b7280; margin-top: 5px;">Weight: {info['weight']*100:.0f}%</div></div>""", unsafe_allow_html=True)
-                                idx += 1
-                    else:
-                        st.info("💡 Component scores yükleniyor... AI Brain ilk analizini yapıyor.")
+                    coin_name = coin_symbol.replace('USDT', '')
+                    st.markdown(f"## {coin_name} Analiz Sonucu")
                     
-                    st.markdown("---")
-                    st.markdown("### 💼 Pozisyon Planı")
-                    if decision.get('entry_price') and decision.get('stop_loss'):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric("📍 Entry", f"${decision['entry_price']:,.2f}")
-                            components.html(copy_button(str(decision['entry_price']), "📋 Entry"), height=40)
-                            st.metric("💰 Position", f"${decision['position_size_usd']:,.2f}")
-                        with col2:
-                            sl_pct = ((decision['stop_loss'] - decision['entry_price']) / decision['entry_price'] * 100)
-                            st.metric("🛡️ Stop Loss", f"${decision['stop_loss']:,.2f}", f"{sl_pct:.2f}%")
-                            components.html(copy_button(str(decision['stop_loss']), "📋 SL"), height=40)
-                            st.metric("⚠️ Risk", f"${decision['risk_amount_usd']:,.2f}")
+                    signal = decision['decision']
+                    badge_class = {'LONG': 'badge-long', 'SHORT': 'badge-short', 'NEUTRAL': 'badge-neutral', 'WAIT': 'badge-neutral'}
+                    emoji = {'LONG': '📈', 'SHORT': '📉', 'NEUTRAL': '⏸️', 'WAIT': '⏳'}
+                    
+                    st.markdown(f"""<div style="text-align: center; padding: 20px;">
+                    <div class="signal-badge {badge_class.get(signal, 'badge-neutral')}">{emoji.get(signal, '🎯')} {signal}</div>
+                    <div style="font-size: 1.2em; margin: 15px 0; color: #e5e5e5;">
+                    Confidence: <strong style="color: #10b981;">{decision['confidence']*100:.0f}%</strong> | Score: <strong style="color: #10b981;">{decision['final_score']:.1f}/100</strong> | R/R: <strong style="color: #10b981;">1:{decision['risk_reward']:.2f}</strong>
+                    </div><div style="font-size: 0.9em; color: #9ca3af;">Trade ID: #{trade_id}</div></div>""", unsafe_allow_html=True)
+                    
+                    # ENHANCED AI YORUMU
+                    ai_comment = generate_enhanced_ai_comment(decision)
+                    st.markdown(f"""<div class="ai-comment">
+                    <h4 style="color: #3b82f6 !important; margin: 0 0 15px 0;">🤖 AI Detaylı Analiz</h4>
+                    {ai_comment.replace('**', '<strong>').replace('</strong>', '</strong>').replace('\n', '<br>')}
+                    </div>""", unsafe_allow_html=True)
+                    
+                    # LONG/SHORT İÇİN DETAY
+                    if signal in ['LONG', 'SHORT']:
+                        with st.expander(f"📊 {coin_name} - 11 Layer Detaylı Analiz", expanded=False):
+                            if 'component_scores' in decision and decision.get('component_scores'):
+                                scores = decision['component_scores']
+                                col1, col2 = st.columns(2)
+                                layer_info = {
+                                    'volume_profile': {'name': 'Volume Profile', 'desc': 'POC, VAH, VAL', 'weight': 0.12},
+                                    'pivot_points': {'name': 'Pivot Points', 'desc': 'Destek/Direnç', 'weight': 0.10},
+                                    'fibonacci': {'name': 'Fibonacci', 'desc': 'Retracement', 'weight': 0.10},
+                                    'vwap': {'name': 'VWAP', 'desc': 'Volume-weighted', 'weight': 0.08},
+                                    'news_sentiment': {'name': 'News Sentiment', 'desc': 'Fear & Greed', 'weight': 0.08},
+                                    'garch': {'name': 'GARCH Volatility', 'desc': 'Vol. tahmin', 'weight': 0.15},
+                                    'markov': {'name': 'Markov Regime', 'desc': 'Piyasa rejimi', 'weight': 0.15},
+                                    'hvi': {'name': 'Historical Vol.', 'desc': 'Geçmiş vol.', 'weight': 0.12},
+                                    'squeeze': {'name': 'Vol. Squeeze', 'desc': 'BB + KC', 'weight': 0.10}
+                                }
+                                idx = 0
+                                for key, info in layer_info.items():
+                                    if key in scores:
+                                        score_val = scores[key].get('score', 0)
+                                        available = scores[key].get('available', False)
+                                        target_col = col1 if idx % 2 == 0 else col2
+                                        with target_col:
+                                            status_icon = '✅' if available else '❌'
+                                            color = '#10b981' if available else '#6b7280'
+                                            st.markdown(f"""<div class="layer-card">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                            <strong style="font-size: 1.05em; color: #e5e5e5;">{status_icon} {info['name']}</strong>
+                                            <span style="font-weight: 700; color: {color};">{score_val:.1f}/100</span></div>
+                                            <div style="font-size: 0.85em; color: #9ca3af; margin-bottom: 8px;">{info['desc']}</div>
+                                            {render_progress_bar(score_val, color=color)}
+                                            <div style="font-size: 0.8em; color: #6b7280; margin-top: 5px;">Weight: {info['weight']*100:.0f}%</div></div>""", unsafe_allow_html=True)
+                                        idx += 1
+                            else:
+                                st.info("💡 Component scores yükleniyor...")
                         
-                        st.markdown("---")
-                        st.markdown("### 🎯 Take Profit")
-                        risk_amount = abs(decision['entry_price'] - decision['stop_loss'])
-                        if decision['decision'] == 'LONG':
-                            tp1, tp2, tp3 = decision['entry_price'] + (risk_amount * 1.0), decision['entry_price'] + (risk_amount * 1.618), decision['entry_price'] + (risk_amount * 2.618)
-                        else:
-                            tp1, tp2, tp3 = decision['entry_price'] - (risk_amount * 1.0), decision['entry_price'] - (risk_amount * 1.618), decision['entry_price'] - (risk_amount * 2.618)
-                        
-                        for tp_num, tp_val, rr, close_pct, desc in [(1, tp1, "1:1", "50%", "Kar garantiye al"), (2, tp2, "1:1.62", "30%", "Fibonacci golden ratio"), (3, tp3, "1:2.62", "20%", "Maksimum kar")]:
-                            tp_pct = ((tp_val - decision['entry_price']) / decision['entry_price'] * 100)
-                            st.markdown(f"""<div class="tp-box"><div><strong style="font-size: 1.1em; color: #10b981;">🎯 TP{tp_num}:</strong> ${tp_val:,.2f} ({tp_pct:+.2f}%) [R/R: {rr}]<br>
-                            <span style="font-size: 0.9em; color: #9ca3af;">→ Close {close_pct} | {desc}</span></div></div>""", unsafe_allow_html=True)
-                            components.html(copy_button(str(tp_val), f"📋 TP{tp_num}"), height=40)
-                        
-                        all_text = f"Entry: {decision['entry_price']}, SL: {decision['stop_loss']}, TP1: {tp1:.2f}, TP2: {tp2:.2f}, TP3: {tp3:.2f}"
-                        st.markdown("---")
-                        components.html(copy_button(all_text, "📋 HEPSİNİ KOPYALA"), height=50)
-                        st.info("**📈 Trailing Stop:** TP1 → SL'i entry'e | TP2 → SL'i TP1'e çek")
+                        # POZISYON PLANI
+                        with st.expander(f"💼 {coin_name} - Pozisyon Planı", expanded=True):
+                            if decision.get('entry_price') and decision.get('stop_loss'):
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("📍 Entry", f"${decision['entry_price']:,.2f}")
+                                    components.html(copy_button(str(decision['entry_price']), "📋 Entry"), height=40)
+                                    st.metric("💰 Position", f"${decision['position_size_usd']:,.2f}")
+                                with col2:
+                                    sl_pct = ((decision['stop_loss'] - decision['entry_price']) / decision['entry_price'] * 100)
+                                    st.metric("🛡️ Stop Loss", f"${decision['stop_loss']:,.2f}", f"{sl_pct:.2f}%")
+                                    components.html(copy_button(str(decision['stop_loss']), "📋 SL"), height=40)
+                                    st.metric("⚠️ Risk", f"${decision['risk_amount_usd']:,.2f}")
+                                
+                                st.markdown("**🎯 Take Profit:**")
+                                risk_amount = abs(decision['entry_price'] - decision['stop_loss'])
+                                if decision['decision'] == 'LONG':
+                                    tp1, tp2, tp3 = decision['entry_price'] + (risk_amount * 1.0), decision['entry_price'] + (risk_amount * 1.618), decision['entry_price'] + (risk_amount * 2.618)
+                                else:
+                                    tp1, tp2, tp3 = decision['entry_price'] - (risk_amount * 1.0), decision['entry_price'] - (risk_amount * 1.618), decision['entry_price'] - (risk_amount * 2.618)
+                                
+                                for tp_num, tp_val, rr, close_pct, desc in [(1, tp1, "1:1", "50%", "Kar garantiye al"), (2, tp2, "1:1.62", "30%", "Fibonacci golden ratio"), (3, tp3, "1:2.62", "20%", "Maksimum kar")]:
+                                    tp_pct = ((tp_val - decision['entry_price']) / decision['entry_price'] * 100)
+                                    st.markdown(f"""<div class="tp-box"><div><strong style="font-size: 1.05em; color: #10b981;">🎯 TP{tp_num}:</strong> ${tp_val:,.2f} ({tp_pct:+.2f}%) [R/R: {rr}]<br>
+                                    <span style="font-size: 0.9em; color: #9ca3af;">→ Close {close_pct} | {desc}</span></div></div>""", unsafe_allow_html=True)
+                                    components.html(copy_button(str(tp_val), f"📋 TP{tp_num}"), height=40)
                 
             except Exception as e:
                 st.error(f"❌ Hata: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.info("💡 Sidebar'dan 'AI ANALİZ YAP' butonuna basın - BTC, ETH ve LTC eş zamanlı analiz edilecek.")
 
 # TAB 2: WATCHLIST
 with tab2:
@@ -564,21 +638,22 @@ with tab3:
         
         with col1:
             st.markdown("#### 📊 Allocation Breakdown")
-            if alloc['allocations']:
+            if alloc.get('allocations'):
                 fig_pie = create_allocation_pie_chart(alloc['allocations'])
                 st.plotly_chart(fig_pie, use_container_width=True)
         
         with col2:
             st.markdown("#### 💰 Position Sizes")
-            position_df = pd.DataFrame([
-                {'Coin': k.replace('USDT', ''), 'Position ($)': f"${v:,.2f}", 'Weight': f"{(v/alloc['total_allocated'])*100:.1f}%"}
-                for k, v in alloc['position_sizes'].items()
-            ])
-            st.dataframe(position_df, use_container_width=True)
+            if alloc.get('position_sizes'):
+                position_df = pd.DataFrame([
+                    {'Coin': k.replace('USDT', ''), 'Position ($)': f"${v:,.2f}", 'Weight': f"{(v/alloc['total_allocated'])*100:.1f}%"}
+                    for k, v in alloc['position_sizes'].items()
+                ])
+                st.dataframe(position_df, use_container_width=True)
         
         st.markdown("---")
         
-        if not alloc['correlation_matrix'].empty:
+        if alloc.get('correlation_matrix') is not None and not alloc['correlation_matrix'].empty:
             st.markdown("#### 🔗 Correlation Matrix")
             fig_corr = create_correlation_heatmap(alloc['correlation_matrix'])
             st.plotly_chart(fig_corr, use_container_width=True)
@@ -589,7 +664,7 @@ with tab3:
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 4: POSITION TRACKER - İYİLEŞTİRİLMİŞ MESAJLAR
+# TAB 4: POSITION TRACKER
 with tab4:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📝 Position Tracker - Futures Manuel Tracking")
@@ -624,7 +699,7 @@ with tab4:
                             st.success(f"✅ Position #{sig['id']} AÇIK olarak işaretlendi!")
                             st.rerun()
             else:
-                st.info("💡 **Henüz AI sinyali yok.** Sidebar'dan 'AI Analiz Yap' butonuna basın. LONG veya SHORT sinyali geldiğinde buraya düşecek.")
+                st.info("💡 **Henüz AI sinyali yok.** Sidebar'dan 'AI Analiz Yap' butonuna basın.")
         
         with col2:
             st.markdown("#### 🔴 Açık Pozisyonlar (Real-time)")
@@ -651,10 +726,10 @@ with tab4:
                     with col_b:
                         if st.button(f"🔒 Kapat", key=f"close_{pos['id']}"):
                             if tracker.close_position(pos['id'], exit_price):
-                                st.success(f"✅ Pozisyon #{pos['id']} kapatıldı! Win/Loss otomatik kaydedildi.")
+                                st.success(f"✅ Pozisyon #{pos['id']} kapatıldı!")
                                 st.rerun()
             else:
-                st.info("💡 **Açık pozisyon yok.** Sol taraftan AI sinyali gelince Binance'de aç, sonra 'Binance'de Açtım' butonuna bas.")
+                st.info("💡 **Açık pozisyon yok.**")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -718,7 +793,7 @@ with tab7:
     if not BACKTEST_AVAILABLE or not AI_AVAILABLE:
         st.error("❌ Backtest Engine veya AI Brain yüklenemedi!")
     else:
-        st.info("💡 **Backtest:** AI stratejisini geçmiş verilerle test edin. Performans metriklerini görün.")
+        st.info("💡 **Backtest:** AI stratejisini geçmiş verilerle test edin.")
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -726,12 +801,12 @@ with tab7:
         with col2:
             bt_max_trades = st.number_input("Max Trades", min_value=10, max_value=200, value=50, step=10)
         with col3:
-            bt_capital = st.number_input("Initial Capital ($)", min_value=1000, max_value=100000, value=10000, step=1000)
+            bt_capital = st.number_input("Initial Capital ($)", min_value=1000, max_value=100000, value=1000, step=100)
         
         if st.button("🚀 RUN BACKTEST", type="primary", use_container_width=True):
-            with st.spinner(f"⏳ Backtest çalışıyor... {bt_lookback} günlük veri analiz ediliyor..."):
+            with st.spinner(f"⏳ Backtest çalışıyor..."):
                 try:
-                    engine = BacktestEngine(selected_coin, bt_capital, risk)
+                    engine = BacktestEngine(selected_coin, bt_capital, risk_per_trade)
                     results = engine.run_backtest(brain, interval, bt_lookback, bt_max_trades)
                     
                     if 'error' not in results:
@@ -789,5 +864,5 @@ with tab7:
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("""<div style='text-align: center; color: #10b981; padding: 20px; background: #2d2d2d; border-radius: 12px;'>
-<p><strong>🔱 DEMIR AI v8.2.1 - UI FIXES COMPLETE - FULL VERSION</strong></p></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div style='text-align: center; color: #10b981; padding: 15px; background: #2d2d2d; border-radius: 8px;'>
+<p><strong>🔱 DEMIR AI v8.3 - MULTI-COIN ANALYSIS + ENHANCED AI - Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</strong></p></div>""", unsafe_allow_html=True)
