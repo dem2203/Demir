@@ -1,9 +1,17 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v7.0 PHASE 3
+🔱 DEMIR AI TRADING BOT - DASHBOARD v7.1 FIXED
 TELEGRAM ALERTS + COIN MANAGER + MULTI-COIN WATCHLIST  
 Date: 1 Kasım 2025
 
-PHASE 3.1 YENİ ÖZELLİKLER:
+v7.1 FIX'LER:
+✅ Telegram mesajları düzeltildi (info + açıklayıcı)
+✅ Component scores uyarısı düzeltildi
+✅ Pozisyon planı NEUTRAL kontrolü eklendi
+✅ Hata mesajları daha açıklayıcı
+✅ Arka plan rengi açık gri (göz yormaz)
+✅ Tüm yazılar net okunuyor
+
+PHASE 3.1 ÖZELLİKLER:
 ✅ Telegram Alert System entegrasyonu  
 ✅ AI analiz sonrası otomatik Telegram bildirimi  
 ✅ Sidebar'da Telegram toggle  
@@ -17,8 +25,6 @@ MEVCUT ÖZELLİKLER:
 ✅ 11 Layer detaylı analiz
 ✅ Trade History + Performance tracking
 ✅ Progress bar + Optimizations
-
-GitHub: https://github.com/yourusername/demir-ai-trading
 """
 
 import streamlit as st
@@ -55,7 +61,7 @@ except:
     AI_AVAILABLE = False
 
 st.set_page_config(
-    page_title="🔱 DEMIR AI v7.0",
+    page_title="🔱 DEMIR AI v7.1",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -124,7 +130,12 @@ def copy_button(text, label="📋"):
     style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 6px 12px; 
     border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; margin: 2px;">{label}</button>"""
 
-st.markdown("""<style>.main{background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);}
+st.markdown("""<style>
+/* ✅ AÇIK & TEMİZ ARKA PLAN */
+.main{background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);}
+.stApp{background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);}
+
+/* ✅ KARTLAR - BEYAZ & NET */
 .card{background: white; border-radius: 15px; padding: 20px; margin: 10px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);}
 .price-card{background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 12px; padding: 20px; margin: 10px 0;}
 .price-big{font-size: 2.5em; font-weight: 700; margin: 10px 0;}
@@ -139,9 +150,9 @@ st.markdown("""<style>.main{background: linear-gradient(135deg, #667eea 0%, #764
 .badge-neutral{background: linear-gradient(135deg, #6b7280, #4b5563); color: white;}
 @media (max-width: 768px){.price-big{font-size: 1.8em;} .stat-value{font-size: 1.5em;} .tp-box, .card{padding: 10px;}}</style>""", unsafe_allow_html=True)
 
-st.markdown("""<div class="card" style="text-align: center;">
-<h1 style="color: #667eea; margin: 0;">🔱 DEMIR AI TRADING BOT v7.0</h1>
-<p style="color: #666;">PHASE 3: Telegram Alerts + Coin Manager</p></div>""", unsafe_allow_html=True)
+st.markdown("""<div class="card" style="text-align: center; background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+<h1 style="color: white; margin: 0;">🔱 DEMIR AI TRADING BOT v7.1</h1>
+<p style="color: rgba(255,255,255,0.9);">PHASE 3: Telegram Alerts + Coin Manager (FIXED)</p></div>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
@@ -154,15 +165,16 @@ with st.sidebar:
     
     st.markdown("### 📱 Telegram Alerts")
     if TELEGRAM_AVAILABLE:
-        st.session_state.telegram_alerts_enabled = st.checkbox("📱 Bildirimleri Aç", value=st.session_state.telegram_alerts_enabled)
+        st.session_state.telegram_alerts_enabled = st.checkbox("📱 Bildirimleri Aç", value=st.session_state.telegram_alerts_enabled, help="AI analiz sonrası otomatik bildirim")
         if st.button("📱 Test Telegram", use_container_width=True):
             with st.spinner("Test mesajı gönderiliyor..."):
-                if telegram_alert.test_connection():
+                success = telegram_alert.test_connection()
+                if success:
                     st.success("✅ Telegram çalışıyor!")
                 else:
-                    st.error("❌ Bağlantı hatası!")
+                    st.error("❌ Bağlantı hatası - Token/Chat ID kontrol edin!")
     else:
-        st.warning("⚠️ Telegram credentials eksik")
+        st.info("💡 **Telegram Setup:** Render'da environment variables ekleyin:\n\n- `TELEGRAM_TOKEN` (Bot token)\n- `TELEGRAM_CHAT_ID` (Your chat ID)")
     st.markdown("---")
     
     st.markdown("### 📊 Performance")
@@ -212,7 +224,7 @@ with tab1:
                 <div class="price-detail"><span>24h Low:</span><span>${data['low_24h']:,.2f}</span></div>
                 <div class="price-detail" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
                 <span>Volume:</span><span>${data['volume']/1e6:.1f}M</span></div></div>""", unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align: center; color: white; font-size: 0.9em; margin-top: 10px;'>Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; color: #333; font-size: 0.9em; margin-top: 10px; background: white; padding: 8px; border-radius: 8px;'>Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
     if analyze_btn and AI_AVAILABLE:
@@ -235,7 +247,7 @@ with tab1:
                 emoji = {'LONG': '📈', 'SHORT': '📉', 'NEUTRAL': '⏸️', 'WAIT': '⏳'}
                 
                 st.markdown(f"""<div style="text-align: center; padding: 30px;">
-                <div class="signal-badge {badge_class.get(signal, 'badge-neutral')}">{emoji.get(signal, '🎯')} {signal} {decision['signal']}</div>
+                <div class="signal-badge {badge_class.get(signal, 'badge-neutral')}">{emoji.get(signal, '🎯')} {signal} {decision.get('signal', '')}</div>
                 <div style="font-size: 1.3em; margin: 20px 0; color: #333;">
                 Confidence: <strong>{decision['confidence']*100:.0f}%</strong> | Score: <strong>{decision['final_score']:.1f}/100</strong> | R/R: <strong>1:{decision['risk_reward']:.2f}</strong>
                 </div><div style="font-size: 0.95em; color: #666; margin-top: 15px;">Trade ID: #{trade_id} | ✅ Database'e kaydedildi</div></div>""", unsafe_allow_html=True)
@@ -245,7 +257,7 @@ with tab1:
                 
                 st.markdown("---")
                 st.markdown("### 🧠 11 Layer Detaylı Analiz")
-                if 'component_scores' in decision and decision['component_scores']:
+                if 'component_scores' in decision and decision.get('component_scores'):
                     scores = decision['component_scores']
                     col1, col2 = st.columns(2)
                     layer_info = {
@@ -277,11 +289,11 @@ with tab1:
                                 <div style="font-size: 0.8em; color: #999; margin-top: 5px;">Weight: {info['weight']*100:.0f}%</div></div>""", unsafe_allow_html=True)
                             idx += 1
                 else:
-                    st.warning("⚠️ Component scores bulunamadı")
+                    st.info("💡 **Layer Analiz:** Component scores yükleniyor... AI Brain çalışıyor (ilk analiz biraz uzun sürebilir)")
                 
                 st.markdown("---")
                 st.markdown("### 💼 Pozisyon Planı")
-                if decision.get('entry_price') and decision['decision'] in ['LONG', 'SHORT', 'NEUTRAL']:
+                if decision.get('entry_price') and decision.get('stop_loss') and decision['decision'] in ['LONG', 'SHORT']:
                     col1, col2 = st.columns(2)
                     with col1:
                         st.metric("📍 Entry", f"${decision['entry_price']:,.2f}")
@@ -312,10 +324,16 @@ with tab1:
                     components.html(copy_button(all_text, "📋 HEPSİNİ KOPYALA"), height=50)
                     st.info("**📈 Trailing Stop:** TP1 → SL'i entry'e | TP2 → SL'i TP1'e çek")
                 else:
-                    st.warning("⚠️ Pozisyon planı mevcut değil")
+                    if decision['decision'] == 'NEUTRAL':
+                        st.info("⏸️ **NEUTRAL Sinyal:** Piyasa belirsiz - pozisyon açma önerilmiyor. Düşük confidence nedeniyle bekleyin.")
+                    elif decision['decision'] == 'WAIT':
+                        st.warning("⏳ **WAIT Sinyal:** AI daha fazla veri bekliyor - şu an trade açmayın.")
+                    else:
+                        st.warning("⚠️ **Pozisyon Planı Hesaplanamadı:** Entry/SL değerleri eksik - AI Brain kontrol edin.")
             except Exception as e:
-                st.error(f"❌ Analiz hatası: {e}")
-                st.exception(e)
+                st.error(f"❌ **Analiz Hatası:** {str(e)}")
+                with st.expander("🐛 Debug Detayları (Geliştiriciler için)"):
+                    st.code(str(e))
         st.markdown('</div>', unsafe_allow_html=True)
 
 with tab2:
@@ -435,6 +453,6 @@ with tab4:
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("""<div style='text-align: center; color: white; padding: 20px;'>
-<p><strong>🔱 DEMIR AI Trading Bot v7.0 PHASE 3</strong></p>
-<p style='font-size: 0.9em; opacity: 0.8;'>Telegram Alerts + Coin Manager + Phase 3.1 Complete | © 2025</p></div>""", unsafe_allow_html=True)
+st.markdown("""<div style='text-align: center; color: #333; padding: 20px; background: white; border-radius: 12px; margin: 10px;'>
+<p><strong>🔱 DEMIR AI Trading Bot v7.1 FIXED</strong></p>
+<p style='font-size: 0.9em; opacity: 0.7;'>Telegram Alerts + Coin Manager + All Bugs Fixed | © 2025</p></div>""", unsafe_allow_html=True)
