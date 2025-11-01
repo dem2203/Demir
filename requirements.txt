@@ -1,5 +1,5 @@
 # DEMIR AI Trading Bot - Requirements
-# Updated: 31 Ekim 2025 - Phase 1 (Trade History)
+# Updated: 1 Kasım 2025 - Phase 4.1 (WebSocket Integration)
 
 # Core dependencies
 streamlit==1.29.0
@@ -32,4 +32,6 @@ matplotlib==3.8.2
 # Utilities
 python-dotenv==1.0.0
 pytz==2023.3
+
+# PHASE 4.1: Real-Time WebSocket
 websocket-client>=1.6.0
