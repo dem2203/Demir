@@ -1,7 +1,11 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v8.3 MAJOR UPDATE
+🔱 DEMIR AI TRADING BOT - DASHBOARD v8.3.1 SYNTAX FIX
 Date: 1 Kasım 2025
 PHASE 3.5: Multi-Coin Analysis + Enhanced AI Commentary
+
+v8.3.1 HOTFIX:
+✅ F-string syntax error düzeltildi (line 537)
+✅ Backslash karakteri f-string dışına alındı
 
 v8.3 MAJOR UPDATES:
 ✅ Kompakt header + canlı fiyatlar tek blok
@@ -11,19 +15,6 @@ v8.3 MAJOR UPDATES:
 ✅ Portfolio Optimizer FIXED
 ✅ 11 Layer Scores GARANTI görünür
 ✅ Görsel analiz + tablolar otomatik refresh
-
-v8.2 FEATURES:
-✅ Manuel Position Tracker (Futures)
-✅ Real-time PNL Calculation
-✅ Open/Close Position Management
-✅ Pending Signals Dashboard
-
-v8.1 FEATURES:
-✅ Portfolio Optimizer
-✅ Backtest Engine
-✅ Dark Mode + AI Comments
-✅ Telegram Alerts
-✅ Trade History
 """
 
 import streamlit as st
@@ -233,7 +224,8 @@ def generate_enhanced_ai_comment(decision):
             layer_analysis.append(f"📰 **News Sentiment ({news_score:.0f}/100):** Piyasa haberleri olumsuz. Fear & Greed endeksi düşük.")
     
     if layer_analysis:
-        comments.append("\n**🧠 Layer Bazlı Detaylar:**\n" + "\n".join(layer_analysis))
+        newline_char = "\n"
+        comments.append(f"{newline_char}**🧠 Layer Bazlı Detaylar:**{newline_char}" + newline_char.join(layer_analysis))
     
     # 4. Trade Önerisi
     if signal == 'LONG':
@@ -241,7 +233,8 @@ def generate_enhanced_ai_comment(decision):
     elif signal == 'SHORT':
         comments.append("📉 **SHORT Sinyal:** AI düşüş trendi tespit etti. Satış fırsatı olabilir. Risk yönetimi kritik!")
     
-    return "\n\n".join(comments)
+    newline_char = "\n"
+    return (newline_char + newline_char).join(comments)
 
 def create_equity_curve_chart(equity_curve):
     fig = go.Figure()
@@ -529,11 +522,12 @@ with tab1:
                     Confidence: <strong style="color: #10b981;">{decision['confidence']*100:.0f}%</strong> | Score: <strong style="color: #10b981;">{decision['final_score']:.1f}/100</strong> | R/R: <strong style="color: #10b981;">1:{decision['risk_reward']:.2f}</strong>
                     </div><div style="font-size: 0.9em; color: #9ca3af;">Trade ID: #{trade_id}</div></div>""", unsafe_allow_html=True)
                     
-                    # ENHANCED AI YORUMU
+                    # ENHANCED AI YORUMU - FIX: f-string dışında string işlemleri
                     ai_comment = generate_enhanced_ai_comment(decision)
+                    ai_comment_html = ai_comment.replace('**', '<strong>').replace('</strong>', '</strong>').replace('\n', '<br>')
                     st.markdown(f"""<div class="ai-comment">
                     <h4 style="color: #3b82f6 !important; margin: 0 0 15px 0;">🤖 AI Detaylı Analiz</h4>
-                    {ai_comment.replace('**', '<strong>').replace('</strong>', '</strong>').replace('\n', '<br>')}
+                    {ai_comment_html}
                     </div>""", unsafe_allow_html=True)
                     
                     # LONG/SHORT İÇİN DETAY
@@ -865,4 +859,4 @@ with tab7:
 
 st.markdown("---")
 st.markdown(f"""<div style='text-align: center; color: #10b981; padding: 15px; background: #2d2d2d; border-radius: 8px;'>
-<p><strong>🔱 DEMIR AI v8.3 - MULTI-COIN ANALYSIS + ENHANCED AI - Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</strong></p></div>""", unsafe_allow_html=True)
+<p><strong>🔱 DEMIR AI v8.3.1 - SYNTAX FIX COMPLETE - Son güncelleme: {datetime.now().strftime('%H:%M:%S')}</strong></p></div>""", unsafe_allow_html=True)
