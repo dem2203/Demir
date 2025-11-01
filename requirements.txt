@@ -32,3 +32,4 @@ matplotlib==3.8.2
 # Utilities
 python-dotenv==1.0.0
 pytz==2023.3
+websocket-client>=1.6.0
