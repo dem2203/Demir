@@ -1,19 +1,20 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v8.0 COMPLETE
+🔱 DEMIR AI TRADING BOT - DASHBOARD v8.1 COMPLETE
 Date: 1 Kasım 2025
+PHASE 3.3: Portfolio Optimizer Integration
 
-v8.0 NEW FEATURES:
-✅ PHASE 3.2: Backtest Module (TAB 5)
-✅ Historical data testing
-✅ Performance metrics (Win Rate, Sharpe, Drawdown, PF)
-✅ Equity curve visualization (Plotly chart)
-✅ Trade-by-trade results
+v8.1 NEW FEATURES:
+✅ Portfolio Optimizer with Kelly Criterion
+✅ Correlation Analysis & Heatmap
+✅ Multi-Coin Allocation
+✅ Diversification Score
+✅ NEW TAB: Portfolio Management
 
-v7.3 ÖZELLİKLER:
-✅ Dark Mode + AI Comments
-✅ Telegram Alert System  
-✅ Coin Manager + Watchlist
-✅ Trade History + Performance
+v8.0 FEATURES:
+✅ Backtest Engine
+✅ Dark Mode + AI Comments  
+✅ Telegram Alerts
+✅ Trade History
 """
 
 import streamlit as st
@@ -22,9 +23,17 @@ import requests
 from datetime import datetime
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 
 import trade_history_db as db
 import win_rate_calculator as wrc
+
+# PHASE 3.3: Portfolio Optimizer
+try:
+    from portfolio_optimizer import PortfolioOptimizer
+    PORTFOLIO_OPTIMIZER_AVAILABLE = True
+except:
+    PORTFOLIO_OPTIMIZER_AVAILABLE = False
 
 # PHASE 3.2: Backtest Engine
 try:
@@ -54,7 +63,7 @@ except:
     AI_AVAILABLE = False
 
 st.set_page_config(
-    page_title="🔱 DEMIR AI v8.0",
+    page_title="🔱 DEMIR AI v8.1",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -66,6 +75,8 @@ if 'telegram_alerts_enabled' not in st.session_state:
     st.session_state.telegram_alerts_enabled = True
 if 'backtest_results' not in st.session_state:
     st.session_state.backtest_results = None
+if 'portfolio_allocation' not in st.session_state:
+    st.session_state.portfolio_allocation = None
 
 def get_binance_price(symbol):
     try:
@@ -184,6 +195,44 @@ def create_equity_curve_chart(equity_curve):
     
     return fig
 
+def create_allocation_pie_chart(allocations):
+    """Portfolio allocation pie chart"""
+    fig = go.Figure(data=[go.Pie(
+        labels=list(allocations.keys()),
+        values=list(allocations.values()),
+        hole=0.4,
+        marker=dict(colors=['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'])
+    )])
+    
+    fig.update_layout(
+        title='Portfolio Allocation',
+        template='plotly_dark',
+        height=350,
+        showlegend=True
+    )
+    
+    return fig
+
+def create_correlation_heatmap(corr_matrix):
+    """Correlation heatmap"""
+    fig = px.imshow(
+        corr_matrix,
+        labels=dict(color="Correlation"),
+        x=corr_matrix.columns,
+        y=corr_matrix.index,
+        color_continuous_scale='RdYlGn_r',
+        zmin=-1, zmax=1,
+        text_auto='.2f'
+    )
+    
+    fig.update_layout(
+        title='Correlation Matrix',
+        template='plotly_dark',
+        height=400
+    )
+    
+    return fig
+
 # DARK MODE CSS
 st.markdown("""<style>
 .main{background: #1a1a1a !important;}
@@ -215,8 +264,8 @@ label{color: #e5e5e5 !important;}
 @media (max-width: 768px){.price-big{font-size: 1.8em;} .stat-value{font-size: 1.5em;} .tp-box, .card{padding: 10px;}}</style>""", unsafe_allow_html=True)
 
 st.markdown("""<div class="card" style="text-align: center; background: linear-gradient(135deg, #10b981, #059669);">
-<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v8.0</h1>
-<p style="color: white !important;">BACKTEST ENGINE + DARK MODE + AI COMMENTS</p></div>""", unsafe_allow_html=True)
+<h1 style="color: white !important; margin: 0;">🔱 DEMIR AI TRADING BOT v8.1</h1>
+<p style="color: white !important;">PORTFOLIO OPTIMIZER + BACKTEST + DARK MODE</p></div>""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.markdown("## ⚙️ Ayarlar")
@@ -225,6 +274,53 @@ with st.sidebar:
     st.markdown("### 💰 Portfolio")
     portfolio = st.number_input("Portfolio ($)", value=10000, step=100)
     risk = st.number_input("Risk/Trade ($)", value=200, step=10)
+    st.markdown("---")
+    
+    # PHASE 3.3: PORTFOLIO OPTIMIZER WIDGET
+    st.markdown("### 🎯 Portfolio Optimizer")
+    if PORTFOLIO_OPTIMIZER_AVAILABLE and AI_AVAILABLE:
+        if st.button("📊 Optimize Portfolio", use_container_width=True):
+            with st.spinner("⏳ Analyzing watchlist..."):
+                try:
+                    signals = []
+                    for coin in st.session_state.watchlist_coins:
+                        decision = brain.make_trading_decision(coin, interval, portfolio, risk)
+                        signals.append({
+                            'symbol': coin,
+                            'signal': decision.get('decision', 'NEUTRAL'),
+                            'confidence': decision.get('confidence', 0),
+                            'score': decision.get('final_score', 0)
+                        })
+                    
+                    perf = wrc.get_performance_dashboard()
+                    perf_dict = {
+                        'win_rate': perf['win_rate'] / 100 if perf['total_trades'] > 0 else 0.5,
+                        'avg_win': 150,
+                        'avg_loss': 100
+                    }
+                    
+                    optimizer = PortfolioOptimizer(portfolio, risk)
+                    result = optimizer.optimize_portfolio(signals, perf_dict)
+                    
+                    st.session_state.portfolio_allocation = result
+                    st.success("✅ Portfolio optimized!")
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+        
+        if st.session_state.portfolio_allocation:
+            alloc = st.session_state.portfolio_allocation
+            
+            st.markdown(f"""<div class="stat-box">
+            <div style="color: white; font-size: 0.9em;">Allocated</div>
+            <div class="stat-value" style="color: white;">${alloc['total_allocated']:,.0f}</div>
+            <div style="color: white; font-size: 0.85em;">Kelly: {alloc['kelly_fraction']:.1%}</div></div>""", unsafe_allow_html=True)
+            
+            st.markdown(f"""<div class="stat-box">
+            <div style="color: white; font-size: 0.9em;">Diversification</div>
+            <div class="stat-value" style="color: white;">{alloc['diversification_score']:.0f}/100</div>
+            <div style="color: white; font-size: 0.85em;">Correlation Risk</div></div>""", unsafe_allow_html=True)
+    else:
+        st.info("💡 Portfolio Optimizer: AI Brain gerekli")
     st.markdown("---")
     
     st.markdown("### 📱 Telegram Alerts")
@@ -266,9 +362,10 @@ with st.sidebar:
 if show_help:
     with st.expander("📚 TERİMLER", expanded=True):
         st.markdown("""**LONG**: Al | **SHORT**: Sat | **Confidence**: AI güven | **Score**: Final puan | **R/R**: Risk/Reward  
-**Entry**: Açılış | **SL**: Stop Loss | **TP**: Take Profit | **Sharpe**: Risk-adjusted return | **Drawdown**: Max düşüş""")
+**Entry**: Açılış | **SL**: Stop Loss | **TP**: Take Profit | **Sharpe**: Risk-adjusted return | **Drawdown**: Max düşüş | **Kelly**: Optimal position size""")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "⚙️ Coin Manager", "📜 Trade History", "📊 Backtest"])
+# 6 TABS - PORTFOLIO ADDED!
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Live Dashboard", "🔍 Watchlist", "💼 Portfolio", "⚙️ Coin Manager", "📜 Trade History", "📊 Backtest"])
 
 # TAB 1: LIVE DASHBOARD
 with tab1:
@@ -317,7 +414,7 @@ with tab1:
                 ai_comment = generate_ai_comment(decision)
                 st.markdown(f"""<div class="ai-comment">
                 <h4 style="color: #3b82f6 !important; margin: 0 0 15px 0;">🤖 AI Yorumu</h4>
-                {ai_comment.replace('**', '<strong>').replace('🔴', '🔴').replace('🟡', '🟡').replace('🟢', '🟢').replace('📊', '📊').replace('⏸️', '⏸️').replace('⏳', '⏳').replace('📈', '📈').replace('📉', '📉')}
+                {ai_comment.replace('**', '<strong>').replace('</strong>', '</strong>')}
                 </div>""", unsafe_allow_html=True)
                 
                 st.markdown("**💡 Karar Gerekçesi:**")
@@ -418,22 +515,47 @@ with tab2:
     if watchlist_data:
         df = pd.DataFrame(watchlist_data)
         st.dataframe(df, use_container_width=True)
-        st.markdown("---")
-        st.markdown("**🔍 Detaylı Analiz:**")
-        cols_per_row = 5
-        for i in range(0, len(st.session_state.watchlist_coins), cols_per_row):
-            cols = st.columns(cols_per_row)
-            for j, coin in enumerate(st.session_state.watchlist_coins[i:i+cols_per_row]):
-                with cols[j]:
-                    btn_label = coin.replace('USDT', '')
-                    if coin in ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']: btn_label = f"🔒 {btn_label}"
-                    if st.button(btn_label, key=f"watch_{coin}", use_container_width=True):
-                        st.session_state.coin = coin
-                        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 3: COIN MANAGER
+# TAB 3: PORTFOLIO (NEW!)
 with tab3:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown("### 💼 Portfolio Allocation")
+    
+    if st.session_state.portfolio_allocation:
+        alloc = st.session_state.portfolio_allocation
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 📊 Allocation Breakdown")
+            if alloc['allocations']:
+                fig_pie = create_allocation_pie_chart(alloc['allocations'])
+                st.plotly_chart(fig_pie, use_container_width=True)
+        
+        with col2:
+            st.markdown("#### 💰 Position Sizes")
+            position_df = pd.DataFrame([
+                {'Coin': k.replace('USDT', ''), 'Position ($)': f"${v:,.2f}", 'Weight': f"{alloc['allocations'].get(k.replace('USDT', ''), 0):.1%}"}
+                for k, v in alloc['position_sizes'].items()
+            ])
+            st.dataframe(position_df, use_container_width=True)
+        
+        st.markdown("---")
+        
+        if not alloc['correlation_matrix'].empty:
+            st.markdown("#### 🔗 Correlation Matrix")
+            fig_corr = create_correlation_heatmap(alloc['correlation_matrix'])
+            st.plotly_chart(fig_corr, use_container_width=True)
+            
+            st.info("💡 **Diversification Tip:** Düşük korelasyon (yeşil) = iyi çeşitlendirme | Yüksek korelasyon (kırmızı) = risk")
+    else:
+        st.info("💡 Sidebar'dan 'Optimize Portfolio' butonuna tıklayın")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# TAB 4: COIN MANAGER
+with tab4:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### ⚙️ Coin Manager")
     st.info("💡 BTC+ETH+LTC sabit")
@@ -459,8 +581,8 @@ with tab3:
                     st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 4: TRADE HISTORY
-with tab4:
+# TAB 5: TRADE HISTORY
+with tab5:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📜 Trade History")
     trades_df = db.get_all_trades()
@@ -484,8 +606,8 @@ with tab4:
         st.info("📊 Trade kaydı yok")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# TAB 5: BACKTEST
-with tab5:
+# TAB 6: BACKTEST
+with tab6:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 📊 Backtest Engine")
     
@@ -564,4 +686,4 @@ with tab5:
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #10b981; padding: 20px; background: #2d2d2d; border-radius: 12px;'>
-<p><strong>🔱 DEMIR AI v8.0 - BACKTEST ENGINE COMPLETE</strong></p></div>""", unsafe_allow_html=True)
+<p><strong>🔱 DEMIR AI v8.1 - PORTFOLIO OPTIMIZER COMPLETE</strong></p></div>""", unsafe_allow_html=True)
