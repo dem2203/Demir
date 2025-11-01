@@ -1,505 +1,440 @@
 """
-🔱 DEMIR AI TRADING BOT - AI Brain v5 PHASE 6 INTEGRATION
-==========================================================
-Date: 1 Kasım 2025, 21:27 CET
-Version: 5.0 - MACRO CORRELATION ADDED!
+🧠 AI BRAIN - ENHANCED 11-LAYER ANALYSIS ENGINE
+================================================
+Date: 2 Kasım 2025, 00:29 CET
+Version: 2.0 - Phase 6 Complete
 
-EVOLUTION:
-----------
-v4: Phase 3A + 3B (11 layers)
-v5: Phase 6 MACRO (12th layer!) → Win rate 80%+!
+PHASE 6 NEW ADDITIONS:
+• Layer 9: Gold Correlation (Safe-haven flow analysis)
+• Layer 10: BTC Dominance & Money Flow (Altseason detector)  
+• Layer 11: Cross-Asset Correlation (Asset rotation signals)
 
-PHASE 6 NEW LAYER:
-------------------
-Layer 12: Macro Correlation (11 external factors combined)
-- SPX, NASDAQ, DXY, Gold, Silver
-- BTC.D, USDT.D, VIX, US10Y, OIL, EURUSD
+ALL 11 LAYERS:
+1. Historical Volatility
+2. GARCH Volatility Forecast
+3. Fibonacci Retracement
+4. Markov Regime Detection
+5. Volume Profile
+6. VWAP Deviation
+7. Pivot Points
+8. Volatility Squeeze
+9. Gold Correlation ⭐ NEW
+10. BTC Dominance Flow ⭐ NEW
+11. Cross-Asset Correlation ⭐ NEW
 
-COMPATIBILITY:
---------------
-✅ Works with existing streamlit_app.py (NO changes needed!)
-✅ Returns same structure ('decision', 'layer_scores', etc.)
-✅ Backwards compatible with Phase 1-5
-
-ETERNAL CONTINUITY PROTOCOL:
-----------------------------
-All previous features preserved!
+FINAL SCORE: Weighted average (0-100)
+RECOMMENDATION: BUY / HOLD / SELL based on score + layers
 """
 
+# ============================================================================
+# IMPORTS
+# ============================================================================
+import sys
+import traceback
 from datetime import datetime
 
-# ============================================================================
-# IMPORTS - PHASE 1-5 (PRESERVED)
-# ============================================================================
+# Existing layers (Phase 1-5)
+from historical_volatility_layer import calculate_historical_volatility
+from garch_volatility_layer import calculate_garch_volatility
+from fibonacci_layer import calculate_fibonacci_levels
+from markov_regime_layer import calculate_markov_regime
+from volume_profile_layer import calculate_volume_profile
+from vwap_layer import calculate_vwap_deviation
+from pivot_points_layer import calculate_pivot_points
+from volatility_squeeze_layer import calculate_volatility_squeeze
 
-# Phase 3A + 3B layers
+# PHASE 6: NEW LAYERS - Macro & Cross-Asset Analysis
 try:
-    import strategy_layer as strategy
-    STRATEGY_AVAILABLE = True
-    print("✅ AI Brain: strategy_layer imported")
-except Exception as e:
-    STRATEGY_AVAILABLE = False
-    print(f"⚠️ AI Brain: strategy_layer import failed: {e}")
-
-try:
-    import monte_carlo_layer as mc
-    MC_AVAILABLE = True
-    print("✅ AI Brain: monte_carlo_layer imported")
-except Exception as e:
-    MC_AVAILABLE = False
-    print(f"⚠️ AI Brain: monte_carlo_layer import failed: {e}")
+    from gold_correlation_layer import calculate_gold_correlation
+    GOLD_AVAILABLE = True
+except ImportError:
+    print("⚠️ Warning: gold_correlation_layer not found (Phase 6.2)")
+    GOLD_AVAILABLE = False
 
 try:
-    import kelly_enhanced_layer as kelly
-    KELLY_AVAILABLE = True
-    print("✅ AI Brain: kelly_enhanced_layer imported")
-except Exception as e:
-    KELLY_AVAILABLE = False
-    print(f"⚠️ AI Brain: kelly_enhanced_layer import failed: {e}")
+    from dominance_flow_layer import calculate_dominance_flow
+    DOMINANCE_AVAILABLE = True
+except ImportError:
+    print("⚠️ Warning: dominance_flow_layer not found (Phase 6.3)")
+    DOMINANCE_AVAILABLE = False
 
-# ============================================================================
-# PHASE 6 NEW IMPORT: MACRO CORRELATION LAYER
-# ============================================================================
 try:
-    import macro_correlation_layer as macro
-    MACRO_AVAILABLE = True
-    print("✅ AI Brain v5: macro_correlation_layer imported (PHASE 6!)")
-except Exception as e:
-    MACRO_AVAILABLE = False
-    print(f"⚠️ AI Brain v5: macro_correlation_layer import failed: {e}")
+    from cross_asset_layer import calculate_cross_asset
+    CROSS_ASSET_AVAILABLE = True
+except ImportError:
+    print("⚠️ Warning: cross_asset_layer not found (Phase 6.4)")
+    CROSS_ASSET_AVAILABLE = False
 
 # ============================================================================
-# MAIN FUNCTION - ENHANCED FOR PHASE 6
+# LAYER WEIGHTS (Total = 100%)
 # ============================================================================
+LAYER_WEIGHTS = {
+    'historical_volatility': 0.10,   # 10%
+    'garch_volatility': 0.10,        # 10%
+    'fibonacci': 0.10,               # 10%
+    'markov_regime': 0.10,           # 10%
+    'volume_profile': 0.08,          # 8%
+    'vwap': 0.08,                    # 8%
+    'pivot_points': 0.08,            # 8%
+    'volatility_squeeze': 0.08,      # 8%
+    'gold_correlation': 0.09,        # 9% ⭐ NEW (Phase 6.2)
+    'dominance_flow': 0.10,          # 10% ⭐ NEW (Phase 6.3)
+    'cross_asset': 0.09              # 9% ⭐ NEW (Phase 6.4)
+}
 
-def make_trading_decision(
-    symbol,
-    interval='1h',
-    portfolio_value=10000,
-    risk_per_trade=200
-):
+# ============================================================================
+# MAIN ANALYSIS FUNCTION
+# ============================================================================
+def calculate_all_layers(symbol='BTCUSDT', interval='1h', limit=500):
     """
-    AI Brain v5 - Final trading decision
+    Calculate all 11 layers and return comprehensive analysis
     
-    NEW IN v5:
-    ----------
-    - Layer 12: Macro Correlation (11 factors)
-    - Win rate target: 80%+ (was 65%)
-    - Better risk-adjusted returns
+    Args:
+        symbol: Trading pair (e.g., 'BTCUSDT')
+        interval: Timeframe ('1m', '5m', '15m', '1h', '4h', '1d')
+        limit: Number of candles to analyze
     
     Returns:
-    --------
-    dict with keys:
-        - 'decision' or 'final_decision': LONG/SHORT/WAIT (streamlit compatible!)
-        - 'signal': Same as decision
-        - 'confidence': 0-1 float
-        - 'entry_price': Entry price
-        - 'stop_loss': SL price
-        - 'take_profit': TP price
-        - 'position_size': Position size
-        - 'layer_scores': Dict of all layer scores
-        - 'ai_commentary': Detailed explanation
+        dict: Complete 11-layer analysis with final score & recommendation
     """
     
-    print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v5: make_trading_decision (PHASE 6)")
-    print(f"   Symbol: {symbol}")
-    print(f"   Interval: {interval}")
-    print(f"   Portfolio: ${portfolio_value:,.0f}")
-    print(f"{'='*80}")
+    print(f"\n🧠 AI BRAIN ANALYSIS - {symbol} ({interval})")
+    print("=" * 70)
     
-    # ========================================================================
-    # LAYER 1-11: STRATEGY LAYER v4 (Phase 3A + 3B)
-    # ========================================================================
-    if STRATEGY_AVAILABLE:
-        try:
-            print(f"\n🔍 Calling strategy.calculate_comprehensive_score...")
-            strategy_result = strategy.calculate_comprehensive_score(symbol, interval)
-            
-            final_score = strategy_result['final_score']
-            signal = strategy_result['signal']
-            confidence = strategy_result['confidence']
-            components = strategy_result['components']
-            
-            print(f"✅ Strategy result (Layers 1-11): {final_score}/100")
-            
-        except Exception as e:
-            print(f"❌ Strategy error: {e}")
-            final_score = 50
-            signal = 'NEUTRAL'
-            confidence = 0.5
-            components = {}
-    else:
-        final_score = 50
-        signal = 'NEUTRAL'
-        confidence = 0.5
-        components = {}
-    
-    # ========================================================================
-    # LAYER 12: MACRO CORRELATION (PHASE 6 - NEW!)
-    # ========================================================================
-    macro_score = 50  # Default neutral
-    macro_signal = "NEUTRAL"
-    macro_details = {}
-    
-    if MACRO_AVAILABLE:
-        try:
-            print(f"\n🌍 Calling macro.MacroCorrelationLayer.analyze_all (Layer 12)...")
-            
-            macro_layer = macro.MacroCorrelationLayer()
-            macro_result = macro_layer.analyze_all(symbol, days=30)
-            
-            macro_score = macro_result['total_score']
-            macro_signal = macro_result['signal']
-            macro_details = {
-                'correlations': macro_result.get('correlations', {}),
-                'factor_scores': macro_result.get('factor_scores', {}),
-                'explanation': macro_result.get('explanation', 'No details')
-            }
-            
-            print(f"✅ Layer 12 (Macro): {macro_score:.2f}/100 - {macro_signal}")
-            
-        except Exception as e:
-            print(f"⚠️ Layer 12 (Macro) error: {e}")
-            macro_score = 50
-            macro_signal = "NEUTRAL"
-    else:
-        print(f"⚠️ Layer 12 (Macro): Not available")
-    
-    # ========================================================================
-    # FINAL SCORE CALCULATION (NOW WITH 12 LAYERS!)
-    # ========================================================================
-    
-    # Weight distribution:
-    # - Layers 1-11 (strategy): 70% weight
-    # - Layer 12 (macro): 30% weight (huge impact!)
-    
-    combined_score = (final_score * 0.70) + (macro_score * 0.30)
-    
-    print(f"\n📊 SCORE BREAKDOWN:")
-    print(f"   Layers 1-11 (Strategy): {final_score}/100 (70% weight)")
-    print(f"   Layer 12 (Macro): {macro_score}/100 (30% weight)")
-    print(f"   Combined Score: {combined_score:.2f}/100")
-    
-    # ========================================================================
-    # MONTE CARLO RISK ASSESSMENT (Phase 3A)
-    # ========================================================================
-    if MC_AVAILABLE:
-        try:
-            mc_assessment = mc.get_monte_carlo_risk_assessment(
-                win_rate=0.55,
-                avg_win=2.0,
-                avg_loss=1.0,
-                num_trades=100,
-                num_simulations=1000
-            )
-            
-            risk_of_ruin = mc_assessment['risk_assessment']['risk_of_ruin_pct']
-            max_drawdown = mc_assessment['drawdown_assessment']['worst_case_pct']
-            sharpe = mc_assessment['sharpe_assessment']['ratio']
-            
-        except:
-            risk_of_ruin = 5.0
-            max_drawdown = 20.0
-            sharpe = 1.5
-    else:
-        risk_of_ruin = 5.0
-        max_drawdown = 20.0
-        sharpe = 1.5
-    
-    # ========================================================================
-    # KELLY POSITION SIZING (Phase 3A)
-    # ========================================================================
-    if KELLY_AVAILABLE:
-        try:
-            kelly_result = kelly.calculate_dynamic_kelly(
-                win_rate=0.55,
-                avg_win=2.0,
-                avg_loss=1.0,
-                confidence=confidence,
-                portfolio_value=portfolio_value
-            )
-            
-            position_size_usd = kelly_result['position_size_usd']
-            position_size_pct = kelly_result['position_size_pct']
-            risk_amount = kelly_result['risk_amount_usd']
-            
-        except:
-            position_size_usd = risk_per_trade
-            position_size_pct = (risk_per_trade / portfolio_value) * 100
-            risk_amount = risk_per_trade
-    else:
-        position_size_usd = risk_per_trade
-        position_size_pct = (risk_per_trade / portfolio_value) * 100
-        risk_amount = risk_per_trade
-    
-    # ========================================================================
-    # BUILD AI COMMENTARY (Phase 3A + 3B + PHASE 6)
-    # ========================================================================
-    
-    commentary_parts = []
-    
-    # Phase 3A Components
-    if components.get('volume_profile', {}).get('available'):
-        vp = components['volume_profile']
-        commentary_parts.append(
-            f"📊 **Volume Profile:** {vp.get('zone', 'N/A')} - {vp.get('description', 'N/A')}"
-        )
-    
-    if components.get('pivot_points', {}).get('available'):
-        pp = components['pivot_points']
-        commentary_parts.append(
-            f"📍 **Pivot Points:** {pp.get('zone', 'N/A')} - {pp.get('description', 'N/A')}"
-        )
-    
-    if components.get('fibonacci', {}).get('available'):
-        fib = components['fibonacci']
-        commentary_parts.append(
-            f"📐 **Fibonacci:** {fib.get('level', 'N/A')} - {fib.get('description', 'N/A')}"
-        )
-    
-    if components.get('vwap', {}).get('available'):
-        vwap = components['vwap']
-        commentary_parts.append(
-            f"📈 **VWAP:** {vwap.get('zone', 'N/A')} - {vwap.get('description', 'N/A')}"
-        )
-    
-    # Phase 3B Components
-    if components.get('garch_volatility', {}).get('available'):
-        garch = components['garch_volatility']
-        vol_level = garch.get('volatility_level', 'UNKNOWN')
-        forecast_vol = garch.get('forecast_vol', 0)
-        commentary_parts.append(
-            f"🎲 **GARCH:** {vol_level} volatility - Forecast: {forecast_vol:.2f}%"
-        )
-    
-    if components.get('markov_regime', {}).get('available'):
-        markov = components['markov_regime']
-        regime = markov.get('regime', 'UNKNOWN')
-        direction = markov.get('direction', 'NEUTRAL')
-        commentary_parts.append(
-            f"🔄 **Market Regime:** {regime} ({direction})"
-        )
-    
-    if components.get('hvi', {}).get('available'):
-        hvi = components['hvi']
-        zscore = hvi.get('hvi_zscore', 0)
-        vol_level = hvi.get('volatility_level', 'UNKNOWN')
-        commentary_parts.append(
-            f"📊 **HVI:** {zscore:.2f}σ ({vol_level})"
-        )
-    
-    if components.get('volatility_squeeze', {}).get('available'):
-        squeeze = components['volatility_squeeze']
-        status = squeeze.get('squeeze_status', 'UNKNOWN')
-        breakout = squeeze.get('breakout_direction', None)
-        if breakout:
-            commentary_parts.append(
-                f"🎯 **Vol Squeeze:** {status} - {breakout} breakout"
-            )
-        else:
-            commentary_parts.append(
-                f"🎯 **Vol Squeeze:** {status}"
-            )
-    
-    # PHASE 6: MACRO CORRELATION (NEW!)
-    if MACRO_AVAILABLE and macro_details:
-        commentary_parts.append(
-            f"\n🌍 **MACRO ANALYSIS (Layer 12):** {macro_signal} - {macro_details.get('explanation', 'N/A')}"
-        )
-        
-        # Top 3 factors
-        factor_scores = macro_details.get('factor_scores', {})
-        if factor_scores:
-            sorted_factors = sorted(factor_scores.items(), key=lambda x: abs(x[1]-50), reverse=True)[:3]
-            commentary_parts.append("   **Key Factors:**")
-            for factor, score in sorted_factors:
-                commentary_parts.append(f"   • {factor}: {score:.1f}/100")
-    
-    # Monte Carlo & Kelly
-    commentary_parts.append(
-        f"🎲 **Monte Carlo:** Risk of Ruin: {risk_of_ruin:.2f}% | Max DD: -{max_drawdown:.2f}%"
-    )
-    commentary_parts.append(
-        f"💰 **Kelly:** Optimal: ${position_size_usd:,.2f} ({position_size_pct:.2f}%)"
-    )
-    
-    ai_commentary = "\\n\\n".join(commentary_parts)
-    
-    # ========================================================================
-    # RISK ADJUSTMENTS (Phase 3A + 3B + PHASE 6)
-    # ========================================================================
-    
-    # Macro adjustment (NEW!)
-    if macro_score < 35:
-        position_size_usd *= 0.6
-        risk_amount *= 0.6
-        print(f"   ⚠️ MACRO BEARISH: Position reduced by 40%")
-    elif macro_score > 75:
-        position_size_usd *= 1.2
-        risk_amount *= 1.2
-        print(f"   ✅ MACRO BULLISH: Position increased by 20%")
-    
-    # Volume Profile adjustments
-    if components.get('volume_profile', {}).get('available'):
-        vp_zone = components['volume_profile'].get('zone', 'UNKNOWN')
-        if vp_zone == 'POC':
-            position_size_usd *= 0.8
-            risk_amount *= 0.8
-    
-    # GARCH volatility adjustments
-    if components.get('garch_volatility', {}).get('available'):
-        vol_level = components['garch_volatility'].get('volatility_level', 'MODERATE')
-        if vol_level == 'EXTREME':
-            position_size_usd *= 0.5
-            risk_amount *= 0.5
-    
-    # Monte Carlo risk-of-ruin adjustment
-    if risk_of_ruin > 10:
-        position_size_usd *= 0.5
-        risk_amount *= 0.5
-    
-    # Max position cap (10% of portfolio)
-    max_position = portfolio_value * 0.10
-    if position_size_usd > max_position:
-        position_size_usd = max_position
-    
-    # ========================================================================
-    # ENTRY/STOP/TARGET CALCULATION
-    # ========================================================================
-    try:
-        import requests
-        url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={symbol}"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            current_price = float(response.json()['price'])
-        else:
-            current_price = None
-    except:
-        current_price = None
-    
-    if current_price:
-        atr = current_price * 0.015
-        entry_price = current_price
-        
-        if signal == 'LONG':
-            stop_loss = entry_price - (atr * 2.0)
-            take_profit = entry_price + (atr * 3.0)
-        elif signal == 'SHORT':
-            stop_loss = entry_price + (atr * 2.0)
-            take_profit = entry_price - (atr * 3.0)
-        else:
-            stop_loss = entry_price - (atr * 2.0)
-            take_profit = entry_price + (atr * 3.0)
-        
-        risk = abs(entry_price - stop_loss)
-        reward = abs(take_profit - entry_price)
-        risk_reward = reward / risk if risk > 0 else 0
-    else:
-        entry_price = None
-        stop_loss = None
-        take_profit = None
-        risk_reward = 0
-    
-    # ========================================================================
-    # FINAL DECISION (Enhanced with macro)
-    # ========================================================================
-    
-    decision = 'WAIT'
-    
-    # Use combined score (not just strategy)
-    if combined_score >= 65 and confidence >= 0.6:
-        decision = 'LONG'
-    elif combined_score <= 35 and confidence >= 0.6:
-        decision = 'SHORT'
-    else:
-        decision = 'WAIT'
-    
-    # Safety checks
-    if risk_of_ruin > 15:
-        decision = 'WAIT'
-        reason = f"Risk of Ruin too high: {risk_of_ruin}%"
-    elif max_drawdown > 40:
-        decision = 'WAIT'
-        reason = f"Max Drawdown too high: {max_drawdown}%"
-    elif confidence < 0.5:
-        decision = 'WAIT'
-        reason = f"Low confidence: {confidence*100:.0f}%"
-    else:
-        reason = f"Score: {combined_score:.1f}/100 (Macro: {macro_score:.1f}/100)"
-    
-    print(f"\n🎯 FINAL DECISION: {decision}")
-    print(f"   Reason: {reason}")
-    print(f"{'='*80}\\n")
-    
-    # ========================================================================
-    # LAYER SCORES (For streamlit display)
-    # ========================================================================
-    layer_scores = {
-        'Layers 1-11 (Strategy)': round(final_score, 2),
-        'Layer 12 (Macro Correlation)': round(macro_score, 2),
-        'Combined Score': round(combined_score, 2)
-    }
-    
-    # ========================================================================
-    # RETURN (Compatible with streamlit_app.py!)
-    # ========================================================================
-    return {
+    results = {
         'symbol': symbol,
         'interval': interval,
-        'decision': decision,  # For streamlit compatibility
-        'final_decision': decision,  # Also support this key
-        'signal': signal,
-        'confidence': round(confidence, 2),
-        'final_score': round(combined_score, 2),
-        'entry_price': round(entry_price, 2) if entry_price else None,
-        'stop_loss': round(stop_loss, 2) if stop_loss else None,
-        'take_profit': round(take_profit, 2) if take_profit else None,
-        'risk_reward': round(risk_reward, 2) if risk_reward else 0,
-        'position_size': round(position_size_usd / current_price, 6) if current_price else 0,
-        'position_size_usd': round(position_size_usd, 2),
-        'position_size_pct': round(position_size_pct, 2),
-        'risk_amount_usd': round(risk_amount, 2),
-        'risk_metrics': {
-            'risk_of_ruin': risk_of_ruin,
-            'max_drawdown': max_drawdown,
-            'sharpe_ratio': sharpe
-        },
-        'layer_scores': layer_scores,  # For streamlit progress bars
-        'ai_commentary': ai_commentary,  # For streamlit expander
-        'reason': reason,
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        # PHASE 6 extras
-        'macro_score': round(macro_score, 2),
-        'macro_signal': macro_signal,
-        'macro_details': macro_details
+        'timestamp': datetime.now().isoformat(),
+        'layers': {},
+        'final_score': 0,
+        'weighted_score': 0,
+        'interpretation': '',
+        'recommendation': '',
+        'confidence': 0,
+        'available_layers': 0,
+        'total_layers': 11,
+        'phase_6_enabled': GOLD_AVAILABLE and DOMINANCE_AVAILABLE and CROSS_ASSET_AVAILABLE
+    }
+    
+    weighted_sum = 0
+    total_weight = 0
+    
+    # ========================================================================
+    # LAYER 1: HISTORICAL VOLATILITY
+    # ========================================================================
+    try:
+        print("📊 Layer 1: Historical Volatility...", end=" ")
+        hv_result = calculate_historical_volatility(symbol, interval, limit)
+        if hv_result and hv_result.get('available'):
+            results['layers']['historical_volatility'] = hv_result
+            score = hv_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['historical_volatility']
+            total_weight += LAYER_WEIGHTS['historical_volatility']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+        traceback.print_exc()
+    
+    # ========================================================================
+    # LAYER 2: GARCH VOLATILITY
+    # ========================================================================
+    try:
+        print("📈 Layer 2: GARCH Volatility...", end=" ")
+        garch_result = calculate_garch_volatility(symbol, interval, limit)
+        if garch_result and garch_result.get('available'):
+            results['layers']['garch_volatility'] = garch_result
+            score = garch_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['garch_volatility']
+            total_weight += LAYER_WEIGHTS['garch_volatility']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 3: FIBONACCI
+    # ========================================================================
+    try:
+        print("🔢 Layer 3: Fibonacci Levels...", end=" ")
+        fib_result = calculate_fibonacci_levels(symbol, interval, limit)
+        if fib_result and fib_result.get('available'):
+            results['layers']['fibonacci'] = fib_result
+            score = fib_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['fibonacci']
+            total_weight += LAYER_WEIGHTS['fibonacci']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 4: MARKOV REGIME
+    # ========================================================================
+    try:
+        print("🎲 Layer 4: Markov Regime...", end=" ")
+        markov_result = calculate_markov_regime(symbol, interval, limit)
+        if markov_result and markov_result.get('available'):
+            results['layers']['markov_regime'] = markov_result
+            score = markov_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['markov_regime']
+            total_weight += LAYER_WEIGHTS['markov_regime']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 5: VOLUME PROFILE
+    # ========================================================================
+    try:
+        print("📊 Layer 5: Volume Profile...", end=" ")
+        vol_result = calculate_volume_profile(symbol, interval, limit)
+        if vol_result and vol_result.get('available'):
+            results['layers']['volume_profile'] = vol_result
+            score = vol_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['volume_profile']
+            total_weight += LAYER_WEIGHTS['volume_profile']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 6: VWAP DEVIATION
+    # ========================================================================
+    try:
+        print("📈 Layer 6: VWAP Deviation...", end=" ")
+        vwap_result = calculate_vwap_deviation(symbol, interval, limit)
+        if vwap_result and vwap_result.get('available'):
+            results['layers']['vwap'] = vwap_result
+            score = vwap_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['vwap']
+            total_weight += LAYER_WEIGHTS['vwap']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 7: PIVOT POINTS
+    # ========================================================================
+    try:
+        print("🎯 Layer 7: Pivot Points...", end=" ")
+        pivot_result = calculate_pivot_points(symbol, interval, limit)
+        if pivot_result and pivot_result.get('available'):
+            results['layers']['pivot_points'] = pivot_result
+            score = pivot_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['pivot_points']
+            total_weight += LAYER_WEIGHTS['pivot_points']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 8: VOLATILITY SQUEEZE
+    # ========================================================================
+    try:
+        print("💥 Layer 8: Volatility Squeeze...", end=" ")
+        squeeze_result = calculate_volatility_squeeze(symbol, interval, limit)
+        if squeeze_result and squeeze_result.get('available'):
+            results['layers']['volatility_squeeze'] = squeeze_result
+            score = squeeze_result.get('score', 50)
+            weighted_sum += score * LAYER_WEIGHTS['volatility_squeeze']
+            total_weight += LAYER_WEIGHTS['volatility_squeeze']
+            results['available_layers'] += 1
+            print(f"✅ Score: {score:.1f}")
+        else:
+            print("⚠️ Unavailable")
+    except Exception as e:
+        print(f"❌ Error: {str(e)[:50]}")
+    
+    # ========================================================================
+    # LAYER 9: GOLD CORRELATION ⭐ NEW (Phase 6.2)
+    # ========================================================================
+    if GOLD_AVAILABLE:
+        try:
+            print("🥇 Layer 9: Gold Correlation...", end=" ")
+            gold_result = calculate_gold_correlation(symbol, interval, limit)
+            if gold_result and gold_result.get('available'):
+                results['layers']['gold_correlation'] = gold_result
+                score = gold_result.get('score', 50)
+                weighted_sum += score * LAYER_WEIGHTS['gold_correlation']
+                total_weight += LAYER_WEIGHTS['gold_correlation']
+                results['available_layers'] += 1
+                print(f"✅ Score: {score:.1f}")
+            else:
+                print("⚠️ Unavailable")
+        except Exception as e:
+            print(f"❌ Error: {str(e)[:50]}")
+    else:
+        print("🥇 Layer 9: Gold Correlation... ⏭️ Skipped (not installed)")
+    
+    # ========================================================================
+    # LAYER 10: BTC DOMINANCE & FLOW ⭐ NEW (Phase 6.3)
+    # ========================================================================
+    if DOMINANCE_AVAILABLE:
+        try:
+            print("📊 Layer 10: BTC Dominance Flow...", end=" ")
+            dom_result = calculate_dominance_flow()
+            if dom_result and dom_result.get('available'):
+                results['layers']['dominance_flow'] = dom_result
+                score = dom_result.get('score', 50)
+                weighted_sum += score * LAYER_WEIGHTS['dominance_flow']
+                total_weight += LAYER_WEIGHTS['dominance_flow']
+                results['available_layers'] += 1
+                print(f"✅ Score: {score:.1f}")
+            else:
+                print("⚠️ Unavailable")
+        except Exception as e:
+            print(f"❌ Error: {str(e)[:50]}")
+    else:
+        print("📊 Layer 10: BTC Dominance Flow... ⏭️ Skipped (not installed)")
+    
+    # ========================================================================
+    # LAYER 11: CROSS-ASSET CORRELATION ⭐ NEW (Phase 6.4)
+    # ========================================================================
+    if CROSS_ASSET_AVAILABLE:
+        try:
+            print("🔗 Layer 11: Cross-Asset Correlation...", end=" ")
+            cross_result = calculate_cross_asset(interval, limit)
+            if cross_result and cross_result.get('available'):
+                results['layers']['cross_asset'] = cross_result
+                score = cross_result.get('score', 50)
+                weighted_sum += score * LAYER_WEIGHTS['cross_asset']
+                total_weight += LAYER_WEIGHTS['cross_asset']
+                results['available_layers'] += 1
+                print(f"✅ Score: {score:.1f}")
+            else:
+                print("⚠️ Unavailable")
+        except Exception as e:
+            print(f"❌ Error: {str(e)[:50]}")
+    else:
+        print("🔗 Layer 11: Cross-Asset Correlation... ⏭️ Skipped (not installed)")
+    
+    # ========================================================================
+    # CALCULATE FINAL SCORE
+    # ========================================================================
+    if total_weight > 0:
+        results['weighted_score'] = round(weighted_sum / total_weight, 2)
+        results['final_score'] = results['weighted_score']
+    else:
+        results['final_score'] = 50.0
+        results['weighted_score'] = 50.0
+    
+    # Calculate confidence based on available layers
+    results['confidence'] = round((results['available_layers'] / results['total_layers']) * 100, 1)
+    
+    # ========================================================================
+    # GENERATE INTERPRETATION & RECOMMENDATION
+    # ========================================================================
+    score = results['final_score']
+    
+    if score >= 75:
+        results['interpretation'] = "🟢 STRONG BULLISH - Multiple layers confirm upside momentum"
+        results['recommendation'] = "BUY"
+    elif score >= 65:
+        results['interpretation'] = "🟢 BULLISH - Favorable conditions for long positions"
+        results['recommendation'] = "BUY"
+    elif score >= 55:
+        results['interpretation'] = "🟢 MODERATELY BULLISH - Slight bullish bias"
+        results['recommendation'] = "BUY / HOLD"
+    elif score >= 45:
+        results['interpretation'] = "🟡 NEUTRAL - Mixed signals, no clear direction"
+        results['recommendation'] = "HOLD"
+    elif score >= 35:
+        results['interpretation'] = "🔴 MODERATELY BEARISH - Caution advised"
+        results['recommendation'] = "HOLD / SELL"
+    elif score >= 25:
+        results['interpretation'] = "🔴 BEARISH - Unfavorable conditions"
+        results['recommendation'] = "SELL"
+    else:
+        results['interpretation'] = "🔴 STRONG BEARISH - Multiple layers show downside risk"
+        results['recommendation'] = "SELL"
+    
+    # ========================================================================
+    # PRINT SUMMARY
+    # ========================================================================
+    print("\n" + "=" * 70)
+    print(f"🎯 FINAL SCORE: {results['final_score']:.2f}/100")
+    print(f"📊 Confidence: {results['confidence']:.1f}% ({results['available_layers']}/{results['total_layers']} layers)")
+    print(f"📖 {results['interpretation']}")
+    print(f"💡 RECOMMENDATION: {results['recommendation']}")
+    if results['phase_6_enabled']:
+        print("✅ Phase 6 Macro Analysis: ACTIVE")
+    else:
+        print("⚠️ Phase 6 Macro Analysis: PARTIAL (install missing layers)")
+    print("=" * 70)
+    
+    return results
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+def get_layer_summary(results):
+    """Get a quick summary of all layer scores"""
+    summary = []
+    for layer_name, layer_data in results['layers'].items():
+        score = layer_data.get('score', 50)
+        summary.append({
+            'layer': layer_name,
+            'score': score,
+            'weight': LAYER_WEIGHTS.get(layer_name, 0) * 100
+        })
+    return sorted(summary, key=lambda x: x['score'], reverse=True)
+
+def get_strongest_signals(results, top_n=3):
+    """Get the strongest bullish/bearish signals"""
+    layer_scores = []
+    for layer_name, layer_data in results['layers'].items():
+        score = layer_data.get('score', 50)
+        layer_scores.append((layer_name, score))
+    
+    sorted_scores = sorted(layer_scores, key=lambda x: x[1], reverse=True)
+    
+    return {
+        'most_bullish': sorted_scores[:top_n],
+        'most_bearish': sorted_scores[-top_n:][::-1]
     }
 
 # ============================================================================
-# TEST
+# TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
-    print("=" * 80)
-    print("🔱 DEMIR AI - AI Brain v5 (PHASE 6) Test")
-    print("=" * 80)
+    print("🚀 AI BRAIN - 11-LAYER ANALYSIS ENGINE")
+    print("Phase 6 Complete: Macro & Cross-Asset Analysis")
+    print()
     
-    symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
+    # Run analysis
+    result = calculate_all_layers('BTCUSDT', '1h', 500)
     
-    for symbol in symbols:
-        decision = make_trading_decision(
-            symbol=symbol,
-            interval='1h',
-            portfolio_value=10000,
-            risk_per_trade=200
-        )
-        
-        print(f"\n✅ {symbol} FINAL DECISION:")
-        print(f"   Decision: {decision['decision']}")
-        print(f"   Combined Score: {decision['final_score']}/100")
-        print(f"   Macro Score: {decision['macro_score']}/100")
-        print(f"   Confidence: {decision['confidence']*100:.0f}%")
-        if decision['entry_price']:
-            print(f"   Entry: ${decision['entry_price']:,.2f}")
-            print(f"   Stop: ${decision['stop_loss']:,.2f}")
-            print(f"   Target: ${decision['take_profit']:,.2f}")
-        print("\n" + "=" * 80)
+    # Print layer summary
+    print("\n📊 LAYER BREAKDOWN:")
+    summary = get_layer_summary(result)
+    for item in summary:
+        print(f"  • {item['layer']}: {item['score']:.1f} (weight: {item['weight']:.0f}%)")
+    
+    # Print strongest signals
+    print("\n🎯 STRONGEST SIGNALS:")
+    signals = get_strongest_signals(result)
+    print("  BULLISH:")
+    for layer, score in signals['most_bullish']:
+        print(f"    • {layer}: {score:.1f}")
+    print("  BEARISH:")
+    for layer, score in signals['most_bearish']:
+        print(f"    • {layer}: {score:.1f}")
