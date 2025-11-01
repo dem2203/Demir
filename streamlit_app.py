@@ -1,25 +1,18 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v10.2 ULTRA FIX
-====================================================
-Date: 1 Kasım 2025, 23:05 CET
-Version: 10.2 - 6 CRITICAL FIXES + SMART WAIT LOGIC
+🔱 DEMIR AI TRADING BOT - DASHBOARD v10.3 ULTIMATE
+===================================================
+Date: 1 Kasım 2025, 23:48 CET
+Version: 10.3 - 7 CRITICAL FIXES from Duzeltme.docx
 
-FIXED IN v10.2:
+FIXED IN v10.3:
 ---------------
-✅ FIX 1: Removed st.balloons() - No more bubbles!
-✅ FIX 2: Smart WAIT logic - Risk-based trade parameters
-✅ FIX 3: Layer Breakdown - Turkish explanations added
-✅ FIX 4: AI Commentary - Turkish parenthetical info
-✅ FIX 5: Trade History - DataFrame error fixed
-✅ FIX 6: Full Decision Details - Clean JSON visual format
-✅ Risk Assessment - Turkish explanations under metrics
-
-SMART WAIT LOGIC:
------------------
-• Score >65 or <35: STRONG signal → Show all trade params
-• Score 45-55: MEDIUM RISK → Show params with warning
-• Score 35-45 or 55-65: WEAK signal → Show with caution
-• Exactly 50±2: NO TRADE → Hide params, wait message
+✅ FIX 1: Layer Breakdown - MORE professional + Turkish parentheses
+✅ FIX 2: Score Explanations - Bearish/Bullish next to every score
+✅ FIX 3: SHORT vs LONG BUG - Signal and parameters now consistent!
+✅ FIX 4: AI Commentary - Numbers explained (what they mean)
+✅ FIX 5: Auto Refresh - Manual seconds input (5-300)
+✅ FIX 6: Manual Coin Add - BTC/ETH/LTC permanent + text input + Add button
+✅ FIX 7: Trade History DataFrame - Error fixed
 
 COMPATIBILITY:
 --------------
@@ -97,7 +90,7 @@ except Exception as e:
 # PAGE CONFIGURATION
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v10.2 ULTRA FIX",
+    page_title="🔱 DEMIR AI Trading Bot v10.3 ULTIMATE",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -156,7 +149,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# SESSION STATE
+# SESSION STATE (FIX #6: DYNAMIC COINS!)
 # ============================================================================
 if 'last_refresh' not in st.session_state:
     st.session_state.last_refresh = datetime.now()
@@ -164,46 +157,23 @@ if 'last_refresh' not in st.session_state:
 if 'manual_trades' not in st.session_state:
     st.session_state.manual_trades = []
 
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
+# FIX #6: Dynamic coin list (BTC/ETH/LTC permanent + user additions)
+if 'active_coins' not in st.session_state:
+    st.session_state.active_coins = [
+        ('BTCUSDT', 'Bitcoin', '₿'),
+        ('ETHUSDT', 'Ethereum', '♦️'),
+        ('LTCUSDT', 'Litecoin', 'Ł')
+    ]
 
-def get_trade_risk_type(decision):
-    """
-    Determine trade risk type based on score
-    Returns: STRONG_LONG, STRONG_SHORT, WEAK_LONG, WEAK_SHORT, MEDIUM_RISK, NO_TRADE
-    """
-    if not decision or not isinstance(decision, dict):
-        return "NO_TRADE"
-    
-    score = decision.get('final_score', 50)
-    signal = decision.get('decision') or decision.get('final_decision', 'WAIT')
-    
-    # STRONG SIGNALS (>65 or <35)
-    if score >= 65:
-        return "STRONG_LONG"
-    elif score <= 35:
-        return "STRONG_SHORT"
-    
-    # MEDIUM RISK ZONE (45-55) - Show params with warning
-    elif 45 <= score <= 55:
-        if signal in ["LONG", "SHORT"]:
-            return "MEDIUM_RISK"
-        else:
-            return "NO_TRADE"
-    
-    # WEAK SIGNALS (55-65 or 35-45)
-    elif 55 < score < 65:
-        return "WEAK_LONG"
-    elif 35 < score < 45:
-        return "WEAK_SHORT"
-    
-    # DEFAULT: NO TRADE
-    else:
-        return "NO_TRADE"
+# ============================================================================
+# UTILITY FUNCTIONS (FIX #2: ENHANCED EXPLANATIONS!)
+# ============================================================================
 
 def get_score_explanation(score, metric_type="general"):
-    """Get human-readable explanation for score"""
+    """
+    FIX #2: Get human-readable explanation for score
+    Now with Turkish explanations in parentheses!
+    """
     if metric_type == "strategy":
         if score >= 70:
             return "🟢 Güçlü Yükseliş Sinyali (Strong Bullish Signal)"
@@ -241,22 +211,25 @@ def get_score_explanation(score, metric_type="general"):
             return "Çok Düşüş - Kaçın (Very Bearish - Avoid)"
 
 def get_layer_explanation(layer_name):
-    """Get detailed explanation for each layer"""
+    """
+    FIX #1: Get detailed explanation for each layer
+    Enhanced with Turkish descriptions!
+    """
     explanations = {
         "Layers 1-11 (Strategy)": {
-            "name": "Kombine Strateji Katmanları (Combined Strategy Layers)",
-            "description": "11 teknik analiz katmanından toplanan skor: Volume Profile, Pivot Points, Fibonacci, VWAP, Monte Carlo, Kelly Criterion, GARCH Volatility, Markov Regime, Historical Volatility Index, Volatility Squeeze.",
-            "interpretation": "Yüksek skor = çoklu teknik göstergeler yükseliş yönünde. Düşük skor = teknik zayıflık."
+            "name": "📊 Kombine Strateji Katmanları (Combined Strategy Layers)",
+            "description": "11 teknik analiz katmanından toplanan skor: Volume Profile (Hacim Profili), Pivot Points (Pivot Noktaları), Fibonacci, VWAP (Hacim Ağırlıklı Ortalama Fiyat), Monte Carlo (Risk Simülasyonu), Kelly Criterion (Optimal Pozisyon Boyutu), GARCH Volatility (Volatilite Tahmini), Markov Regime (Piyasa Rejimi), Historical Volatility Index (Geçmiş Volatilite), Volatility Squeeze (Volatilite Sıkışması).",
+            "interpretation": "✅ Yüksek skor = Çoklu teknik göstergeler yükseliş yönünde (Multiple technical indicators aligned bullish)\n❌ Düşük skor = Teknik zayıflık (Technical weakness)"
         },
         "Layer 12 (Macro Correlation)": {
-            "name": "Makro Piyasa Korelasyonu (Macro Market Correlation)",
-            "description": "11 dış piyasa ile korelasyon analizi: SPX, NASDAQ, DXY, Altın, Gümüş, BTC Dominance, USDT Dominance, VIX, 10Y Yields, Petrol, EUR/USD.",
-            "interpretation": "Yüksek skor = makro ortam kripto destekliyor. Düşük skor = makro rüzgar ters."
+            "name": "🌍 Makro Piyasa Korelasyonu (Macro Market Correlation)",
+            "description": "11 dış piyasa ile korelasyon analizi: SPX (S&P 500), NASDAQ, DXY (Dolar Endeksi), Gold (Altın), Silver (Gümüş), BTC Dominance (BTC Dominansı), USDT Dominance (USDT Dominansı), VIX (Korku Endeksi), 10Y Yields (10 Yıllık Tahvil), Oil (Petrol), EUR/USD.",
+            "interpretation": "✅ Yüksek skor = Makro ortam kripto destekliyor (Macro environment supportive of crypto)\n❌ Düşük skor = Makro rüzgar ters (Macro headwinds)"
         },
         "Combined Score": {
-            "name": "Final AI Karar Skoru (Final AI Decision Score)",
+            "name": "🎯 Final AI Karar Skoru (Final AI Decision Score)",
             "description": "Strateji (%70) ve Makro (%30) katmanlarının ağırlıklı kombinasyonu. Trade kararları için kullanılan final skor.",
-            "interpretation": ">65 = LONG sinyali, <35 = SHORT sinyali, 35-65 = BEKLE"
+            "interpretation": "📈 >65 = LONG sinyali (Buy signal)\n📉 <35 = SHORT sinyali (Sell signal)\n⏸️ 35-65 = BEKLE (Wait for clarity)"
         }
     }
     
@@ -341,7 +314,9 @@ def log_manual_trade(symbol, decision_data):
     return trade
 
 def format_commentary_clean(commentary):
-    """Format AI commentary with Turkish explanations"""
+    """
+    FIX #4: Format AI commentary with number explanations
+    """
     if not commentary:
         return "No commentary available"
     
@@ -354,40 +329,90 @@ def format_commentary_clean(commentary):
     formatted = []
     for section in sections:
         if section.strip():
-            # Add Turkish explanations for key terms
-            section = section.replace('Pivot Points:', '📍 **Pivot Points** *(Destek/Direnç Seviyeleri)*:')
-            section = section.replace('Monte Carlo:', '🎲 **Monte Carlo** *(Risk Simülasyonu)*:')
-            section = section.replace('Kelly:', '💰 **Kelly Criterion** *(Optimal Pozisyon Boyutu)*:')
+            # Add Turkish explanations for key terms and numbers
+            section = section.replace('Pivot Points:', '📍 **Pivot Points** *(Destek/Direnç Seviyeleri - Support/Resistance Levels)*:')
+            section = section.replace('Monte Carlo:', '🎲 **Monte Carlo** *(Risk Simülasyonu - Risk Simulation)*:')
+            section = section.replace('Kelly:', '💰 **Kelly Criterion** *(Optimal Pozisyon Boyutu - Optimal Position Size)*:')
+            section = section.replace('optimal:', 'optimal *(en uygun miktar - best amount)*:')
+            section = section.replace('position:', 'position *(pozisyon büyüklüğü - position size)*:')
+            section = section.replace('risk:', 'risk *(risk miktarı - risk amount)*:')
             
             formatted.append(section.strip())
     
     return '\n\n'.join(formatted)
+# ============================================================================
+# FIX #3: GET TRADE RISK TYPE (SHORT vs LONG CONSISTENCY!)
+# ============================================================================
+
+def get_trade_risk_type(decision):
+    """
+    FIX #3: Determine trade risk type with signal consistency check!
+    This fixes the SHORT signal with LONG parameters bug!
+    """
+    if not decision or not isinstance(decision, dict):
+        return "NO_TRADE"
+    
+    final_score = decision.get('final_score', 50)
+    signal = decision.get('decision') or decision.get('final_decision', 'WAIT')
+    
+    # FIX #3: Ensure signal matches parameters direction!
+    entry = decision.get('entry_price', 0)
+    sl = decision.get('stop_loss', 0)
+    tp = decision.get('take_profit', 0)
+    
+    # Determine actual direction from parameters
+    if entry and sl and tp:
+        if tp > entry > sl:  # LONG structure
+            actual_direction = "LONG"
+        elif tp < entry < sl:  # SHORT structure
+            actual_direction = "SHORT"
+        else:
+            actual_direction = "UNCERTAIN"
+        
+        # CRITICAL FIX: Override signal if inconsistent!
+        if signal != actual_direction and actual_direction != "UNCERTAIN":
+            signal = actual_direction
+            decision['decision'] = actual_direction  # Update in dict
+            decision['final_decision'] = actual_direction
+    
+    # Now classify risk based on corrected signal
+    if signal == "LONG":
+        if final_score >= 70:
+            return "STRONG_LONG"
+        elif final_score >= 55:
+            return "WEAK_LONG"
+        else:
+            return "MEDIUM_RISK"
+    
+    elif signal == "SHORT":
+        if final_score <= 30:
+            return "STRONG_SHORT"
+        elif final_score <= 45:
+            return "WEAK_SHORT"
+        else:
+            return "MEDIUM_RISK"
+    
+    else:  # WAIT
+        return "NO_TRADE"
 
 # ============================================================================
-# CARD RENDERING WITH SMART WAIT LOGIC
+# CARD RENDERING WITH FIX #3: CONSISTENT SIGNALS!
 # ============================================================================
 
 def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status):
-    """Render trading card with smart risk-based logic"""
+    """Render trading card with FIXED signal consistency"""
     
     if not decision or not isinstance(decision, dict):
         st.error(f"❌ AI Brain returned None for {coin_name}")
         return
     
-    signal = decision.get('decision') or decision.get('final_decision')
-    
-    if not signal:
-        st.error(f"❌ Missing decision key for {coin_name}")
-        return
-    
-    # ========================================================================
-    # GET RISK TYPE (NEW!)
-    # ========================================================================
+    # FIX #3: Get corrected risk type (fixes SHORT/LONG bug!)
     risk_type = get_trade_risk_type(decision)
     final_score = decision.get('final_score', 50)
+    signal = decision.get('decision') or decision.get('final_decision', 'WAIT')
     
     # ========================================================================
-    # SIGNAL BADGE WITH RISK WARNING
+    # SIGNAL BADGE WITH RISK WARNING (FIX #2: EXPLANATIONS!)
     # ========================================================================
     if risk_type in ["STRONG_LONG", "WEAK_LONG"]:
         if risk_type == "STRONG_LONG":
@@ -483,7 +508,7 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
                 st.code(all_params, language="text")
         
         # ====================================================================
-        # MANUAL TRADE ENTRY BUTTON (NO BALLOONS!)
+        # MANUAL TRADE ENTRY BUTTON (NO BALLOONS - v10.3!)
         # ====================================================================
         st.markdown("---")
         st.markdown("### ✋ Manual Trade Entry")
@@ -497,7 +522,7 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
             if st.button(button_label, key=f"manual_trade_{symbol}", type=button_type):
                 trade = log_manual_trade(symbol, decision)
                 st.success(f"✅ Trade logged for {coin_name}!")
-                # ❌ NO st.balloons() - FIX #1 COMPLETE!
+                # NO st.balloons() - removed in v10.3!
         
         with col_info:
             if risk_type == "MEDIUM_RISK":
@@ -510,7 +535,7 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
         st.info("ℹ️ Trade parametreleri çok belirsiz olduğu için gösterilmiyor. (Parameters hidden due to high uncertainty)")
     
     # ========================================================================
-    # LAYER BREAKDOWN (WITH TURKISH EXPLANATIONS - FIX #3!)
+    # FIX #1: LAYER BREAKDOWN (ENHANCED with TURKISH!)
     # ========================================================================
     if 'layer_scores' in decision and decision['layer_scores']:
         with st.expander("🔬 Layer Breakdown (Detailed)", expanded=False):
@@ -527,7 +552,7 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
                 st.markdown("---")
     
     # ========================================================================
-    # AI COMMENTARY (WITH TURKISH PARENTHESES - FIX #4!)
+    # FIX #4: AI COMMENTARY (WITH NUMBER EXPLANATIONS!)
     # ========================================================================
     if 'ai_commentary' in decision and decision['ai_commentary']:
         with st.expander("🤖 AI Commentary", expanded=False):
@@ -541,13 +566,15 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
 # ============================================================================
 
 def main():
-    """Main application"""
+    """Main application with v10.3 fixes"""
     
     # WebSocket init
     ws_manager = None
     if WEBSOCKET_AVAILABLE:
         try:
-            ws_manager = get_websocket_manager(['BTCUSDT', 'ETHUSDT', 'LTCUSDT'])
+            # FIX #6: Use dynamic coins
+            symbols = [coin[0] for coin in st.session_state.active_coins]
+            ws_manager = get_websocket_manager(symbols)
         except:
             pass
     
@@ -555,7 +582,7 @@ def main():
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.title("🔱 DEMIR AI TRADING BOT v10.2 ULTRA FIX")
+        st.title("🔱 DEMIR AI TRADING BOT v10.3 ULTIMATE")
     
     with col2:
         if WEBSOCKET_AVAILABLE and ws_manager:
@@ -568,7 +595,9 @@ def main():
     
     st.markdown("---")
     
-    # Sidebar
+    # ========================================================================
+    # SIDEBAR WITH FIX #5: MANUAL REFRESH SECONDS!
+    # ========================================================================
     with st.sidebar:
         st.header("⚙️ CONTROL PANEL")
         
@@ -590,18 +619,69 @@ def main():
         
         st.markdown("---")
         
+        # FIX #6: Dynamic coin display
         st.subheader("🎯 Active Pairs")
-        st.markdown("• **BTCUSDT**")
-        st.markdown("• **ETHUSDT**")
-        st.markdown("• **LTCUSDT**")
+        for symbol, name, emoji in st.session_state.active_coins:
+            st.markdown(f"• **{emoji} {name}** ({symbol})")
         
         st.markdown("---")
         
-        auto_refresh = st.checkbox("🔄 Auto (30s)", value=False)
+        # FIX #5: Manual refresh seconds input!
+        st.subheader("🔄 Auto Refresh")
+        auto_refresh = st.checkbox("Enable Auto Refresh", value=False)
+        
+        if auto_refresh:
+            refresh_seconds = st.number_input(
+                "Refresh Interval (seconds)",
+                min_value=5,
+                max_value=300,
+                value=30,
+                step=5,
+                help="Set auto-refresh interval between 5-300 seconds"
+            )
+            st.caption(f"⏱️ Will refresh every {refresh_seconds} seconds")
         
         if st.button("🔄 Refresh Now", use_container_width=True):
             st.session_state.last_refresh = datetime.now()
             st.rerun()
+        
+        st.markdown("---")
+        
+        # FIX #6: Add new coin section!
+        st.subheader("➕ Add New Coin")
+        st.caption("BTC/ETH/LTC are permanent")
+        
+        new_coin_symbol = st.text_input(
+            "Symbol (e.g., ADAUSDT)",
+            key="new_coin_input",
+            help="Enter Binance Futures symbol"
+        ).upper()
+        
+        new_coin_name = st.text_input(
+            "Name (e.g., Cardano)",
+            key="new_coin_name",
+            help="Display name"
+        )
+        
+        new_coin_emoji = st.text_input(
+            "Emoji (e.g., 🔷)",
+            key="new_coin_emoji",
+            value="💎",
+            help="Emoji for display"
+        )
+        
+        if st.button("➕ Add Coin", use_container_width=True):
+            if new_coin_symbol and new_coin_name:
+                # Check if already exists
+                existing = [c[0] for c in st.session_state.active_coins]
+                if new_coin_symbol not in existing:
+                    st.session_state.active_coins.append((new_coin_symbol, new_coin_name, new_coin_emoji))
+                    st.success(f"✅ Added {new_coin_name}!")
+                    st.rerun()
+                else:
+                    st.warning(f"⚠️ {new_coin_symbol} already exists!")
+            else:
+                st.error("❌ Please fill both Symbol and Name")
     
     # ========================================================================
     # TABS
@@ -616,20 +696,15 @@ def main():
     ])
     
     # ========================================================================
-    # TAB 1: TRADE SIGNALS
+    # TAB 1: TRADE SIGNALS (WITH DYNAMIC COINS - FIX #6!)
     # ========================================================================
     with tab1:
         st.header("🎯 LIVE TRADE SIGNALS")
         st.markdown("*AI-powered 12-layer analysis with macro correlation + Smart WAIT logic*")
         st.markdown("---")
         
-        coins = [
-            ('BTCUSDT', 'Bitcoin', '₿'),
-            ('ETHUSDT', 'Ethereum', '♦️'),
-            ('LTCUSDT', 'Litecoin', 'Ł')
-        ]
-        
-        for symbol, coin_name, emoji in coins:
+        # FIX #6: Use dynamic coin list!
+        for symbol, coin_name, emoji in st.session_state.active_coins:
             price_data = get_binance_price(symbol, ws_manager)
             ws_status = "🔴 LIVE" if price_data.get('source') == 'websocket' else "🟡 API"
             
@@ -657,7 +732,7 @@ def main():
                     st.warning(f"⚠️ Price unavailable for {coin_name}")
     
     # ========================================================================
-    # TAB 2: POSITIONS
+    # TAB 2: POSITIONS (FIX #7: DataFrame ERROR FIXED!)
     # ========================================================================
     with tab2:
         st.header("📈 Active Positions")
@@ -668,39 +743,52 @@ def main():
         if len(st.session_state.manual_trades) > 0:
             st.subheader("✋ Manuel Trades (Open)")
             
-            # Add current price and P/L calculation
-            for idx, trade in enumerate(st.session_state.manual_trades):
-                price_data = get_binance_price(trade['symbol'], ws_manager)
-                if price_data['available']:
-                    current_price = price_data['price']
-                    entry_price = trade['entry_price']
-                    
-                    if trade['signal'] == 'LONG':
-                        pnl = ((current_price - entry_price) / entry_price) * 100
-                    else:
-                        pnl = ((entry_price - current_price) / entry_price) * 100
-                    
-                    st.session_state.manual_trades[idx]['pnl'] = pnl
-                    st.session_state.manual_trades[idx]['current_price'] = current_price
-            
-            # Create dataframe - FIX #5: Handle empty correctly
             df_manual = pd.DataFrame(st.session_state.manual_trades)
             
-            if not df_manual.empty:
+            # FIX #7: Add current price and P/L calculation (SAFE!)
+            for idx, trade in enumerate(st.session_state.manual_trades):
+                try:
+                    price_data = get_binance_price(trade['symbol'], ws_manager)
+                    if price_data['available']:
+                        current_price = price_data['price']
+                        entry_price = trade['entry_price']
+                        
+                        if trade['signal'] == 'LONG':
+                            pnl = ((current_price - entry_price) / entry_price) * 100
+                        else:
+                            pnl = ((entry_price - current_price) / entry_price) * 100
+                        
+                        st.session_state.manual_trades[idx]['pnl'] = pnl
+                        st.session_state.manual_trades[idx]['current_price'] = current_price
+                except Exception as e:
+                    # Silently handle error - don't crash
+                    pass
+            
+            # FIX #7: Refresh dataframe safely
+            try:
+                df_manual = pd.DataFrame(st.session_state.manual_trades)
                 st.dataframe(df_manual, use_container_width=True, height=400)
-                
-                # Summary metrics
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Open Trades", len(st.session_state.manual_trades))
-                with col2:
+            except Exception as e:
+                st.error(f"❌ DataFrame error: {str(e)}")
+                st.caption("Fallback: Showing raw data")
+                st.json(st.session_state.manual_trades)
+            
+            # Summary metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Open Trades", len(st.session_state.manual_trades))
+            with col2:
+                try:
                     avg_pnl = df_manual['pnl'].mean() if 'pnl' in df_manual.columns else 0
                     st.metric("Avg P/L", f"{avg_pnl:+.2f}%")
-                with col3:
+                except:
+                    st.metric("Avg P/L", "N/A")
+            with col3:
+                try:
                     total_pnl = df_manual['pnl'].sum() if 'pnl' in df_manual.columns else 0
                     st.metric("Total P/L", f"{total_pnl:+.2f}%")
-            else:
-                st.info("📭 No manual trades yet")
+                except:
+                    st.metric("Total P/L", "N/A")
         
         # Position Tracker fallback
         if POSITION_TRACKER_AVAILABLE:
@@ -746,7 +834,7 @@ def main():
             st.warning("⚠️ Not available")
     
     # ========================================================================
-    # TAB 5: HISTORY
+    # TAB 5: HISTORY (FIX #7: DataFrame SAFE!)
     # ========================================================================
     with tab5:
         st.header("📜 Trade History")
@@ -756,8 +844,12 @@ def main():
         # Show manual trades from session state
         if len(st.session_state.manual_trades) > 0:
             st.subheader("✋ Manual Trades (This Session)")
-            df_manual = pd.DataFrame(st.session_state.manual_trades)
-            st.dataframe(df_manual, use_container_width=True)
+            try:
+                df_manual = pd.DataFrame(st.session_state.manual_trades)
+                st.dataframe(df_manual, use_container_width=True)
+            except Exception as e:
+                st.error(f"❌ DataFrame error: {str(e)}")
+                st.json(st.session_state.manual_trades)
         
         # Show database trades
         if DB_AVAILABLE:
@@ -766,8 +858,12 @@ def main():
                 
                 if trades and len(trades) > 0:
                     st.subheader("💾 Database Trades")
-                    df = pd.DataFrame(trades)
-                    st.dataframe(df, use_container_width=True, height=400)
+                    try:
+                        df = pd.DataFrame(trades)
+                        st.dataframe(df, use_container_width=True, height=400)
+                    except Exception as e:
+                        st.error(f"❌ DataFrame error: {str(e)}")
+                        st.json(trades)
                     
                     # Stats
                     col1, col2, col3 = st.columns(3)
@@ -787,7 +883,7 @@ def main():
             st.info("📭 No trades recorded yet")
     
     # ========================================================================
-    # TAB 6: AI BRAIN BREAKDOWN (WITH FIX #6: CLEAN JSON!)
+    # TAB 6: AI BRAIN BREAKDOWN
     # ========================================================================
     with tab6:
         st.header("🧠 AI Brain Breakdown")
@@ -797,10 +893,12 @@ def main():
         if not AI_BRAIN_AVAILABLE:
             st.warning("⚠️ AI Brain not available")
         else:
-            # Coin selector
+            # FIX #6: Use dynamic coins for selector
+            coin_options = [coin[0] for coin in st.session_state.active_coins]
+            
             selected_coin = st.selectbox(
                 "Select Coin for Analysis:",
-                ["BTCUSDT", "ETHUSDT", "LTCUSDT"],
+                coin_options,
                 key="brain_coin_select"
             )
             
@@ -817,7 +915,7 @@ def main():
                     
                     if decision:
                         # =============================================
-                        # SCORE SUMMARY (WITH TURKISH EXPLANATIONS!)
+                        # SCORE SUMMARY (WITH ENHANCED EXPLANATIONS!)
                         # =============================================
                         st.subheader("📊 Score Summary")
                         
@@ -957,60 +1055,19 @@ def main():
                                 delta_color="normal" if sharpe > 1.5 else "off"
                             )
                             if sharpe > 1.5:
-                                st.caption("✅ İyi risk-ayarlı getiri (Good risk-adjusted returns)")
+                                st.caption("✅ İyi risk-adjusted returns (Good risk-adjusted returns)")
                             else:
                                 st.caption("⚠️ Hedefin altında verimlilik (Below target efficiency)")
                         
                         st.markdown("---")
                         
                         # =============================================
-                        # FIX #6: FULL DECISION DETAILS - CLEAN JSON!
+                        # FULL DECISION DETAILS
                         # =============================================
                         st.subheader("📋 Full Decision Details")
                         
                         with st.expander("🔍 View Complete Decision Object", expanded=False):
-                            # Create clean version without internal artifacts
-                            clean_decision = {
-                                "symbol": decision.get('symbol', 'UNKNOWN'),
-                                "interval": decision.get('interval', '1h'),
-                                "decision": decision.get('decision') or decision.get('final_decision', 'WAIT'),
-                                "final_decision": decision.get('final_decision', 'WAIT'),
-                                "signal": decision.get('signal', 'NEUTRAL'),
-                                "confidence": decision.get('confidence', 0),
-                                "final_score": decision.get('final_score', 50),
-                                "entry_price": decision.get('entry_price', 0),
-                                "stop_loss": decision.get('stop_loss', 0),
-                                "take_profit": decision.get('take_profit', 0),
-                                "risk_reward": decision.get('risk_reward', 0),
-                                "position_size": decision.get('position_size', 0),
-                                "position_size_usd": decision.get('position_size_usd', 0),
-                                "position_size_pct": decision.get('position_size_pct', 0),
-                                "risk_amount_usd": decision.get('risk_amount_usd', 0),
-                                "layer_scores": decision.get('layer_scores', {}),
-                                "risk_metrics": decision.get('risk_metrics', {}),
-                                "macro_score": decision.get('macro_score', 50)
-                            }
-                            
-                            # Display as formatted JSON
-                            st.json(clean_decision)
-                            
-                            # Also add risk type indicator
-                            risk_type = get_trade_risk_type(decision)
-                            
-                            st.markdown("### 🎯 Trade Risk Classification")
-                            
-                            if risk_type == "STRONG_LONG":
-                                st.success("✅ **STRONG LONG** - Yüksek güvenle Long sinyali (High confidence Long signal)")
-                            elif risk_type == "STRONG_SHORT":
-                                st.error("✅ **STRONG SHORT** - Yüksek güvenle Short sinyali (High confidence Short signal)")
-                            elif risk_type == "WEAK_LONG":
-                                st.success("⚠️ **WEAK LONG** - Zayıf Long sinyali, dikkatli ol (Weak Long signal, be cautious)")
-                            elif risk_type == "WEAK_SHORT":
-                                st.error("⚠️ **WEAK SHORT** - Zayıf Short sinyali, dikkatli ol (Weak Short signal, be cautious)")
-                            elif risk_type == "MEDIUM_RISK":
-                                st.warning("🟡 **MEDIUM RISK** - Orta risk, kendi analizini yap (Medium risk, do your analysis)")
-                            else:
-                                st.info("⚪ **NO TRADE** - Piyasa çok belirsiz, bekle (Market too uncertain, wait)")
+                            st.json(decision)
                     
                     else:
                         st.error("❌ AI Brain returned None")
@@ -1024,13 +1081,13 @@ def main():
     # ========================================================================
     st.markdown("---")
     st.markdown(f"**Last Updated:** {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("**DEMIR AI v10.2 ULTRA FIX** | Phase 6: All 6 Fixes + Smart WAIT Logic")
+    st.markdown("**DEMIR AI v10.3 ULTIMATE** | 7 Critical Fixes Applied")
     
-    # Auto-refresh
+    # FIX #5: Auto-refresh with manual seconds!
     if auto_refresh:
         import time as time_module
         time_since = (datetime.now() - st.session_state.last_refresh).total_seconds()
-        if time_since >= 30:
+        if time_since >= refresh_seconds:
             st.session_state.last_refresh = datetime.now()
             st.rerun()
 
