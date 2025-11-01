@@ -1,6 +1,7 @@
+"""
 🔱 DEMIR AI TRADING BOT - AI Brain v6.0 ULTIMATE MERGE
 ======================================================
-Date: 2 Kasım 2025, 00:42 CET
+Date: 2 Kasım 2025, 00:57 CET
 Version: 6.0 - 14-LAYER ULTIMATE SYSTEM
 
 EVOLUTION:
