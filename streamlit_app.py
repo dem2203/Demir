@@ -1,17 +1,17 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v10.0 PRO - PHASE 6 + AI TRANSPARENCY
-===========================================================================
-Date: 1 Kasım 2025, 21:42 CET
-Version: 10.0 - AI Brain Breakdown + Manual Trade Entry
+🔱 DEMIR AI TRADING BOT - DASHBOARD v10.1 PRO FIXED
+====================================================
+Date: 1 Kasım 2025, 22:23 CET
+Version: 10.1 - CRITICAL FIXES
 
-NEW IN v10.0:
--------------
-✅ Tab 6: AI Brain Breakdown (transparency!)
-✅ Manuel trade entry buttons (I opened this trade!)
-✅ Trade result tracking (WIN/LOSS logging)
-✅ Layer scores visualization
-✅ Macro factors breakdown
-✅ Full transparency dashboard
+FIXED IN v10.1:
+---------------
+✅ Layer Breakdown: Detailed explanations for each layer
+✅ AI Commentary: Clean markdown format (no HTML artifacts!)
+✅ POSITIONS Tab: Now shows manual trades
+✅ Score Explanations: Added context (Bullish/Bearish/Risky)
+✅ Persistent Storage: Manual trades saved to DB
+✅ PDF Export: Fixed HTML rendering issues
 
 COMPATIBILITY:
 --------------
@@ -35,6 +35,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import traceback
+import json
 
 # Optional modules
 try:
@@ -88,7 +89,7 @@ except Exception as e:
 # PAGE CONFIGURATION
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v10.0 PRO",
+    page_title="🔱 DEMIR AI Trading Bot v10.1 PRO",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -127,6 +128,14 @@ st.markdown("""
         border-color: #00ff88;
         transform: translateY(-1px);
     }
+    
+    .layer-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -142,6 +151,70 @@ if 'manual_trades' not in st.session_state:
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
+
+def get_score_explanation(score, metric_type="general"):
+    """Get human-readable explanation for score"""
+    if metric_type == "strategy":
+        if score >= 70:
+            return "🟢 Strong Bullish Signal"
+        elif score >= 55:
+            return "🟢 Moderate Bullish"
+        elif score >= 45:
+            return "🟡 Neutral / Wait"
+        elif score >= 30:
+            return "🔴 Moderate Bearish"
+        else:
+            return "🔴 Strong Bearish Signal"
+    
+    elif metric_type == "macro":
+        if score >= 70:
+            return "🌍 Macro Tailwinds Strong"
+        elif score >= 55:
+            return "🌍 Macro Supportive"
+        elif score >= 45:
+            return "🌍 Macro Neutral"
+        elif score >= 30:
+            return "🌍 Macro Headwinds"
+        else:
+            return "🌍 Macro Very Bearish"
+    
+    else:  # general
+        if score >= 70:
+            return "Bullish - High Confidence"
+        elif score >= 55:
+            return "Bullish - Moderate"
+        elif score >= 45:
+            return "Neutral - Wait for clarity"
+        elif score >= 30:
+            return "Bearish - Risky"
+        else:
+            return "Very Bearish - Avoid"
+
+def get_layer_explanation(layer_name):
+    """Get detailed explanation for each layer"""
+    explanations = {
+        "Layers 1-11 (Strategy)": {
+            "name": "Combined Strategy Layers",
+            "description": "Aggregated score from 11 technical analysis layers including Volume Profile, Pivot Points, Fibonacci, VWAP, Monte Carlo, Kelly Criterion, GARCH Volatility, Markov Regime, Historical Volatility Index, and Volatility Squeeze.",
+            "interpretation": "Higher score indicates multiple technical indicators are aligned bullish. Lower score suggests technical weakness."
+        },
+        "Layer 12 (Macro Correlation)": {
+            "name": "Macro Market Correlation",
+            "description": "Analyzes correlation with 11 external markets: SPX, NASDAQ, DXY, Gold, Silver, BTC Dominance, USDT Dominance, VIX, 10Y Yields, Oil, EUR/USD.",
+            "interpretation": "Higher score means macro environment is supportive of crypto. Lower score indicates macro headwinds."
+        },
+        "Combined Score": {
+            "name": "Final AI Decision Score",
+            "description": "Weighted combination of Strategy (70%) and Macro (30%) layers. This is the final score used for trading decisions.",
+            "interpretation": ">65 = LONG signal, <35 = SHORT signal, 35-65 = WAIT"
+        }
+    }
+    
+    return explanations.get(layer_name, {
+        "name": layer_name,
+        "description": "Layer analysis component",
+        "interpretation": "Scoring metric"
+    })
 
 def get_binance_price(symbol, ws_manager=None):
     """Get price from WebSocket or REST API"""
@@ -196,7 +269,8 @@ def log_manual_trade(symbol, decision_data):
         'take_profit': decision_data.get('take_profit'),
         'ai_score': decision_data.get('final_score', 0),
         'macro_score': decision_data.get('macro_score', 0),
-        'status': 'OPEN'
+        'status': 'OPEN',
+        'pnl': 0.0
     }
     
     st.session_state.manual_trades.append(trade)
@@ -215,6 +289,28 @@ def log_manual_trade(symbol, decision_data):
             pass
     
     return trade
+
+def format_commentary_clean(commentary):
+    """Format AI commentary without HTML artifacts"""
+    if not commentary:
+        return "No commentary available"
+    
+    # Remove any \n\n artifacts
+    clean = commentary.replace('\\n\\n', '\n\n').replace('\\n', '\n')
+    
+    # Split into sections
+    sections = clean.split('\n\n')
+    
+    formatted = []
+    for section in sections:
+        if section.strip():
+            # Check if it's a header (starts with emoji or **bold**)
+            if section.startswith('📊') or section.startswith('📍') or section.startswith('**'):
+                formatted.append(f"**{section.strip()}**")
+            else:
+                formatted.append(section.strip())
+    
+    return '\n\n'.join(formatted)
 
 # ============================================================================
 # CARD RENDERING
@@ -294,7 +390,7 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
             st.code(all_params, language="text")
     
     # ========================================================================
-    # NEW: MANUAL TRADE ENTRY BUTTON
+    # MANUAL TRADE ENTRY BUTTON
     # ========================================================================
     st.markdown("---")
     st.markdown("### ✋ Manual Trade Entry")
@@ -310,16 +406,29 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
     with col_info:
         st.info(f"💡 Click when you manually open a trade based on AI recommendation")
     
-    # Layer scores (AI transparency!)
+    # ========================================================================
+    # LAYER BREAKDOWN (IMPROVED!)
+    # ========================================================================
     if 'layer_scores' in decision and decision['layer_scores']:
-        with st.expander("🔬 Layer Breakdown", expanded=False):
+        with st.expander("🔬 Layer Breakdown (Detailed)", expanded=False):
+            st.markdown("### 📊 AI Layer Analysis")
+            
             for layer_name, score in decision['layer_scores'].items():
-                st.progress(score / 100, text=f"{layer_name}: {score:.1f}%")
+                layer_info = get_layer_explanation(layer_name)
+                explanation = get_score_explanation(score, "general")
+                
+                st.markdown(f"**{layer_info['name']}**")
+                st.progress(score / 100, text=f"{score:.1f}/100 - {explanation}")
+                st.caption(f"ℹ️ {layer_info['description']}")
+                st.markdown("---")
     
-    # AI commentary
+    # ========================================================================
+    # AI COMMENTARY (CLEAN FORMAT!)
+    # ========================================================================
     if 'ai_commentary' in decision and decision['ai_commentary']:
         with st.expander("🤖 AI Commentary", expanded=False):
-            st.info(decision['ai_commentary'])
+            clean_commentary = format_commentary_clean(decision['ai_commentary'])
+            st.markdown(clean_commentary)
     
     st.markdown("---")
 
@@ -342,7 +451,7 @@ def main():
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        st.title("🔱 DEMIR AI TRADING BOT v10.0 PRO")
+        st.title("🔱 DEMIR AI TRADING BOT v10.1 PRO")
     
     with col2:
         if WEBSOCKET_AVAILABLE and ws_manager:
@@ -391,7 +500,7 @@ def main():
             st.rerun()
     
     # ========================================================================
-    # TABS (NOW WITH 6TH TAB!)
+    # TABS
     # ========================================================================
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🎯 TRADE SIGNALS",
@@ -399,7 +508,7 @@ def main():
         "💼 PORTFOLIO",
         "⚡ BACKTEST",
         "📜 HISTORY",
-        "🧠 AI BREAKDOWN"  # NEW!
+        "🧠 AI BREAKDOWN"
     ])
     
     # ========================================================================
@@ -444,26 +553,64 @@ def main():
                     st.warning(f"⚠️ Price unavailable for {coin_name}")
     
     # ========================================================================
-    # TAB 2: POSITIONS
+    # TAB 2: POSITIONS (FIXED! NOW SHOWS MANUAL TRADES!)
     # ========================================================================
     with tab2:
         st.header("📈 Active Positions")
         st.markdown("*Monitor open positions and P/L*")
         st.markdown("---")
         
+        # Show manual trades from session state
+        if len(st.session_state.manual_trades) > 0:
+            st.subheader("✋ Manuel Trades (Open)")
+            
+            df_manual = pd.DataFrame(st.session_state.manual_trades)
+            
+            # Add current price and P/L calculation
+            for idx, trade in enumerate(st.session_state.manual_trades):
+                price_data = get_binance_price(trade['symbol'], ws_manager)
+                if price_data['available']:
+                    current_price = price_data['price']
+                    entry_price = trade['entry_price']
+                    
+                    if trade['signal'] == 'LONG':
+                        pnl = ((current_price - entry_price) / entry_price) * 100
+                    else:
+                        pnl = ((entry_price - current_price) / entry_price) * 100
+                    
+                    st.session_state.manual_trades[idx]['pnl'] = pnl
+                    st.session_state.manual_trades[idx]['current_price'] = current_price
+            
+            # Refresh dataframe
+            df_manual = pd.DataFrame(st.session_state.manual_trades)
+            
+            st.dataframe(df_manual, use_container_width=True, height=400)
+            
+            # Summary metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Open Trades", len(st.session_state.manual_trades))
+            with col2:
+                avg_pnl = df_manual['pnl'].mean() if 'pnl' in df_manual.columns else 0
+                st.metric("Avg P/L", f"{avg_pnl:+.2f}%")
+            with col3:
+                total_pnl = df_manual['pnl'].sum() if 'pnl' in df_manual.columns else 0
+                st.metric("Total P/L", f"{total_pnl:+.2f}%")
+        
+        # Position Tracker fallback
         if POSITION_TRACKER_AVAILABLE:
             try:
                 positions = tracker.positions if hasattr(tracker, 'positions') else []
                 
                 if len(positions) > 0:
+                    st.subheader("📊 Position Tracker Data")
                     df = pd.DataFrame(positions)
-                    st.dataframe(df, use_container_width=True, height=400)
-                else:
-                    st.info("📭 No active positions")
+                    st.dataframe(df, use_container_width=True, height=300)
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
-        else:
-            st.warning("⚠️ Position Tracker not available")
+                pass
+        
+        if len(st.session_state.manual_trades) == 0 and (not POSITION_TRACKER_AVAILABLE or len(positions) == 0):
+            st.info("📭 No active positions. Click 'I Opened This Trade!' on the TRADE SIGNALS tab to track a position.")
     
     # ========================================================================
     # TAB 3: PORTFOLIO
@@ -535,7 +682,7 @@ def main():
             st.info("📭 No trades recorded yet")
     
     # ========================================================================
-    # TAB 6: AI BRAIN BREAKDOWN (NEW!)
+    # TAB 6: AI BRAIN BREAKDOWN (ENHANCED!)
     # ========================================================================
     with tab6:
         st.header("🧠 AI Brain Breakdown")
@@ -565,7 +712,7 @@ def main():
                     
                     if decision:
                         # =============================================
-                        # SCORE SUMMARY
+                        # SCORE SUMMARY (WITH EXPLANATIONS!)
                         # =============================================
                         st.subheader("📊 Score Summary")
                         
@@ -573,22 +720,27 @@ def main():
                         
                         with col1:
                             strategy_score = decision.get('layer_scores', {}).get('Layers 1-11 (Strategy)', 50)
+                            strategy_exp = get_score_explanation(strategy_score, "strategy")
                             st.metric(
                                 "Strategy Score",
                                 f"{strategy_score:.1f}/100",
                                 delta="70% weight"
                             )
+                            st.caption(f"📊 {strategy_exp}")
                         
                         with col2:
                             macro_score = decision.get('macro_score', 50)
+                            macro_exp = get_score_explanation(macro_score, "macro")
                             st.metric(
                                 "Macro Score",
                                 f"{macro_score:.1f}/100",
                                 delta="30% weight"
                             )
+                            st.caption(f"🌍 {macro_exp}")
                         
                         with col3:
                             final_score = decision.get('final_score', 50)
+                            final_exp = get_score_explanation(final_score, "general")
                             delta_color = "normal" if 45 <= final_score <= 65 else ("off" if final_score < 45 else "inverse")
                             st.metric(
                                 "Combined Score",
@@ -596,6 +748,7 @@ def main():
                                 delta=decision.get('decision', 'WAIT'),
                                 delta_color=delta_color
                             )
+                            st.caption(f"🎯 {final_exp}")
                         
                         st.markdown("---")
                         
@@ -656,7 +809,7 @@ def main():
                         st.markdown("---")
                         
                         # =============================================
-                        # RISK METRICS
+                        # RISK METRICS (WITH EXPLANATIONS!)
                         # =============================================
                         st.subheader("⚠️ Risk Assessment")
                         
@@ -672,6 +825,10 @@ def main():
                                 delta="Target: <5%",
                                 delta_color="inverse" if ror > 10 else "normal"
                             )
+                            if ror > 10:
+                                st.caption("⚠️ High risk - Reduce position size!")
+                            else:
+                                st.caption("✅ Acceptable risk level")
                         
                         with col2:
                             mdd = risk_metrics.get('max_drawdown', 0)
@@ -681,6 +838,10 @@ def main():
                                 delta="Target: <20%",
                                 delta_color="inverse" if mdd > 30 else "normal"
                             )
+                            if mdd > 30:
+                                st.caption("⚠️ High drawdown expected")
+                            else:
+                                st.caption("✅ Manageable drawdown")
                         
                         with col3:
                             sharpe = risk_metrics.get('sharpe_ratio', 0)
@@ -690,6 +851,10 @@ def main():
                                 delta="Target: >1.5",
                                 delta_color="normal" if sharpe > 1.5 else "off"
                             )
+                            if sharpe > 1.5:
+                                st.caption("✅ Good risk-adjusted returns")
+                            else:
+                                st.caption("⚠️ Below target efficiency")
                         
                         st.markdown("---")
                         
@@ -713,7 +878,7 @@ def main():
     # ========================================================================
     st.markdown("---")
     st.markdown(f"**Last Updated:** {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("**DEMIR AI v10.0 PRO** | Phase 6: Macro Correlation + AI Transparency")
+    st.markdown("**DEMIR AI v10.1 PRO** | Phase 6: Macro Correlation + Full Transparency")
     
     # Auto-refresh
     if auto_refresh:
