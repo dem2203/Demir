@@ -1,22 +1,13 @@
 """
-🔱 DEMIR AI TRADING BOT - DASHBOARD v9.1 BUGFIX
+🔱 DEMIR AI TRADING BOT - DASHBOARD v9.2 FINAL FIX
 Date: 1 Kasım 2025
-PHASE 5.1: Professional UI + Critical Bugfixes
+PHASE 5.2: AI Brain Integration Fix + Better Error Messages
 
-v9.1 BUGFIXES:
-✅ Fixed Position Tracker error (get_all_positions → positions attribute)
-✅ Fixed Trade History DataFrame ambiguous boolean error
-✅ Fixed AI Decision KeyError for 'final_decision'
-✅ All v9.0 Professional UI features retained
-
-v9.0 FEATURES (RETAINED):
-✅ Professional TradingView-style card layout
-✅ Prominent Entry/TP/SL display with copy buttons
-✅ Real-time WebSocket price streaming
-✅ Visual signal indicators
-✅ 11-Layer analysis with progress bars
-✅ Risk/Reward calculator
-✅ Modern gradient UI
+v9.2 CRITICAL FIXES:
+✅ Enhanced error handling for AI Brain responses
+✅ Better debugging messages
+✅ Fallback mechanism when AI returns None
+✅ Display actual error from ai_brain module
 ✅ All previous features intact
 """
 
@@ -29,6 +20,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import trade_history_db as db
 import win_rate_calculator as wrc
+import traceback
 
 # PHASE 4.1: WebSocket Integration
 try:
@@ -64,12 +56,13 @@ except:
 try:
     import ai_brain
     AI_BRAIN_AVAILABLE = True
-except:
+except Exception as e:
     AI_BRAIN_AVAILABLE = False
+    print(f"❌ AI Brain import error: {e}")
 
 # Page configuration
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v9.1 PRO",
+    page_title="🔱 DEMIR AI Trading Bot v9.2 PRO",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -453,9 +446,14 @@ def render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
     Render professional TradingView-style trading card
     Shows signal, entry, SL, TP, R/R, position size with copy buttons
     """
-    # BUGFIX v9.1: Check if 'final_decision' exists
+    # BUGFIX v9.2: Enhanced validation
+    if not decision or not isinstance(decision, dict):
+        st.error(f"❌ AI Brain returned None or invalid data for {coin_name}")
+        return
+    
     if 'final_decision' not in decision:
-        st.error(f"❌ Missing 'final_decision' in AI response for {coin_name}")
+        st.error(f"❌ Missing 'final_decision' key in AI response for {coin_name}")
+        st.write("**Debug Info:** Decision keys:", list(decision.keys()) if decision else "None")
         return
     
     signal = decision['final_decision']
@@ -573,7 +571,7 @@ def main():
     # Header with live status
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.title("🔱 DEMIR AI TRADING BOT v9.1 PRO")
+        st.title("🔱 DEMIR AI TRADING BOT v9.2 PRO")
     with col2:
         if WEBSOCKET_AVAILABLE and ws_manager and ws_manager.is_connected():
             st.markdown("### 🟢 LIVE STREAM")
@@ -661,6 +659,7 @@ def main():
             # Get AI trading decision
             if AI_BRAIN_AVAILABLE and price_data['available']:
                 try:
+                    # Call AI Brain with detailed error tracking
                     decision = ai_brain.make_trading_decision(
                         symbol=symbol,
                         interval='1h',
@@ -668,16 +667,31 @@ def main():
                         risk_per_trade=risk_per_trade
                     )
                     
-                    # BUGFIX v9.1: Validate decision before rendering
-                    if decision and 'final_decision' in decision:
-                        render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
+                    # BUGFIX v9.2: Detailed validation and error reporting
+                    if decision is None:
+                        st.error(f"❌ AI Brain returned None for {coin_name}")
+                        st.warning(f"⚠️ Check ai_brain.py - make_trading_decision() is returning None")
+                    elif not isinstance(decision, dict):
+                        st.error(f"❌ AI Brain returned invalid type: {type(decision)} for {coin_name}")
+                    elif 'final_decision' not in decision:
+                        st.error(f"❌ AI Brain missing 'final_decision' key for {coin_name}")
+                        with st.expander("🔍 Debug Info - Click to expand"):
+                            st.write("**Returned keys:**", list(decision.keys()))
+                            st.write("**Full response:**", decision)
                     else:
-                        st.error(f"❌ Invalid AI decision response for {coin_name}")
+                        # Valid decision - render card
+                        render_trade_card(symbol, coin_name, emoji, decision, price_data, ws_status)
                     
                 except Exception as e:
-                    st.error(f"❌ Error analyzing {coin_name}: {str(e)}")
+                    st.error(f"❌ Exception in {coin_name} analysis:")
+                    st.code(f"{type(e).__name__}: {str(e)}")
+                    with st.expander("🔍 Full Traceback"):
+                        st.code(traceback.format_exc())
             else:
-                st.warning(f"⚠️ AI analysis unavailable for {coin_name}")
+                if not AI_BRAIN_AVAILABLE:
+                    st.warning(f"⚠️ AI Brain module not available for {coin_name}")
+                else:
+                    st.warning(f"⚠️ Price data unavailable for {coin_name}")
             
             st.markdown("---")
     
@@ -776,7 +790,7 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown(f"**Last Updated:** {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
-    st.markdown("**DEMIR AI Trading Bot v9.1 PRO** | PHASE 5.1: Bugfix Release")
+    st.markdown("**DEMIR AI Trading Bot v9.2 PRO** | PHASE 5.2: Enhanced Error Handling")
     
     # Auto-refresh logic
     if auto_refresh:
