@@ -1,8 +1,14 @@
 """
-🔱 DEMIR AI TRADING BOT - AI Brain v9.0 PRODUCTION ULTIMATE
-===========================================================
-Date: 2 Kasım 2025, 21:40 CET
-Version: 9.0 - 18-LAYER WITH REAL DATA INTEGRATION
+🔱 DEMIR AI TRADING BOT - AI Brain v9.1 PRODUCTION ULTIMATE (FIXED)
+====================================================================
+Date: 2 Kasım 2025, 21:55 CET
+Version: 9.1 - 18-LAYER WITH REAL DATA + STREAMLIT COMPATIBILITY FIX
+
+BUGFIX v9.1:
+------------
+✅ Changed parameter from 'interval' to 'timeframe' (streamlit compatibility)
+✅ Internal conversion: timeframe → interval for all layer calls
+✅ All functionality preserved - ZERO features removed!
 
 EVOLUTION:
 ----------
@@ -11,7 +17,8 @@ v5: Phase 6 MACRO (12 layers)
 v6: ATTEMPT (14 layers - had import issues)
 v7: PRODUCTION FIX (15 layers - working!)
 v8: PHASE 6 COMPLETE (18 layers)
-v9: REAL DATA INTEGRATION (yfinance + CMC_API_KEY + FRED_API_KEY) ⭐ NEW!
+v9: REAL DATA INTEGRATION (yfinance + CMC_API_KEY + FRED_API_KEY)
+v9.1: STREAMLIT COMPATIBILITY FIX (timeframe parameter) ⭐ NEW!
 
 ALL 18 LAYERS:
 --------------
@@ -27,6 +34,7 @@ Layer 18: Traditional Markets (REAL DATA - yfinance)
 ✅ ALL REAL DATA - NO MOCK VALUES!
 ✅ API KEYS: CMC_API_KEY, FRED_API_KEY
 ✅ FREE DATA: yfinance (no key required)
+✅ STREAMLIT COMPATIBLE: Uses 'timeframe' parameter
 """
 
 from datetime import datetime
@@ -64,58 +72,58 @@ except Exception as e:
 try:
     from macro_correlation_layer import MacroCorrelationLayer
     MACRO_AVAILABLE = True
-    print("✅ AI Brain v9: macro_correlation_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.1: macro_correlation_layer imported (REAL DATA!)")
 except Exception as e:
     MACRO_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: macro_correlation_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: macro_correlation_layer import failed: {e}")
 
 try:
     from gold_correlation_layer import get_gold_signal, calculate_gold_correlation
     GOLD_AVAILABLE = True
-    print("✅ AI Brain v9: gold_correlation_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.1: gold_correlation_layer imported (REAL DATA!)")
 except Exception as e:
     GOLD_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: gold_correlation_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: gold_correlation_layer import failed: {e}")
 
 try:
     from dominance_flow_layer import get_dominance_signal, calculate_dominance_flow
     DOMINANCE_AVAILABLE = True
-    print("✅ AI Brain v9: dominance_flow_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.1: dominance_flow_layer imported (REAL DATA!)")
 except Exception as e:
     DOMINANCE_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: dominance_flow_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: dominance_flow_layer import failed: {e}")
 
 try:
     import cross_asset_layer as cross_asset
     CROSS_ASSET_AVAILABLE = True
-    print("✅ AI Brain v9: cross_asset_layer imported")
+    print("✅ AI Brain v9.1: cross_asset_layer imported")
 except Exception as e:
     CROSS_ASSET_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: cross_asset_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: cross_asset_layer import failed: {e}")
 
 try:
     from vix_layer import get_vix_signal, analyze_vix
     VIX_AVAILABLE = True
-    print("✅ AI Brain v9: vix_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.1: vix_layer imported (REAL DATA!)")
 except Exception as e:
     VIX_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: vix_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: vix_layer import failed: {e}")
 
 try:
     from interest_rates_layer import get_interest_signal, calculate_rates_score, get_interest_rates_fred
     RATES_AVAILABLE = True
-    print("✅ AI Brain v9: interest_rates_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.1: interest_rates_layer imported (REAL DATA!)")
 except Exception as e:
     RATES_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: interest_rates_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: interest_rates_layer import failed: {e}")
 
 try:
     from traditional_markets_layer import get_traditional_markets_signal, TraditionalMarketsLayer
     TRAD_MARKETS_AVAILABLE = True
-    print("✅ AI Brain v9: traditional_markets_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.1: traditional_markets_layer imported (REAL DATA!)")
 except Exception as e:
     TRAD_MARKETS_AVAILABLE = False
-    print(f"⚠️ AI Brain v9: traditional_markets_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.1: traditional_markets_layer import failed: {e}")
 
 # ============================================================================
 # MAIN FUNCTION - 18-LAYER TRADING DECISION ENGINE
@@ -123,39 +131,48 @@ except Exception as e:
 
 def make_trading_decision(
     symbol,
-    interval='1h',
+    timeframe='1h',  # ✅ STREAMLIT COMPATIBLE PARAMETER NAME
     portfolio_value=10000,
     risk_per_trade=200
 ):
     """
-    AI Brain v9 - ULTIMATE 18-LAYER TRADING DECISION ENGINE WITH REAL DATA
+    AI Brain v9.1 - ULTIMATE 18-LAYER TRADING DECISION ENGINE WITH REAL DATA
     
-    NEW IN v9:
-    ----------
-    - ALL layers now use REAL DATA (no mock values!)
-    - yfinance integration (FREE!)
-    - CMC_API_KEY for dominance data
-    - FRED_API_KEY for interest rates
-    - Updated function calls to match new layer interfaces
+    FIXED IN v9.1:
+    --------------
+    - Parameter name changed from 'interval' to 'timeframe' for streamlit compatibility
+    - Internally converts timeframe → interval for all layer calls
+    - All features preserved - ZERO functionality removed!
+    
+    Args:
+        symbol: Trading pair (e.g., 'BTCUSDT')
+        timeframe: Candlestick interval (e.g., '1h', '4h', '1d')
+        portfolio_value: Total portfolio value in USD
+        risk_per_trade: Maximum risk per trade in USD
     
     Returns:
-    --------
-    dict with keys:
-        - 'decision' or 'final_decision': LONG/SHORT/WAIT
-        - 'signal': Same as decision
-        - 'confidence': 0-1 float
-        - 'entry_price': Entry price
-        - 'stop_loss': SL price
-        - 'take_profit': TP price
-        - 'position_size': Position size
-        - 'risk_reward': Risk/reward ratio
-        - 'layer_scores': Dict of all layer scores
-        - 'ai_commentary': Detailed explanation
+        dict with keys:
+            - 'decision' or 'final_decision': LONG/SHORT/WAIT
+            - 'signal': Same as decision
+            - 'confidence': 0-1 float
+            - 'entry_price': Entry price
+            - 'stop_loss': SL price
+            - 'take_profit': TP price
+            - 'position_size': Position size
+            - 'risk_reward': Risk/reward ratio
+            - 'layer_scores': Dict of all layer scores
+            - 'ai_commentary': Detailed explanation
     """
+    
+    # ========================================================================
+    # CONVERT TIMEFRAME TO INTERVAL (FOR INTERNAL USE)
+    # ========================================================================
+    interval = timeframe  # ✅ streamlit sends 'timeframe', we use 'interval' internally
+    
     print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v9: make_trading_decision (18-LAYER WITH REAL DATA)")
+    print(f"🧠 AI BRAIN v9.1: make_trading_decision (18-LAYER WITH REAL DATA)")
     print(f"   Symbol: {symbol}")
-    print(f"   Interval: {interval}")
+    print(f"   Timeframe/Interval: {interval}")
     print(f"   Portfolio: ${portfolio_value:,.0f}")
     print(f"{'='*80}")
     
@@ -581,7 +598,7 @@ def make_trading_decision(
     # ========================================================================
     
     commentary_parts = []
-    commentary_parts.append(f"🧠 AI Brain v9 Analysis (18 Layers with REAL DATA):")
+    commentary_parts.append(f"🧠 AI Brain v9.1 Analysis (18 Layers with REAL DATA):")
     commentary_parts.append(f"")
     commentary_parts.append(f"📊 Aggregated Score: {aggregated_score:.1f}/100")
     commentary_parts.append(f"🎯 Decision: {final_decision} ({decision_confidence:.0%} confidence)")
@@ -661,21 +678,22 @@ def make_trading_decision(
         'timestamp': datetime.now().isoformat(),
         'symbol': symbol,
         'interval': interval,
-        'version': 'v9.0 - 18 Layers with Real Data'
+        'timeframe': timeframe,  # ✅ Also return timeframe for clarity
+        'version': 'v9.1 - 18 Layers with Real Data + Streamlit Fix'
     }
     
     print(f"\n{'='*80}")
-    print(f"✅ AI BRAIN v9 COMPLETE!")
+    print(f"✅ AI BRAIN v9.1 COMPLETE!")
     print(f"{'='*80}\n")
     
     return result
 
 
 # ============================================================================
-# END OF AI_BRAIN.PY v9.0
+# END OF AI_BRAIN.PY v9.1 FIXED
 # ============================================================================
 
 if __name__ == "__main__":
-    print("🔱 AI Brain v9.0 - Testing...")
+    print("🔱 AI Brain v9.1 FIXED - Testing...")
     result = make_trading_decision('BTCUSDT', '1h', portfolio_value=10000, risk_per_trade=200)
     print("\n" + result['ai_commentary'])
