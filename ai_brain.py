@@ -516,6 +516,7 @@ RECOMMENDATION: {signal} with {confidence*100:.0f}% confidence
         'position_size_usd': round(position_size, 2),
         'kelly_percentage': round(kelly_percentage, 2),
         'expected_value': round(expected_value, 2),
+        'risk_reward': 2.0,  # ⭐ EKLE: Default risk/reward ratio
         'win_probability': round(win_probability, 2),
         'layer_scores': {
             'strategy': round(final_score, 1),
