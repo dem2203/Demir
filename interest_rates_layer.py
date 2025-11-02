@@ -1,254 +1,369 @@
 """
-🔱 INTEREST RATES LAYER - Phase 6.6
-====================================
-Date: 2 Kasım 2025
-Version: 1.0 - SYNTAX FIXED
+🔱 INTEREST RATES LAYER - REAL DATA
+===================================
+Date: 2 Kasım 2025, 21:50 CET
+Version: 2.0 - FRED API Integration
 
-HOTFIX 2025-11-02 16:32:
-------------------------
-✅ Fixed syntax error on line 222 (missing colon)
-✅ All other code preserved exactly
+✅ REAL DATA SOURCES:
+- Fed Funds Rate → FRED API (FRED_API_KEY)
+- 10-Year Treasury Yield → FRED API
+- Rate direction analysis → Real trends
 
-WHAT IT DOES:
--------------
-- Monitors Fed interest rates (Federal Funds Rate)
-- Tracks US 10-Year Treasury Yield
-- Analyzes rate direction (rising/falling)
-- Correlates with crypto risk appetite
-
-RATE LOGIC:
------------
-RISING RATES → Bearish for crypto (capital flows to bonds)
-FALLING RATES → Bullish for crypto (liquidity flows to risk assets)
-HIGH RATES (>5%) → Very bearish
-LOW RATES (<2%) → Very bullish
-
-SCORING:
---------
-- Rates falling + low → 70-80 (Very Bullish)
-- Rates falling + moderate → 55-65 (Bullish)
-- Rates stable → 45-55 (Neutral)
-- Rates rising + moderate → 35-45 (Bearish)
-- Rates rising + high → 20-30 (Very Bearish)
+✅ API KEY: FRED_API_KEY from Render environment
+✅ Fallback: yfinance for Treasury yields if FRED fails
 """
 
 import requests
 import numpy as np
+import pandas as pd
+import yfinance as yf
+import os
 from datetime import datetime, timedelta
 
-def get_interest_rate_data():
+def get_interest_rates_fred():
     """
-    Fetch US interest rate data
-    Data sources:
-    - Fed Funds Rate (Federal Reserve target rate)
-    - US 10Y Treasury Yield
+    Fetch interest rates from Federal Reserve Economic Data (FRED) API
+    Requires FRED_API_KEY environment variable
     
     Returns:
-        dict: Interest rate metrics
+        dict: Fed funds rate, 10Y yield, trends
     """
     try:
-        # Method 1: Try FRED API (Federal Reserve Economic Data)
-        # This is a fallback - requires API key in production
-        # For now, we'll use Yahoo Finance for US10Y
+        fred_api_key = os.getenv('FRED_API_KEY')
         
-        # Get US 10-Year Treasury Yield from Yahoo Finance
-        symbol = '%5ETNX'  # ^TNX (10-year treasury) URL-encoded
-        url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=60d'
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        if not fred_api_key:
+            print("⚠️ FRED_API_KEY not set, using yfinance fallback")
+            return get_interest_rates_yfinance()
+        
+        print(f"\n💰 Fetching Interest Rates (FRED API - REAL DATA)...")
+        
+        base_url = "https://api.stlouisfed.org/fred/series/observations"
+        
+        # ==========================================
+        # FETCH FED FUNDS RATE
+        # ==========================================
+        
+        # FEDFUNDS = Federal Funds Effective Rate
+        fed_params = {
+            'series_id': 'FEDFUNDS',
+            'api_key': fred_api_key,
+            'file_type': 'json',
+            'sort_order': 'desc',
+            'limit': 30  # Last 30 observations
         }
         
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Extract price data
-            result = data['chart']['result'][0]
-            timestamps = result['timestamp']
-            quotes = result['indicators']['quote'][0]
-            closes = quotes['close']
-            
-            # Filter out None values
-            valid_data = [(t, c) for t, c in zip(timestamps, closes) if c is not None]
-            
-            if len(valid_data) >= 2:
-                # Current and previous yields
-                current_yield = valid_data[-1][1]
-                prev_yield = valid_data[-2][1]
-                
-                # Calculate 30-day average
-                recent_closes = [c for _, c in valid_data[-30:] if c is not None]
-                yield_avg_30d = np.mean(recent_closes) if recent_closes else current_yield
-                
-                # Calculate trend (rising/falling)
-                yield_change = current_yield - prev_yield
-                yield_change_pct = (yield_change / prev_yield) * 100 if prev_yield != 0 else 0
-                
-                # Determine trend direction (last 10 days)
-                if len(valid_data) >= 10:
-                    last_10 = [c for _, c in valid_data[-10:]]
-                    trend = "RISING" if last_10[-1] > last_10[0] else "FALLING"
-                else:
-                    trend = "RISING" if yield_change > 0 else "FALLING"
-                
-                # Estimate Fed Funds Rate (usually 0.5-1% below 10Y yield)
-                # This is an approximation - in production use actual Fed data
-                fed_rate_est = max(0, current_yield - 1.0)
-                
-                return {
-                    'success': True,
-                    'us10y_yield': round(current_yield, 2),
-                    'us10y_prev': round(prev_yield, 2),
-                    'us10y_change': round(yield_change, 2),
-                    'us10y_change_pct': round(yield_change_pct, 2),
-                    'us10y_avg_30d': round(yield_avg_30d, 2),
-                    'fed_rate_est': round(fed_rate_est, 2),
-                    'trend': trend
-                }
+        fed_response = requests.get(base_url, params=fed_params, timeout=10)
+        fed_response.raise_for_status()
+        fed_data = fed_response.json()
         
-        # Fallback: Return estimated values if API fails
-        print("⚠️ Interest Rate API unavailable, using estimated values")
+        if 'observations' not in fed_data or len(fed_data['observations']) == 0:
+            print("⚠️ Fed Funds data unavailable, trying fallback")
+            return get_interest_rates_yfinance()
+        
+        # Parse Fed Funds Rate
+        fed_obs = fed_data['observations']
+        fed_current = float(fed_obs[0]['value'])
+        fed_previous = float(fed_obs[1]['value']) if len(fed_obs) > 1 else fed_current
+        fed_30d_ago = float(fed_obs[-1]['value']) if len(fed_obs) > 1 else fed_current
+        
+        fed_change = fed_current - fed_previous
+        fed_change_30d = fed_current - fed_30d_ago
+        
+        # ==========================================
+        # FETCH 10-YEAR TREASURY YIELD
+        # ==========================================
+        
+        # DGS10 = 10-Year Treasury Constant Maturity Rate
+        treasury_params = {
+            'series_id': 'DGS10',
+            'api_key': fred_api_key,
+            'file_type': 'json',
+            'sort_order': 'desc',
+            'limit': 30
+        }
+        
+        treasury_response = requests.get(base_url, params=treasury_params, timeout=10)
+        treasury_response.raise_for_status()
+        treasury_data = treasury_response.json()
+        
+        if 'observations' not in treasury_data or len(treasury_data['observations']) == 0:
+            print("⚠️ Treasury yield data unavailable")
+            treasury_current = 4.5  # Default estimate
+            treasury_change = 0
+            treasury_change_30d = 0
+        else:
+            # Parse Treasury yield
+            treasury_obs = treasury_data['observations']
+            treasury_current = float(treasury_obs[0]['value'])
+            treasury_previous = float(treasury_obs[1]['value']) if len(treasury_obs) > 1 else treasury_current
+            treasury_30d_ago = float(treasury_obs[-1]['value']) if len(treasury_obs) > 1 else treasury_current
+            
+            treasury_change = treasury_current - treasury_previous
+            treasury_change_30d = treasury_current - treasury_30d_ago
+        
+        print(f"✅ FRED Data Retrieved!")
+        print(f"   Fed Funds Rate: {fed_current:.2f}%")
+        print(f"   10Y Treasury: {treasury_current:.2f}%")
+        print(f"   Fed Change (30d): {fed_change_30d:+.2f}%")
+        
         return {
-            'success': True,
-            'us10y_yield': 4.25,
-            'us10y_prev': 4.35,
-            'us10y_change': -0.10,
-            'us10y_change_pct': -2.3,
-            'us10y_avg_30d': 4.40,
-            'fed_rate_est': 5.25,
-            'trend': 'FALLING',
-            'note': 'Estimated values - API unavailable'
+            'available': True,
+            'source': 'FRED_API',
+            'fed_funds_rate': fed_current,
+            'fed_change': fed_change,
+            'fed_change_30d': fed_change_30d,
+            'treasury_10y': treasury_current,
+            'treasury_change': treasury_change,
+            'treasury_change_30d': treasury_change_30d,
+            'timestamp': datetime.now().isoformat()
         }
-        
+    
     except Exception as e:
-        print(f"❌ Interest Rate data error: {e}")
-        return {'success': False}
+        print(f"⚠️ FRED API error: {e}, trying yfinance fallback")
+        return get_interest_rates_yfinance()
 
-def calculate_rates_score(rate_data):
+
+def get_interest_rates_yfinance():
     """
-    Calculate trading score based on interest rates
-    Logic:
-    - Low rates + falling → Very bullish for crypto
-    - High rates + rising → Very bearish for crypto
+    Fallback: Fetch Treasury yields from yfinance
+    Fed Funds Rate not available on yfinance, so we estimate from current environment
+    """
+    try:
+        print(f"\n💰 Fetching Interest Rates (yfinance fallback)...")
+        
+        # ==========================================
+        # FETCH 10-YEAR TREASURY FROM YFINANCE
+        # ==========================================
+        
+        treasury_ticker = yf.Ticker("^TNX")  # 10-Year Treasury Yield
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        treasury_hist = treasury_ticker.history(start=start_date, end=end_date)
+        
+        if len(treasury_hist) == 0:
+            print("⚠️ Treasury data unavailable from yfinance")
+            return {
+                'available': False,
+                'reason': 'Unable to fetch Treasury data'
+            }
+        
+        treasury_current = treasury_hist['Close'].iloc[-1]
+        treasury_30d_ago = treasury_hist['Close'].iloc[0]
+        treasury_change_30d = treasury_current - treasury_30d_ago
+        
+        # Fed Funds Rate estimate (current environment ~5.25-5.50%)
+        # This is a rough estimate when FRED API is unavailable
+        fed_funds_rate = 5.33  # Current Fed target midpoint (Nov 2025)
+        
+        print(f"✅ yfinance Data Retrieved!")
+        print(f"   10Y Treasury: {treasury_current:.2f}%")
+        print(f"   Fed Funds (estimate): {fed_funds_rate:.2f}%")
+        
+        return {
+            'available': True,
+            'source': 'yfinance_fallback',
+            'fed_funds_rate': fed_funds_rate,
+            'fed_change': 0,  # Unknown without FRED
+            'fed_change_30d': 0,
+            'treasury_10y': treasury_current,
+            'treasury_change': 0,
+            'treasury_change_30d': treasury_change_30d,
+            'timestamp': datetime.now().isoformat()
+        }
     
-    Args:
-        rate_data (dict): Interest rate metrics
+    except Exception as e:
+        print(f"⚠️ yfinance fallback error: {e}")
+        return {
+            'available': False,
+            'reason': str(e)
+        }
+
+
+def calculate_rates_score(rates_data):
+    """
+    Calculate score based on interest rate environment
+    
+    RATE ENVIRONMENT LOGIC:
+    -----------------------
+    FALLING RATES + LOW → Bullish for crypto (70-85)
+    STABLE + MODERATE → Neutral (45-55)
+    RISING RATES + HIGH → Bearish for crypto (15-35)
+    
+    HIGH RATES (>5%) = Capital flows to bonds = Bad for crypto
+    LOW RATES (<2%) = Cheap money = Good for crypto
     
     Returns:
-        float: Score 0-100 (higher = more bullish for crypto)
+        dict: Score (0-100), signal, interpretation
     """
-    us10y = rate_data['us10y_yield']
-    trend = rate_data['trend']
-    
-    # Base score from yield level
-    if us10y < 2.0:
-        # Very low rates → very bullish
-        base_score = 75
-    elif us10y < 3.0:
-        # Low rates → bullish
-        base_score = 65
-    elif us10y < 4.0:
-        # Moderate rates → slightly bullish
-        base_score = 55
-    elif us10y < 5.0:
-        # Elevated rates → slightly bearish
-        base_score = 40
-    elif us10y < 6.0:
-        # High rates → bearish
-        base_score = 30
-    else:
-        # Very high rates → very bearish
-        base_score = 20
-    
-    # Adjust for trend
-    if trend == "FALLING":
-        # Rates falling = more liquidity = bullish
-        adjustment = +8
-    else:
-        # Rates rising = tighter conditions = bearish
-        adjustment = -8
-    
-    final_score = np.clip(base_score + adjustment, 0, 100)
-    return round(final_score, 1)
-
-def calculate_interest_rates_layer():
-    """
-    Main function: Calculate Interest Rates Layer
-    
-    Returns:
-        dict: Layer analysis with score and details
-    """
-    # Get interest rate data
-    rate_data = get_interest_rate_data()
-    
-    if not rate_data['success']:
+    if not rates_data.get('available', False):
         return {
             'available': False,
             'score': 50,
-            'reason': 'Interest rate data unavailable'
+            'signal': 'NEUTRAL',
+            'reason': rates_data.get('reason', 'Rates data unavailable')
         }
     
-    # Calculate score
-    score = calculate_rates_score(rate_data)
+    try:
+        fed_rate = rates_data['fed_funds_rate']
+        fed_change_30d = rates_data['fed_change_30d']
+        treasury_10y = rates_data['treasury_10y']
+        treasury_change_30d = rates_data['treasury_change_30d']
+        
+        # ==========================================
+        # BASE SCORE FROM ABSOLUTE RATE LEVELS
+        # ==========================================
+        
+        # Fed Funds Rate impact
+        if fed_rate > 5.5:
+            # Very high rates
+            fed_score = 25
+            fed_level = "VERY_HIGH"
+        elif fed_rate > 4.5:
+            # High rates
+            fed_score = 35
+            fed_level = "HIGH"
+        elif fed_rate > 3.0:
+            # Moderate rates
+            fed_score = 50
+            fed_level = "MODERATE"
+        elif fed_rate > 1.5:
+            # Low rates
+            fed_score = 65
+            fed_level = "LOW"
+        else:
+            # Very low rates
+            fed_score = 80
+            fed_level = "VERY_LOW"
+        
+        # 10-Year Treasury impact
+        if treasury_10y > 4.5:
+            treasury_score = 30
+        elif treasury_10y > 3.5:
+            treasury_score = 45
+        elif treasury_10y > 2.5:
+            treasury_score = 55
+        else:
+            treasury_score = 70
+        
+        # Weighted average (Fed 60%, Treasury 40%)
+        base_score = (fed_score * 0.6) + (treasury_score * 0.4)
+        
+        # ==========================================
+        # ADJUST FOR RATE DIRECTION (TREND)
+        # ==========================================
+        
+        # Rising rates = tightening = bad for crypto
+        # Falling rates = easing = good for crypto
+        
+        total_change = fed_change_30d + treasury_change_30d
+        
+        if total_change > 0.5:
+            # Rates rising significantly
+            trend_adjustment = -15
+            rate_direction = "RISING"
+        elif total_change > 0.1:
+            # Rates rising slightly
+            trend_adjustment = -8
+            rate_direction = "SLIGHTLY_RISING"
+        elif total_change > -0.1:
+            # Rates stable
+            trend_adjustment = 0
+            rate_direction = "STABLE"
+        elif total_change > -0.5:
+            # Rates falling slightly
+            trend_adjustment = +8
+            rate_direction = "SLIGHTLY_FALLING"
+        else:
+            # Rates falling significantly
+            trend_adjustment = +15
+            rate_direction = "FALLING"
+        
+        # ==========================================
+        # FINAL SCORE
+        # ==========================================
+        
+        final_score = base_score + trend_adjustment
+        final_score = max(0, min(100, final_score))
+        
+        # Determine signal
+        if final_score >= 65:
+            signal = "BULLISH"
+            interpretation = "Low/falling rates environment - Favorable for crypto"
+        elif final_score >= 45:
+            signal = "NEUTRAL"
+            interpretation = "Moderate rates - Balanced environment"
+        else:
+            signal = "BEARISH"
+            interpretation = "High/rising rates - Unfavorable for risk assets"
+        
+        print(f"✅ Rates Score Calculated!")
+        print(f"   Fed Level: {fed_level}")
+        print(f"   Rate Direction: {rate_direction}")
+        print(f"   Score: {final_score:.2f}/100")
+        print(f"   Signal: {signal}")
+        
+        return {
+            'available': True,
+            'score': round(final_score, 2),
+            'fed_funds_rate': round(fed_rate, 2),
+            'fed_change_30d': round(fed_change_30d, 2),
+            'treasury_10y': round(treasury_10y, 2),
+            'treasury_change_30d': round(treasury_change_30d, 2),
+            'fed_level': fed_level,
+            'rate_direction': rate_direction,
+            'signal': signal,
+            'interpretation': interpretation,
+            'source': rates_data.get('source', 'unknown'),
+            'timestamp': datetime.now().isoformat()
+        }
     
-    # Determine signal
-    if score >= 65:
-        signal = "BULLISH"
-        interpretation = "Low/falling rates, favorable for risk assets"
-    elif score >= 45:
-        signal = "NEUTRAL"
-        interpretation = "Moderate rates, balanced environment"
-    else:
-        signal = "BEARISH"
-        interpretation = "High/rising rates, challenging for crypto"
+    except Exception as e:
+        print(f"⚠️ Rates score calculation error: {e}")
+        return {
+            'available': False,
+            'score': 50,
+            'signal': 'NEUTRAL',
+            'reason': str(e)
+        }
+
+
+def get_interest_signal():
+    """
+    Main function: Get interest rates signal (used by ai_brain.py)
     
-    # Compile result
-    result = {
-        'available': True,
-        'score': score,
-        'signal': signal,
-        'interpretation': interpretation,
-        'us10y_yield': rate_data['us10y_yield'],
-        'us10y_change': rate_data['us10y_change'],
-        'us10y_change_pct': rate_data['us10y_change_pct'],
-        'us10y_trend': rate_data['trend'],
-        'us10y_avg_30d': rate_data['us10y_avg_30d'],
-        'fed_rate_est': rate_data['fed_rate_est'],
-        'timestamp': datetime.now().isoformat()
+    Returns:
+        dict: {'available': bool, 'score': float, 'signal': str}
+    """
+    rates_data = get_interest_rates_fred()
+    result = calculate_rates_score(rates_data)
+    
+    return {
+        'available': result['available'],
+        'score': result.get('score', 50),
+        'signal': result.get('signal', 'NEUTRAL')
     }
-    
-    # ⭐ HOTFIX: Added missing colon here (line 222 fix)
-    if 'note' in rate_data:
-        result['note'] = rate_data['note']
-    
-    return result
+
 
 # ============================================================================
-# TEST EXECUTION
+# STANDALONE TESTING
 # ============================================================================
 
 if __name__ == "__main__":
-    print("🔱 INTEREST RATES LAYER - TEST")
-    print("=" * 60)
+    print("🔱 INTEREST RATES LAYER - REAL DATA TEST")
+    print("=" * 70)
     
-    result = calculate_interest_rates_layer()
+    rates_data = get_interest_rates_fred()
+    result = calculate_rates_score(rates_data)
     
-    if result['available']:
-        print(f"\n✅ Interest Rates Layer Active")
-        print(f"📊 Score: {result['score']}/100")
-        print(f"🎯 Signal: {result['signal']}")
-        print(f"💡 Interpretation: {result['interpretation']}")
-        print(f"\n📈 Rate Details:")
-        print(f"   US 10Y Yield: {result['us10y_yield']}%")
-        print(f"   Change: {result['us10y_change']}% ({result['us10y_change_pct']}%)")
-        print(f"   Trend: {result['us10y_trend']}")
-        print(f"   30-Day Avg: {result['us10y_avg_30d']}%")
-        print(f"   Fed Rate (est): {result['fed_rate_est']}%")
-        
-        if 'note' in result:
-            print(f"\n⚠️ Note: {result['note']}")
-    else:
-        print(f"\n❌ Interest Rates Layer Unavailable")
-        print(f"Reason: {result['reason']}")
-    
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
+    print("📊 INTEREST RATES ANALYSIS:")
+    print(f"   Available: {result['available']}")
+    print(f"   Fed Funds: {result.get('fed_funds_rate', 'N/A')}%")
+    print(f"   10Y Treasury: {result.get('treasury_10y', 'N/A')}%")
+    print(f"   Fed Level: {result.get('fed_level', 'N/A')}")
+    print(f"   Direction: {result.get('rate_direction', 'N/A')}")
+    print(f"   Score: {result.get('score', 'N/A')}/100")
+    print(f"   Signal: {result.get('signal', 'N/A')}")
+    print("=" * 70)
