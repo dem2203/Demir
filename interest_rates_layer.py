@@ -1,46 +1,55 @@
 """
-🔱 VIX FEAR INDEX LAYER - Phase 6.5
-===================================
+🔱 INTEREST RATES LAYER - Phase 6.6
+====================================
 Date: 2 Kasım 2025
 Version: 1.0
 
 WHAT IT DOES:
 -------------
-- Monitors VIX (Fear Index) levels
-- Detects extreme fear/greed in markets
+- Monitors Fed interest rates (Federal Funds Rate)
+- Tracks US 10-Year Treasury Yield
+- Analyzes rate direction (rising/falling)
 - Correlates with crypto risk appetite
-- Provides risk-on/risk-off signals
 
-VIX LEVELS:
+RATE LOGIC:
 -----------
-> 30: EXTREME FEAR → Risk-off → Bearish for crypto
-20-30: ELEVATED FEAR → Caution
-15-20: NORMAL → Neutral
-< 15: COMPLACENCY → Risk-on → Bullish for crypto
+RISING RATES → Bearish for crypto (capital flows to bonds)
+FALLING RATES → Bullish for crypto (liquidity flows to risk assets)
+HIGH RATES (>5%) → Very bearish
+LOW RATES (<2%) → Very bullish
 
 SCORING:
 --------
-- VIX < 15 (Complacency) → 65-75 (Bullish)
-- VIX 15-20 (Normal) → 45-55 (Neutral)
-- VIX 20-30 (Fear) → 30-40 (Bearish)
-- VIX > 30 (Panic) → 15-25 (Very Bearish)
+- Rates falling + low → 70-80 (Very Bullish)
+- Rates falling + moderate → 55-65 (Bullish)
+- Rates stable → 45-55 (Neutral)
+- Rates rising + moderate → 35-45 (Bearish)
+- Rates rising + high → 20-30 (Very Bearish)
 """
 
 import requests
 import numpy as np
 from datetime import datetime, timedelta
 
-def get_vix_data():
+def get_interest_rate_data():
     """
-    Fetch VIX data from Yahoo Finance or alternative source
+    Fetch US interest rate data
+    
+    Data sources:
+    - Fed Funds Rate (Federal Reserve target rate)
+    - US 10Y Treasury Yield
     
     Returns:
-        dict: VIX current level, change, and trend
+        dict: Interest rate metrics
     """
     try:
-        # Method 1: Try Yahoo Finance API (free, no key needed)
-        symbol = '%5EVIX'  # ^VIX URL-encoded
-        url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=30d'
+        # Method 1: Try FRED API (Federal Reserve Economic Data)
+        # This is a fallback - requires API key in production
+        # For now, we'll use Yahoo Finance for US10Y
+        
+        # Get US 10-Year Treasury Yield from Yahoo Finance
+        symbol = '%5ETNX'  # ^TNX (10-year treasury) URL-encoded
+        url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=60d'
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -61,131 +70,139 @@ def get_vix_data():
             valid_data = [(t, c) for t, c in zip(timestamps, closes) if c is not None]
             
             if len(valid_data) >= 2:
-                # Current and previous VIX
-                current_vix = valid_data[-1][1]
-                prev_vix = valid_data[-2][1]
+                # Current and previous yields
+                current_yield = valid_data[-1][1]
+                prev_yield = valid_data[-2][1]
                 
-                # Calculate 7-day average
-                recent_closes = [c for _, c in valid_data[-7:]]
-                vix_avg_7d = np.mean(recent_closes)
+                # Calculate 30-day average
+                recent_closes = [c for _, c in valid_data[-30:] if c is not None]
+                yield_avg_30d = np.mean(recent_closes) if recent_closes else current_yield
                 
                 # Calculate trend (rising/falling)
-                vix_change = current_vix - prev_vix
-                vix_change_pct = (vix_change / prev_vix) * 100
+                yield_change = current_yield - prev_yield
+                yield_change_pct = (yield_change / prev_yield) * 100 if prev_yield != 0 else 0
                 
-                # Determine trend direction
-                if len(valid_data) >= 5:
-                    last_5 = [c for _, c in valid_data[-5:]]
-                    trend = "RISING" if last_5[-1] > last_5[0] else "FALLING"
+                # Determine trend direction (last 10 days)
+                if len(valid_data) >= 10:
+                    last_10 = [c for _, c in valid_data[-10:]]
+                    trend = "RISING" if last_10[-1] > last_10[0] else "FALLING"
                 else:
-                    trend = "RISING" if vix_change > 0 else "FALLING"
+                    trend = "RISING" if yield_change > 0 else "FALLING"
+                
+                # Estimate Fed Funds Rate (usually 0.5-1% below 10Y yield)
+                # This is an approximation - in production use actual Fed data
+                fed_rate_est = max(0, current_yield - 1.0)
                 
                 return {
                     'success': True,
-                    'current_vix': round(current_vix, 2),
-                    'prev_vix': round(prev_vix, 2),
-                    'vix_change': round(vix_change, 2),
-                    'vix_change_pct': round(vix_change_pct, 2),
-                    'vix_avg_7d': round(vix_avg_7d, 2),
+                    'us10y_yield': round(current_yield, 2),
+                    'us10y_prev': round(prev_yield, 2),
+                    'us10y_change': round(yield_change, 2),
+                    'us10y_change_pct': round(yield_change_pct, 2),
+                    'us10y_avg_30d': round(yield_avg_30d, 2),
+                    'fed_rate_est': round(fed_rate_est, 2),
                     'trend': trend
                 }
         
-        # Fallback: Return mock data if API fails
-        print("⚠️ VIX API unavailable, using estimated values")
+        # Fallback: Return estimated values if API fails
+        print("⚠️ Interest Rate API unavailable, using estimated values")
         return {
             'success': True,
-            'current_vix': 18.5,
-            'prev_vix': 19.2,
-            'vix_change': -0.7,
-            'vix_change_pct': -3.6,
-            'vix_avg_7d': 19.8,
+            'us10y_yield': 4.25,
+            'us10y_prev': 4.35,
+            'us10y_change': -0.10,
+            'us10y_change_pct': -2.3,
+            'us10y_avg_30d': 4.40,
+            'fed_rate_est': 5.25,
             'trend': 'FALLING',
             'note': 'Estimated values - API unavailable'
         }
         
     except Exception as e:
-        print(f"❌ VIX data error: {e}")
+        print(f"❌ Interest Rate data error: {e}")
         return {'success': False}
 
-def calculate_vix_score(vix_data):
+def calculate_rates_score(rate_data):
     """
-    Calculate trading score based on VIX levels
+    Calculate trading score based on interest rates
     
-    VIX Interpretation:
-    - < 12: Extreme complacency (very bullish for risk assets)
-    - 12-15: Low fear (bullish)
-    - 15-20: Normal (neutral)
-    - 20-25: Elevated fear (slightly bearish)
-    - 25-30: High fear (bearish)
-    - > 30: Panic (very bearish)
+    Logic:
+    - Low rates + falling → Very bullish for crypto
+    - High rates + rising → Very bearish for crypto
     
     Args:
-        vix_data (dict): VIX metrics
+        rate_data (dict): Interest rate metrics
     
     Returns:
         float: Score 0-100 (higher = more bullish for crypto)
     """
     
-    current_vix = vix_data['current_vix']
-    trend = vix_data['trend']
+    us10y = rate_data['us10y_yield']
+    trend = rate_data['trend']
     
-    # Base score from VIX level
-    if current_vix < 12:
-        base_score = 75  # Extreme complacency → very bullish
-    elif current_vix < 15:
-        base_score = 65  # Low fear → bullish
-    elif current_vix < 20:
-        base_score = 50  # Normal → neutral
-    elif current_vix < 25:
-        base_score = 40  # Elevated fear → slightly bearish
-    elif current_vix < 30:
-        base_score = 30  # High fear → bearish
+    # Base score from yield level
+    if us10y < 2.0:
+        # Very low rates → very bullish
+        base_score = 75
+    elif us10y < 3.0:
+        # Low rates → bullish
+        base_score = 65
+    elif us10y < 4.0:
+        # Moderate rates → slightly bullish
+        base_score = 55
+    elif us10y < 5.0:
+        # Elevated rates → slightly bearish
+        base_score = 40
+    elif us10y < 6.0:
+        # High rates → bearish
+        base_score = 30
     else:
-        base_score = 20  # Panic → very bearish
+        # Very high rates → very bearish
+        base_score = 20
     
     # Adjust for trend
     if trend == "FALLING":
-        # VIX falling = fear decreasing = bullish
-        adjustment = +5
+        # Rates falling = more liquidity = bullish
+        adjustment = +8
     else:
-        # VIX rising = fear increasing = bearish
-        adjustment = -5
+        # Rates rising = tighter conditions = bearish
+        adjustment = -8
     
     final_score = np.clip(base_score + adjustment, 0, 100)
     
     return round(final_score, 1)
 
-def calculate_vix_layer():
+def calculate_interest_rates_layer():
     """
-    Main function: Calculate VIX Fear Index Layer
+    Main function: Calculate Interest Rates Layer
     
     Returns:
         dict: Layer analysis with score and details
     """
     
-    # Get VIX data
-    vix_data = get_vix_data()
+    # Get interest rate data
+    rate_data = get_interest_rate_data()
     
-    if not vix_data['success']:
+    if not rate_data['success']:
         return {
             'available': False,
             'score': 50,
-            'reason': 'VIX data unavailable'
+            'reason': 'Interest rate data unavailable'
         }
     
     # Calculate score
-    score = calculate_vix_score(vix_data)
+    score = calculate_rates_score(rate_data)
     
     # Determine signal
     if score >= 65:
         signal = "BULLISH"
-        interpretation = "Low market fear, risk-on environment"
+        interpretation = "Low/falling rates, favorable for risk assets"
     elif score >= 45:
         signal = "NEUTRAL"
-        interpretation = "Normal fear levels, balanced market"
+        interpretation = "Moderate rates, balanced environment"
     else:
         signal = "BEARISH"
-        interpretation = "Elevated market fear, risk-off environment"
+        interpretation = "High/rising rates, challenging for crypto"
     
     # Compile result
     result = {
@@ -193,16 +210,17 @@ def calculate_vix_layer():
         'score': score,
         'signal': signal,
         'interpretation': interpretation,
-        'vix_level': vix_data['current_vix'],
-        'vix_change': vix_data['vix_change'],
-        'vix_change_pct': vix_data['vix_change_pct'],
-        'vix_trend': vix_data['trend'],
-        'vix_7d_avg': vix_data['vix_avg_7d'],
+        'us10y_yield': rate_data['us10y_yield'],
+        'us10y_change': rate_data['us10y_change'],
+        'us10y_change_pct': rate_data['us10y_change_pct'],
+        'us10y_trend': rate_data['trend'],
+        'us10y_avg_30d': rate_data['us10y_avg_30d'],
+        'fed_rate_est': rate_data['fed_rate_est'],
         'timestamp': datetime.now().isoformat()
     }
     
-    if 'note' in vix_data:
-        result['note'] = vix_data['note']
+    if 'note' in rate_
+        result['note'] = rate_data['note']
     
     return result
 
@@ -210,26 +228,27 @@ def calculate_vix_layer():
 # TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
-    print("🔱 VIX FEAR INDEX LAYER - TEST")
+    print("🔱 INTEREST RATES LAYER - TEST")
     print("=" * 60)
     
-    result = calculate_vix_layer()
+    result = calculate_interest_rates_layer()
     
     if result['available']:
-        print(f"\n✅ VIX Layer Active")
+        print(f"\n✅ Interest Rates Layer Active")
         print(f"📊 Score: {result['score']}/100")
         print(f"🎯 Signal: {result['signal']}")
         print(f"💡 Interpretation: {result['interpretation']}")
-        print(f"\n📈 VIX Details:")
-        print(f"  Current VIX: {result['vix_level']}")
-        print(f"  Change: {result['vix_change']} ({result['vix_change_pct']}%)")
-        print(f"  Trend: {result['vix_trend']}")
-        print(f"  7-Day Avg: {result['vix_7d_avg']}")
+        print(f"\n📈 Rate Details:")
+        print(f"  US 10Y Yield: {result['us10y_yield']}%")
+        print(f"  Change: {result['us10y_change']}% ({result['us10y_change_pct']}%)")
+        print(f"  Trend: {result['us10y_trend']}")
+        print(f"  30-Day Avg: {result['us10y_avg_30d']}%")
+        print(f"  Fed Rate (est): {result['fed_rate_est']}%")
         
         if 'note' in result:
             print(f"\n⚠️ Note: {result['note']}")
     else:
-        print(f"\n❌ VIX Layer Unavailable")
+        print(f"\n❌ Interest Rates Layer Unavailable")
         print(f"Reason: {result['reason']}")
     
     print("\n" + "=" * 60)
