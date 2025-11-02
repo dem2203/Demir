@@ -378,7 +378,12 @@ def make_trading_decision(
     if MC_AVAILABLE:
         try:
             print(f"\n🎲 Running Monte Carlo simulation...")
-            mc_result = mc.run_monte_carlo(symbol, interval, num_simulations=1000)
+            mc_result = mc.get_monte_carlo_risk_assessment(
+    win_rate=win_probability,
+    avg_win=abs(expected_value) if expected_value > 0 else 0.02,
+    avg_loss=abs(expected_value) if expected_value < 0 else 0.01,
+    num_simulations=1000
+)
             expected_value = mc_result.get('expected_return', 0)
             win_probability = mc_result.get('win_probability', 0.5)
             print(f"✅ Monte Carlo: EV={expected_value:.2f}%, Win P={win_probability:.2f}")
@@ -398,13 +403,13 @@ def make_trading_decision(
     if KELLY_AVAILABLE:
         try:
             print(f"\n💰 Calculating Kelly criterion position size...")
-            kelly_result = kelly.calculate_kelly_position(
-                win_rate=win_probability,
-                avg_win=abs(expected_value) if expected_value > 0 else 0.02,
-                avg_loss=abs(expected_value) if expected_value < 0 else 0.01,
-                portfolio_value=portfolio_value,
-                risk_per_trade=risk_per_trade
-            )
+            kelly_result = kelly.calculate_dynamic_kelly(
+    win_rate=win_probability,
+    avg_win=abs(expected_value) if expected_value > 0 else 0.02,
+    avg_loss=abs(expected_value) if expected_value < 0 else 0.01,
+    confidence=confidence,
+    portfolio_value=portfolio_value
+)
             kelly_position = kelly_result.get('position_size_usd', 0)
             kelly_percentage = kelly_result.get('kelly_percentage', 0)
             print(f"✅ Kelly: ${kelly_position:.2f} ({kelly_percentage:.2f}% of portfolio)")
