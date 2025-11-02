@@ -80,16 +80,6 @@ except:
     TELEGRAM_BOT_TOKEN = None
     TELEGRAM_CHAT_ID = None
 
-# ============================================================================
-# PAGE CONFIG
-# ============================================================================
-
-st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v8.0",
-    page_icon="🔱",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # ============================================================================
 # SIDEBAR - NAVIGATION & SETTINGS
