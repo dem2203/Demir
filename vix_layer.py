@@ -1,235 +1,275 @@
 """
-🔱 VIX FEAR INDEX LAYER - Phase 6.5
+🔱 VIX FEAR INDEX LAYER - REAL DATA
 ===================================
-Date: 2 Kasım 2025
-Version: 1.0
+Date: 2 Kasım 2025, 21:45 CET
+Version: 2.0 - yfinance Integration
 
-WHAT IT DOES:
--------------
-- Monitors VIX (Fear Index) levels
-- Detects extreme fear/greed in markets
-- Correlates with crypto risk appetite
-- Provides risk-on/risk-off signals
+✅ REAL DATA SOURCE:
+- VIX Index (^VIX) → yfinance (FREE!)
+- Historical VIX data → 30 days
+- Fear/Greed calculation → Real levels
 
-VIX LEVELS:
------------
-> 30: EXTREME FEAR → Risk-off → Bearish for crypto
-20-30: ELEVATED FEAR → Caution
-15-20: NORMAL → Neutral
-< 15: COMPLACENCY → Risk-on → Bullish for crypto
-
-SCORING:
---------
-- VIX < 15 (Complacency) → 65-75 (Bullish)
-- VIX 15-20 (Normal) → 45-55 (Neutral)
-- VIX 20-30 (Fear) → 30-40 (Bearish)
-- VIX > 30 (Panic) → 15-25 (Very Bearish)
+✅ NO API KEY REQUIRED - 100% FREE!
 """
 
 import requests
 import numpy as np
+import pandas as pd
+import yfinance as yf
 from datetime import datetime, timedelta
 
 def get_vix_data():
     """
-    Fetch VIX data from Yahoo Finance or alternative source
-    
+    Fetch VIX data from Yahoo Finance using yfinance
     Returns:
         dict: VIX current level, change, and trend
     """
     try:
-        # Method 1: Try Yahoo Finance API (free, no key needed)
-        symbol = '%5EVIX'  # ^VIX URL-encoded
-        url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=30d'
+        print(f"\n📊 Fetching VIX Fear Index (REAL DATA)...")
         
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+        # ==========================================
+        # FETCH VIX FROM YFINANCE
+        # ==========================================
+        vix_ticker = yf.Ticker("^VIX")
         
-        response = requests.get(url, headers=headers, timeout=10)
+        # Get last 30 days of data
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
         
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Extract price data
-            result = data['chart']['result'][0]
-            timestamps = result['timestamp']
-            quotes = result['indicators']['quote'][0]
-            closes = quotes['close']
-            
-            # Filter out None values
-            valid_data = [(t, c) for t, c in zip(timestamps, closes) if c is not None]
-            
-            if len(valid_data) >= 2:
-                # Current and previous VIX
-                current_vix = valid_data[-1][1]
-                prev_vix = valid_data[-2][1]
-                
-                # Calculate 7-day average
-                recent_closes = [c for _, c in valid_data[-7:]]
-                vix_avg_7d = np.mean(recent_closes)
-                
-                # Calculate trend (rising/falling)
-                vix_change = current_vix - prev_vix
-                vix_change_pct = (vix_change / prev_vix) * 100
-                
-                # Determine trend direction
-                if len(valid_data) >= 5:
-                    last_5 = [c for _, c in valid_data[-5:]]
-                    trend = "RISING" if last_5[-1] > last_5[0] else "FALLING"
-                else:
-                    trend = "RISING" if vix_change > 0 else "FALLING"
-                
-                return {
-                    'success': True,
-                    'current_vix': round(current_vix, 2),
-                    'prev_vix': round(prev_vix, 2),
-                    'vix_change': round(vix_change, 2),
-                    'vix_change_pct': round(vix_change_pct, 2),
-                    'vix_avg_7d': round(vix_avg_7d, 2),
-                    'trend': trend
-                }
+        vix_hist = vix_ticker.history(start=start_date, end=end_date)
         
-        # Fallback: Return mock data if API fails
-        print("⚠️ VIX API unavailable, using estimated values")
+        if len(vix_hist) == 0:
+            print("⚠️ VIX data unavailable from yfinance")
+            return None
+        
+        # Current VIX level
+        vix_current = vix_hist['Close'].iloc[-1]
+        
+        # Calculate changes
+        vix_yesterday = vix_hist['Close'].iloc[-2] if len(vix_hist) > 1 else vix_current
+        vix_7d_ago = vix_hist['Close'].iloc[-7] if len(vix_hist) > 7 else vix_current
+        vix_30d_ago = vix_hist['Close'].iloc[0]
+        
+        vix_change_1d = vix_current - vix_yesterday
+        vix_change_7d = ((vix_current / vix_7d_ago) - 1) * 100
+        vix_change_30d = ((vix_current / vix_30d_ago) - 1) * 100
+        
+        # Calculate trend (simple moving average)
+        vix_sma_7 = vix_hist['Close'].iloc[-7:].mean() if len(vix_hist) >= 7 else vix_current
+        
+        # Determine trend
+        if vix_current > vix_sma_7 * 1.05:
+            trend = "RISING"
+        elif vix_current < vix_sma_7 * 0.95:
+            trend = "FALLING"
+        else:
+            trend = "STABLE"
+        
+        print(f"✅ VIX Data Retrieved!")
+        print(f"   Current VIX: {vix_current:.2f}")
+        print(f"   1D Change: {vix_change_1d:+.2f}")
+        print(f"   7D Change: {vix_change_7d:+.2f}%")
+        print(f"   Trend: {trend}")
+        
         return {
-            'success': True,
-            'current_vix': 18.5,
-            'prev_vix': 19.2,
-            'vix_change': -0.7,
-            'vix_change_pct': -3.6,
-            'vix_avg_7d': 19.8,
-            'trend': 'FALLING',
-            'note': 'Estimated values - API unavailable'
+            'vix_current': vix_current,
+            'vix_change_1d': vix_change_1d,
+            'vix_change_7d': vix_change_7d,
+            'vix_change_30d': vix_change_30d,
+            'vix_sma_7': vix_sma_7,
+            'trend': trend,
+            'timestamp': datetime.now().isoformat()
         }
-        
+    
     except Exception as e:
-        print(f"❌ VIX data error: {e}")
-        return {'success': False}
+        print(f"⚠️ VIX fetch error: {e}")
+        return None
+
 
 def calculate_vix_score(vix_data):
     """
-    Calculate trading score based on VIX levels
+    Calculate VIX-based score for crypto risk appetite
     
-    VIX Interpretation:
-    - < 12: Extreme complacency (very bullish for risk assets)
-    - 12-15: Low fear (bullish)
-    - 15-20: Normal (neutral)
-    - 20-25: Elevated fear (slightly bearish)
-    - 25-30: High fear (bearish)
-    - > 30: Panic (very bearish)
-    
-    Args:
-        vix_data (dict): VIX metrics
+    VIX LEVELS INTERPRETATION:
+    ---------------------------
+    < 12: EXTREME COMPLACENCY → Very bullish for crypto (80-90)
+    12-15: LOW FEAR → Bullish for crypto (65-80)
+    15-20: NORMAL → Neutral (45-65)
+    20-25: ELEVATED FEAR → Caution (35-45)
+    25-30: HIGH FEAR → Bearish (25-35)
+    > 30: EXTREME FEAR/PANIC → Very bearish (10-25)
     
     Returns:
-        float: Score 0-100 (higher = more bullish for crypto)
+        dict: Score (0-100), signal, interpretation
     """
-    
-    current_vix = vix_data['current_vix']
-    trend = vix_data['trend']
-    
-    # Base score from VIX level
-    if current_vix < 12:
-        base_score = 75  # Extreme complacency → very bullish
-    elif current_vix < 15:
-        base_score = 65  # Low fear → bullish
-    elif current_vix < 20:
-        base_score = 50  # Normal → neutral
-    elif current_vix < 25:
-        base_score = 40  # Elevated fear → slightly bearish
-    elif current_vix < 30:
-        base_score = 30  # High fear → bearish
-    else:
-        base_score = 20  # Panic → very bearish
-    
-    # Adjust for trend
-    if trend == "FALLING":
-        # VIX falling = fear decreasing = bullish
-        adjustment = +5
-    else:
-        # VIX rising = fear increasing = bearish
-        adjustment = -5
-    
-    final_score = np.clip(base_score + adjustment, 0, 100)
-    
-    return round(final_score, 1)
-
-def calculate_vix_layer():
-    """
-    Main function: Calculate VIX Fear Index Layer
-    
-    Returns:
-        dict: Layer analysis with score and details
-    """
-    
-    # Get VIX data
-    vix_data = get_vix_data()
-    
-    if not vix_data['success']:
+    if vix_data is None:
         return {
             'available': False,
             'score': 50,
+            'signal': 'NEUTRAL',
             'reason': 'VIX data unavailable'
         }
     
-    # Calculate score
-    score = calculate_vix_score(vix_data)
+    try:
+        vix_current = vix_data['vix_current']
+        vix_change_7d = vix_data['vix_change_7d']
+        trend = vix_data['trend']
+        
+        # ==========================================
+        # BASE SCORE FROM ABSOLUTE VIX LEVEL
+        # ==========================================
+        
+        if vix_current < 12:
+            # Extreme complacency
+            base_score = 85
+            fear_level = "EXTREME_COMPLACENCY"
+            interpretation = "Market extremely complacent - Very bullish for crypto"
+        elif vix_current < 15:
+            # Low fear
+            base_score = 72
+            fear_level = "LOW_FEAR"
+            interpretation = "Low fear environment - Bullish for risk assets"
+        elif vix_current < 20:
+            # Normal levels
+            base_score = 55
+            fear_level = "NORMAL"
+            interpretation = "Normal market conditions - Neutral sentiment"
+        elif vix_current < 25:
+            # Elevated fear
+            base_score = 40
+            fear_level = "ELEVATED_FEAR"
+            interpretation = "Elevated fear - Caution recommended"
+        elif vix_current < 30:
+            # High fear
+            base_score = 30
+            fear_level = "HIGH_FEAR"
+            interpretation = "High fear in markets - Bearish for crypto"
+        else:
+            # Extreme fear/panic
+            base_score = 20
+            fear_level = "EXTREME_FEAR"
+            interpretation = "Market panic mode - Very bearish for crypto"
+        
+        # ==========================================
+        # ADJUST FOR TREND
+        # ==========================================
+        
+        # Rising VIX = increasing fear = bad for crypto
+        # Falling VIX = decreasing fear = good for crypto
+        
+        if trend == "RISING":
+            trend_adjustment = -5
+        elif trend == "FALLING":
+            trend_adjustment = +5
+        else:
+            trend_adjustment = 0
+        
+        # Additional adjustment for sharp moves
+        if abs(vix_change_7d) > 20:
+            # Sharp move in past week
+            if vix_change_7d > 0:
+                # Sharp increase in fear
+                trend_adjustment -= 10
+            else:
+                # Sharp decrease in fear
+                trend_adjustment += 10
+        
+        # ==========================================
+        # FINAL SCORE
+        # ==========================================
+        
+        final_score = base_score + trend_adjustment
+        final_score = max(0, min(100, final_score))
+        
+        # Determine signal
+        if final_score >= 70:
+            signal = "VERY_BULLISH"
+        elif final_score >= 55:
+            signal = "BULLISH"
+        elif final_score >= 45:
+            signal = "NEUTRAL"
+        elif final_score >= 30:
+            signal = "BEARISH"
+        else:
+            signal = "VERY_BEARISH"
+        
+        print(f"✅ VIX Score Calculated!")
+        print(f"   Fear Level: {fear_level}")
+        print(f"   Score: {final_score:.2f}/100")
+        print(f"   Signal: {signal}")
+        
+        return {
+            'available': True,
+            'score': round(final_score, 2),
+            'vix_current': round(vix_current, 2),
+            'vix_change_1d': round(vix_data['vix_change_1d'], 2),
+            'vix_change_7d': round(vix_change_7d, 2),
+            'vix_change_30d': round(vix_data['vix_change_30d'], 2),
+            'fear_level': fear_level,
+            'trend': trend,
+            'signal': signal,
+            'interpretation': interpretation,
+            'timestamp': datetime.now().isoformat()
+        }
     
-    # Determine signal
-    if score >= 65:
-        signal = "BULLISH"
-        interpretation = "Low market fear, risk-on environment"
-    elif score >= 45:
-        signal = "NEUTRAL"
-        interpretation = "Normal fear levels, balanced market"
-    else:
-        signal = "BEARISH"
-        interpretation = "Elevated market fear, risk-off environment"
+    except Exception as e:
+        print(f"⚠️ VIX score calculation error: {e}")
+        return {
+            'available': False,
+            'score': 50,
+            'signal': 'NEUTRAL',
+            'reason': str(e)
+        }
+
+
+def get_vix_signal():
+    """
+    Main function: Get VIX signal (used by ai_brain.py)
     
-    # Compile result
-    result = {
-        'available': True,
-        'score': score,
-        'signal': signal,
-        'interpretation': interpretation,
-        'vix_level': vix_data['current_vix'],
-        'vix_change': vix_data['vix_change'],
-        'vix_change_pct': vix_data['vix_change_pct'],
-        'vix_trend': vix_data['trend'],
-        'vix_7d_avg': vix_data['vix_avg_7d'],
-        'timestamp': datetime.now().isoformat()
+    Returns:
+        dict: {'available': bool, 'score': float, 'signal': str}
+    """
+    vix_data = get_vix_data()
+    result = calculate_vix_score(vix_data)
+    
+    return {
+        'available': result['available'],
+        'score': result.get('score', 50),
+        'signal': result.get('signal', 'NEUTRAL')
     }
+
+
+def analyze_vix():
+    """
+    Complete VIX analysis with detailed output
+    """
+    print("🔱 VIX FEAR INDEX ANALYSIS - REAL DATA")
+    print("=" * 70)
     
-    if 'note' in vix_data:
-        result['note'] = vix_data['note']
+    vix_data = get_vix_data()
+    
+    if vix_data is None:
+        print("❌ Unable to fetch VIX data")
+        return None
+    
+    result = calculate_vix_score(vix_data)
+    
+    print("\n" + "=" * 70)
+    print("📊 VIX ANALYSIS COMPLETE:")
+    print(f"   VIX Level: {result.get('vix_current', 'N/A')}")
+    print(f"   Fear Level: {result.get('fear_level', 'N/A')}")
+    print(f"   Trend: {result.get('trend', 'N/A')}")
+    print(f"   Score: {result.get('score', 'N/A')}/100")
+    print(f"   Signal: {result.get('signal', 'N/A')}")
+    print(f"   Interpretation: {result.get('interpretation', 'N/A')}")
+    print("=" * 70)
     
     return result
 
+
 # ============================================================================
-# TEST EXECUTION
+# STANDALONE TESTING
 # ============================================================================
+
 if __name__ == "__main__":
-    print("🔱 VIX FEAR INDEX LAYER - TEST")
-    print("=" * 60)
-    
-    result = calculate_vix_layer()
-    
-    if result['available']:
-        print(f"\n✅ VIX Layer Active")
-        print(f"📊 Score: {result['score']}/100")
-        print(f"🎯 Signal: {result['signal']}")
-        print(f"💡 Interpretation: {result['interpretation']}")
-        print(f"\n📈 VIX Details:")
-        print(f"  Current VIX: {result['vix_level']}")
-        print(f"  Change: {result['vix_change']} ({result['vix_change_pct']}%)")
-        print(f"  Trend: {result['vix_trend']}")
-        print(f"  7-Day Avg: {result['vix_7d_avg']}")
-        
-        if 'note' in result:
-            print(f"\n⚠️ Note: {result['note']}")
-    else:
-        print(f"\n❌ VIX Layer Unavailable")
-        print(f"Reason: {result['reason']}")
-    
-    print("\n" + "=" * 60)
+    result = analyze_vix()
