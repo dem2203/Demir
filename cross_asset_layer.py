@@ -1,217 +1,132 @@
 """
 🔗 CROSS-ASSET CORRELATION LAYER - Phase 6.4
-==============================================
-Date: 2 Kasım 2025, 00:18 CET
-Version: 1.0 COMPLETE
-
-FEATURES:
-• BTC/ETH correlation and divergence detection
-• BTC/LTC, ETH/BNB, and other major pair analysis
-• Altcoin rotation detection (when alts rotate leadership)
-• Cross-pair strength comparison
-• Leading/lagging asset identification
-• Arbitrage opportunity signals
-
-SCORING:
-• 70-100: Strong positive correlation (assets moving together)
-• 50-70: Moderate correlation
-• 30-50: Weak/neutral correlation
-• 0-30: Divergence (assets moving opposite)
-
-USAGE:
-from cross_asset_layer import calculate_cross_asset
-result = calculate_cross_asset()
+============================================
+Analyzes correlation patterns across major crypto assets
+- BTC/ETH/LTC/BNB price movements
+- Rotation detection
+- Correlation strength
+- Leader/laggard identification
 """
 
 import requests
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-
-def get_pair_data(symbol='BTCUSDT', interval='1h', limit=100):
-    """Get price data for any symbol"""
-    try:
-        url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit={limit}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            df = pd.DataFrame(data, columns=[
-                'timestamp', 'open', 'high', 'low', 'close', 'volume',
-                'close_time', 'quote_volume', 'trades', 'taker_buy_base',
-                'taker_buy_quote', 'ignore'
-            ])
-            df['close'] = df['close'].astype(float)
-            return df['close'].values
-    except:
-        pass
-    return None
-
-def calculate_correlation(series1, series2):
-    """Calculate Pearson correlation between two price series"""
-    if series1 is None or series2 is None:
-        return 0.0
-    if len(series1) != len(series2):
-        min_len = min(len(series1), len(series2))
-        series1 = series1[-min_len:]
-        series2 = series2[-min_len:]
-    
-    return np.corrcoef(series1, series2)[0, 1]
-
-def calculate_price_change(prices):
-    """Calculate 24h price change percentage"""
-    if prices is None or len(prices) < 24:
-        return 0.0
-    return ((prices[-1] / prices[-24]) - 1) * 100
+from datetime import datetime
 
 def calculate_cross_asset(interval='1h', limit=100):
     """
-    Calculate cross-asset correlations and rotation signals
+    Calculate cross-asset correlation and rotation
     
-    Returns score 0-100 based on correlation strength
+    Returns score 0-100:
+    - 100 = Strong positive correlation (coordinated rally)
+    - 50 = Mixed/rotation (assets moving independently)
+    - 0 = Strong negative correlation (divergence/selloff)
     """
+    
     try:
-        # Get price data for major pairs
-        btc_prices = get_pair_data('BTCUSDT', interval, limit)
-        eth_prices = get_pair_data('ETHUSDT', interval, limit)
-        ltc_prices = get_pair_data('LTCUSDT', interval, limit)
-        bnb_prices = get_pair_data('BNBUSDT', interval, limit)
+        symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT']
+        returns_data = {}
         
-        if btc_prices is None or eth_prices is None:
-            return create_error_response("Price data unavailable")
+        # Fetch price data for all assets
+        for symbol in symbols:
+            url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
+            response = requests.get(url, timeout=10)
+            data = response.json()
+            
+            if not data or not isinstance(data, list):
+                continue
+            
+            closes = np.array([float(candle[4]) for candle in data])
+            returns = np.diff(closes) / closes[:-1]
+            returns_data[symbol] = returns
         
-        # Calculate correlations
-        btc_eth_corr = calculate_correlation(btc_prices, eth_prices)
-        btc_ltc_corr = calculate_correlation(btc_prices, ltc_prices) if ltc_prices is not None else 0
-        eth_bnb_corr = calculate_correlation(eth_prices, bnb_prices) if bnb_prices is not None else 0
+        if len(returns_data) < 2:
+            return {'available': False, 'score': 50, 'reason': 'Insufficient cross-asset data'}
         
-        # Calculate 24h changes
-        btc_change = calculate_price_change(btc_prices)
-        eth_change = calculate_price_change(eth_prices)
-        ltc_change = calculate_price_change(ltc_prices) if ltc_prices is not None else 0
-        bnb_change = calculate_price_change(bnb_prices) if bnb_prices is not None else 0
+        # Calculate pairwise correlations
+        correlations = {}
+        asset_names = list(returns_data.keys())
         
-        # Average correlation (overall market cohesion)
-        avg_correlation = (btc_eth_corr + btc_ltc_corr + eth_bnb_corr) / 3
+        for i in range(len(asset_names)):
+            for j in range(i+1, len(asset_names)):
+                asset1 = asset_names[i]
+                asset2 = asset_names[j]
+                
+                returns1 = returns_data[asset1]
+                returns2 = returns_data[asset2]
+                
+                # Ensure same length
+                min_len = min(len(returns1), len(returns2))
+                corr = np.corrcoef(returns1[:min_len], returns2[:min_len])[0, 1]
+                
+                pair_name = f"{asset1[:3]}/{asset2[:3]}"
+                correlations[pair_name] = corr
         
-        # Detect divergences
-        btc_eth_divergence = abs(btc_change - eth_change)
-        divergence_threshold = 3.0  # 3% difference = significant divergence
+        # Calculate average correlation
+        avg_correlation = np.mean(list(correlations.values()))
         
-        # SCORING LOGIC
-        # High correlation = assets moving together (70-100)
-        # Low correlation = divergence, rotation happening (0-30)
+        # Calculate recent performance (last 10 periods)
+        recent_performance = {}
+        for symbol, returns in returns_data.items():
+            recent_ret = np.sum(returns[-10:]) * 100  # Last 10 periods cumulative return
+            recent_performance[symbol[:3]] = recent_ret
         
-        corr_score = (avg_correlation + 1) * 50  # Map [-1, 1] to [0, 100]
+        # Identify leader and laggard
+        sorted_perf = sorted(recent_performance.items(), key=lambda x: x[1], reverse=True)
+        leader = sorted_perf[0][0]
+        leader_perf = sorted_perf[0][1]
+        laggard = sorted_perf[-1][0]
+        laggard_perf = sorted_perf[-1][1]
         
-        # Adjust for divergence magnitude
-        if btc_eth_divergence > divergence_threshold:
-            corr_score -= 15  # Penalize for divergence
+        # Score calculation
+        # High positive correlation + positive returns = bullish coordination
+        # High positive correlation + negative returns = bearish coordination
+        # Low correlation = rotation/uncertainty
         
-        # Detect rotation (one asset significantly outperforming)
-        rotation_detected = False
-        rotation_leader = None
-        
-        if btc_eth_divergence > divergence_threshold:
-            rotation_detected = True
-            rotation_leader = "ETH" if eth_change > btc_change else "BTC"
-        
-        final_score = max(0, min(100, corr_score))
+        if avg_correlation > 0.7:
+            if leader_perf > 0:
+                score = 75  # Strong coordinated rally
+                sentiment = "BULLISH"
+                reason = f"Strong positive correlation ({avg_correlation:.2f}) - coordinated rally"
+            else:
+                score = 25  # Strong coordinated selloff
+                sentiment = "BEARISH"
+                reason = f"Strong positive correlation ({avg_correlation:.2f}) - coordinated selloff"
+        elif avg_correlation > 0.4:
+            score = 50 + (leader_perf * 2)  # Moderate correlation, bias toward leader
+            score = max(0, min(100, score))
+            sentiment = "NEUTRAL"
+            reason = f"Moderate correlation ({avg_correlation:.2f}) - some coordination"
+        else:
+            score = 50  # Low correlation = rotation
+            sentiment = "ROTATION"
+            reason = f"Low correlation ({avg_correlation:.2f}) - asset rotation active"
         
         return {
-            'score': round(final_score, 2),
-            'avg_correlation': round(avg_correlation, 4),
-            'btc_eth_correlation': round(btc_eth_corr, 4),
-            'btc_ltc_correlation': round(btc_ltc_corr, 4),
-            'eth_bnb_correlation': round(eth_bnb_corr, 4),
-            'btc_change_24h': round(btc_change, 2),
-            'eth_change_24h': round(eth_change, 2),
-            'ltc_change_24h': round(ltc_change, 2),
-            'bnb_change_24h': round(bnb_change, 2),
-            'btc_eth_divergence': round(btc_eth_divergence, 2),
-            'rotation_detected': rotation_detected,
-            'rotation_leader': rotation_leader,
-            'market_cohesion': get_market_cohesion(avg_correlation),
-            'interpretation': get_interpretation(final_score),
-            'available': True
+            'available': True,
+            'score': round(score, 1),
+            'sentiment': sentiment,
+            'reason': reason,
+            'avg_correlation': round(avg_correlation, 3),
+            'correlations': {k: round(v, 3) for k, v in correlations.items()},
+            'leader': leader,
+            'leader_performance': round(leader_perf, 2),
+            'laggard': laggard,
+            'laggard_performance': round(laggard_perf, 2),
+            'performance': {k: round(v, 2) for k, v in recent_performance.items()},
+            'timestamp': datetime.now().isoformat()
         }
-    
+        
     except Exception as e:
-        return create_error_response(str(e))
-
-def get_market_cohesion(avg_corr):
-    """Interpret overall market correlation"""
-    if avg_corr > 0.8:
-        return "🟢 Very High - All assets moving together (strong trend)"
-    elif avg_corr > 0.6:
-        return "🟢 High - Strong positive correlation"
-    elif avg_corr > 0.4:
-        return "🟡 Moderate - Some correlation, some independence"
-    elif avg_corr > 0.2:
-        return "🟡 Low - Assets moving independently"
-    elif avg_corr > 0:
-        return "🔴 Very Low - High divergence, rotation likely"
-    elif avg_corr > -0.2:
-        return "🔴 Negative - Assets moving opposite (rare)"
-    else:
-        return "⚠️ Strong Negative - Inverse correlation (very rare)"
-
-def get_interpretation(score):
-    """Get human-readable interpretation"""
-    if score >= 80:
-        return "🟢 STRONG CORRELATION - Assets moving in sync, clear trend"
-    elif score >= 70:
-        return "🟢 HIGH CORRELATION - Coordinated market movement"
-    elif score >= 60:
-        return "🟢 MODERATE CORRELATION - General trend alignment"
-    elif score >= 50:
-        return "🟡 NEUTRAL - Mixed signals, some independence"
-    elif score >= 40:
-        return "🟡 LOW CORRELATION - Assets diverging"
-    elif score >= 30:
-        return "🔴 DIVERGENCE - Rotation likely happening"
-    else:
-        return "⚠️ STRONG DIVERGENCE - Major rotation in progress"
-
-def create_error_response(error_msg):
-    """Create standardized error response"""
-    return {
-        'score': 50,
-        'avg_correlation': 0,
-        'btc_eth_correlation': 0,
-        'btc_ltc_correlation': 0,
-        'eth_bnb_correlation': 0,
-        'btc_change_24h': 0,
-        'eth_change_24h': 0,
-        'ltc_change_24h': 0,
-        'bnb_change_24h': 0,
-        'btc_eth_divergence': 0,
-        'rotation_detected': False,
-        'rotation_leader': None,
-        'market_cohesion': f"⚠️ Error: {error_msg}",
-        'interpretation': f"⚠️ Data unavailable: {error_msg}",
-        'available': False
-    }
+        return {
+            'available': False,
+            'score': 50,
+            'reason': f'Cross-asset error: {str(e)[:50]}'
+        }
 
 if __name__ == "__main__":
-    print("🔗 CROSS-ASSET CORRELATION LAYER TEST")
-    print("=" * 60)
-    result = calculate_cross_asset()
-    print(f"\n🎯 SCORE: {result['score']}/100")
-    print(f"📖 Interpretation: {result['interpretation']}")
-    print(f"🌍 Market Cohesion: {result['market_cohesion']}")
-    print(f"\n📊 CORRELATIONS:")
-    print(f"   BTC/ETH: {result['btc_eth_correlation']:.4f}")
-    print(f"   BTC/LTC: {result['btc_ltc_correlation']:.4f}")
-    print(f"   ETH/BNB: {result['eth_bnb_correlation']:.4f}")
-    print(f"   Average: {result['avg_correlation']:.4f}")
-    print(f"\n💹 24H CHANGES:")
-    print(f"   BTC: {result['btc_change_24h']:+.2f}%")
-    print(f"   ETH: {result['eth_change_24h']:+.2f}%")
-    print(f"   LTC: {result['ltc_change_24h']:+.2f}%")
-    print(f"   BNB: {result['bnb_change_24h']:+.2f}%")
-    print(f"\n🔄 ROTATION:")
-    print(f"   Detected: {result['rotation_detected']}")
-    print(f"   Leader: {result['rotation_leader']}")
-    print(f"   BTC/ETH Divergence: {result['btc_eth_divergence']:.2f}%")
-    print(f"\n✅ Data Available: {result['available']}")
-    print("=" * 60)
+    result = calculate_cross_asset('1h', 100)
+    print(f"Cross-Asset Score: {result['score']}")
+    print(f"Sentiment: {result.get('sentiment', 'N/A')}")
+    print(f"Avg Correlation: {result.get('avg_correlation', 0)}")
+    print(f"Leader: {result.get('leader', 'N/A')} ({result.get('leader_performance', 0)}%)")
+    print(f"Reason: {result.get('reason', 'N/A')}")
