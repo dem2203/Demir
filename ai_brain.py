@@ -57,6 +57,32 @@ try:
 except Exception as e:
     KELLY_AVAILABLE = False
     print(f"⚠️ AI Brain: kelly_enhanced_layer import failed: {e}")
+# Phase 6.5: VIX Fear Index
+try:
+    import vix_layer as vix
+    VIX_AVAILABLE = True
+    print("✅ AI Brain v7: vix_layer imported (Layer 16!)")
+except Exception as e:
+    VIX_AVAILABLE = False
+    print(f"⚠️ AI Brain v7: vix_layer import failed: {e}")
+
+# Phase 6.6: Interest Rates Impact
+try:
+    import interest_rates_layer as rates
+    RATES_AVAILABLE = True
+    print("✅ AI Brain v7: interest_rates_layer imported (Layer 17!)")
+except Exception as e:
+    RATES_AVAILABLE = False
+    print(f"⚠️ AI Brain v7: interest_rates_layer import failed: {e}")
+
+# Phase 6.7: Cross-Asset Enhanced
+try:
+    import cross_asset_layer_enhanced as cross_enhanced
+    CROSS_ENHANCED_AVAILABLE = True
+    print("✅ AI Brain v7: cross_asset_layer_enhanced imported (Layer 18!)")
+except Exception as e:
+    CROSS_ENHANCED_AVAILABLE = False
+    print(f"⚠️ AI Brain v7: cross_asset_layer_enhanced import failed: {e}")
 
 # ============================================================================
 # PHASE 6 MACRO CORRELATION LAYER (v5 - PRESERVED)
