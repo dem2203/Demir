@@ -193,7 +193,7 @@ if page == "📊 Live Analysis":
                 decision = make_trading_decision(
                     symbol=symbol,
                     interval=interval,
-                    capital=capital,
+                    portfolio_value=capital,
                     risk_per_trade=risk_per_trade
                 )
                 
@@ -696,7 +696,7 @@ elif page == "🤖 Auto-Trade Manager":
                 decision = make_trading_decision(
                     symbol=trade_symbol,
                     interval=trade_interval,
-                    capital=capital,
+                    portfolio_value=capital,
                     risk_per_trade=risk_per_trade
                 )
                 
