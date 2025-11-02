@@ -379,93 +379,91 @@ def get_current_price(symbol):
 
 LAYER_EXPLANATIONS = {
     'strategy': {
-        'name': 'Teknik Strateji Katmanı (1-11)',
-        'description': 'RSI, MACD, Bollinger Bands, Fibonacci, VWAP, Volume Profile gibi 11 teknik göstergenin kombinasyonu.',
-        'why_matters': 'Fiyat hareketlerinin matematiksel analizi ile kısa-orta vadeli trend tahminleri yapar.',
+        'name': 'Teknik Strateji Katmani (1-11)',
+        'description': 'RSI, MACD, Bollinger Bands, Fibonacci, VWAP, Volume Profile gibi 11 teknik gostergenin kombinasyonu.',
+        'why_matters': 'Fiyat hareketlerinin matematiksel analizi ile kisa-orta vadeli trend tahminleri yapar.',
         'interpretation': {
-            '70-100': 'Tüm teknik göstergeler güçlü al sinyali veriyor. Momentum ve trend pozitif.',
-            '50-70': 'Çoğu teknik gösterge pozitif ama karışık sinyaller var. Dik
-
-kameli yaklaşım önerilir.',
-            '30-50': 'Teknik göstergeler zayıf veya karışık. Bekleme pozisyonu en mantıklısı.',
-            '0-30': 'Teknik göstergeler sat sinyali veriyor. Momentum negatif.'
+            '70-100': 'Tum teknik gostergeler guclu al sinyali veriyor. Momentum ve trend pozitif.',
+            '50-70': 'Cogu teknik gosterge pozitif ama karisik sinyaller var. Dikkatli yaklasim onerilir.',
+            '30-50': 'Teknik gostergeler zayif veya karisik. Bekleme pozisyonu en mantiklisi.',
+            '0-30': 'Teknik gostergeler sat sinyali veriyor. Momentum negatif.'
         }
     },
     'macro': {
         'name': 'Makro Korelasyon (Layer 12)',
         'description': 'DXY (Dolar), S&P500, Nasdaq gibi geleneksel piyasalarla korelasyon analizi.',
-        'why_matters': 'Kripto piyasaları artık global finans sistemiyle entegre. Makro göstergeler kripto üzerinde etkili.',
+        'why_matters': 'Kripto piyasalari artik global finans sistemiyle entegre. Makro gostergeler kripto uzerinde etkili.',
         'interpretation': {
-            '70-100': 'Makro ortam kripto için çok olumlu. Risk iştahı yüksek.',
-            '50-70': 'Makro ortam nötr-pozitif. Normal piyasa koşulları.',
-            '30-50': 'Makro ortam karışık. Dış riskler mevcut.',
-            '0-30': 'Makro ortam olumsuz. Risk iştahı düşük, safe haven talep ediliyor.'
+            '70-100': 'Makro ortam kripto icin cok olumlu. Risk ishtahi yuksek.',
+            '50-70': 'Makro ortam notr-pozitif. Normal piyasa kosullari.',
+            '30-50': 'Makro ortam karisik. Dis riskler mevcut.',
+            '0-30': 'Makro ortam olumsuz. Risk ishtahi dusuk, safe haven talep ediliyor.'
         }
     },
     'gold': {
-        'name': 'Altın Korelasyonu (Layer 13)',
-        'description': 'Altın (XAU/USD) fiyatı ile BTC arasındaki korelasyon. "Digital gold" teorisi.',
-        'why_matters': 'BTC, enflasyona karşı koruma (hedge) aracı olarak algılanıyor. Altın yükselince BTC da yükselme eğiliminde.',
+        'name': 'Altin Korelasyonu (Layer 13)',
+        'description': 'Altin (XAU/USD) fiyati ile BTC arasindaki korelasyon. "Digital gold" teorisi.',
+        'why_matters': 'BTC, enflasyona karsi koruma (hedge) araci olarak algilaniyor. Altin yukselince BTC da yukselme egiliminde.',
         'interpretation': {
-            '70-100': 'Altın güçlü yükseliş trendinde, BTC için pozitif katalizör.',
-            '50-70': 'Altın stabil, BTC için nötr ortam.',
-            '30-50': 'Altın zayıf, safe haven talebi düşük.',
-            '0-30': 'Altın düşüşte, risk iştahı yüksek (BTC için karışık sinyal).'
+            '70-100': 'Altin guclu yukselis trendinde, BTC icin pozitif katalizor.',
+            '50-70': 'Altin stabil, BTC icin notr ortam.',
+            '30-50': 'Altin zayif, safe haven talebi dusuk.',
+            '0-30': 'Altin dususte, risk ishtahi yuksek (BTC icin karisik sinyal).'
         }
     },
     'dominance': {
         'name': 'BTC Dominance (Layer 14)',
-        'description': 'Bitcoin\'in toplam kripto piyasa değeri içindeki payı (%).',
-        'why_matters': 'BTC dominansı yükselirken altcoinler zayıflar. Düşerken altcoin sezonu başlar.',
+        'description': 'Bitcoin\'in toplam kripto piyasa degeri icindeki payi (%).',
+        'why_matters': 'BTC dominansi yukselirken altcoinler zayiflar. Duserken altcoin sezonu baslar.',
         'interpretation': {
-            '70-100': 'BTC dominansı artıyor. Para BTC\'ye akıyor, güvenli liman.',
-            '50-70': 'BTC dominansı stabil. Dengeli piyasa.',
-            '30-50': 'BTC dominansı düşüyor. Altcoinlere para akıyor.',
-            '0-30': 'BTC dominansı hızla düşüyor. Altcoin sezonu peak\'te.'
+            '70-100': 'BTC dominansi artiyor. Para BTC\'ye akiyor, guvenli liman.',
+            '50-70': 'BTC dominansi stabil. Dengeli piyasa.',
+            '30-50': 'BTC dominansi dusuyor. Altcoinlere para akiyor.',
+            '0-30': 'BTC dominansi hizla dusuyor. Altcoin sezonu peak\'te.'
         }
     },
     'cross_asset': {
         'name': 'Cross-Asset Analizi (Layer 15)',
-        'description': 'ETH, LTC, BNB gibi diğer majör kripto paralarla korelasyon.',
-        'why_matters': 'BTC diğer kriptolarla birlikte mi hareket ediyor yoksa tek başına mı? Piyasa geneli momentum göstergesi.',
+        'description': 'ETH, LTC, BNB gibi diger major kripto paralarla korelasyon.',
+        'why_matters': 'BTC diger kriptolarla birlikte mi hareket ediyor yoksa tek basina mi? Piyasa geneli momentum gostergesi.',
         'interpretation': {
-            '70-100': 'Tüm majör kriptolar birlikte yükseliyor. Güçlü piyasa trendi.',
-            '50-70': 'Kripto piyasası karma sinyal veriyor.',
-            '30-50': 'Kriptolar birbirinden bağımsız hareket ediyor. Belirsizlik var.',
-            '0-30': 'Majör kriptolar düşüşte. Genel piyasa sentiment negatif.'
+            '70-100': 'Tum major kriptolar birlikte yukseliyor. Guclu piyasa trendi.',
+            '50-70': 'Kripto piyasasi karma sinyal veriyor.',
+            '30-50': 'Kriptolar birbirinden bagimsiz hareket ediyor. Belirsizlik var.',
+            '0-30': 'Major kriptolar dususte. Genel piyasa sentiment negatif.'
         }
     },
     'vix': {
         'name': 'VIX Korku Endeksi (Layer 16)',
-        'description': 'S&P500 volatilite endeksi. "Korku göstergesi" olarak bilinir.',
-        'why_matters': 'VIX yüksekken yatırımcılar korkulu, risk almak istemezler. Kripto gibi riskli varlıklar satar.',
+        'description': 'S&P500 volatilite endeksi. "Korku gostergesi" olarak bilinir.',
+        'why_matters': 'VIX yuksekken yatirimcilar korkulu, risk almak istemezler. Kripto gibi riskli varliklari satar.',
         'interpretation': {
-            '70-100': 'VIX çok düşük (<15). Piyasada komplikasyon yok, risk iştahı yüksek.',
-            '50-70': 'VIX normal seviyede (15-20). Dengeli risk ortamı.',
-            '30-50': 'VIX yükseliyor (20-30). Belirsizlik artıyor.',
-            '0-30': 'VIX çok yüksek (>30). Panik modu. Kripto için çok riskli.'
+            '70-100': 'VIX cok dusuk (<15). Piyasada komplikasyon yok, risk ishtahi yuksek.',
+            '50-70': 'VIX normal seviyede (15-20). Dengeli risk ortami.',
+            '30-50': 'VIX yukseliyor (20-30). Belirsizlik artiyor.',
+            '0-30': 'VIX cok yuksek (>30). Panik modu. Kripto icin cok riskli.'
         }
     },
     'rates': {
-        'name': 'Faiz Oranları (Layer 17)',
-        'description': 'Fed faiz oranları, 10-yıllık tahvil getirisi. Likidite göstergesi.',
-        'why_matters': 'Faizler yüksekken para pahalı, kripto gibi riskli varlıklara talep azalır. Faizler düşükken likidite bol.',
+        'name': 'Faiz Oranlari (Layer 17)',
+        'description': 'Fed faiz oranlari, 10-yillik tahvil getirisi. Likidite gostergesi.',
+        'why_matters': 'Faizler yuksekken para pahali, kripto gibi riskli varliklara talep azalir. Faizler dusukken likidite bol.',
         'interpretation': {
-            '70-100': 'Faizler düşüyor veya çok düşük. Bol likidite, kripto için pozitif.',
+            '70-100': 'Faizler dusuyor veya cok dusuk. Bol likidite, kripto icin pozitif.',
             '50-70': 'Faizler stabil. Normal ortam.',
-            '30-50': 'Faizler yükseliyor. Likidite azalıyor.',
-            '0-30': 'Faizler çok yüksek. Para çok pahalı, kripto için olumsuz.'
+            '30-50': 'Faizler yukseliyor. Likidite azaliyor.',
+            '0-30': 'Faizler cok yuksek. Para cok pahali, kripto icin olumsuz.'
         }
     },
     'traditional_markets': {
         'name': 'Geleneksel Piyasalar (Layer 18)',
-        'description': 'S&P500, Nasdaq, Dow Jones performansı.',
-        'why_matters': 'Hisse piyasası iyi gidiyorsa risk iştahı yüksek, kripto da genelde pozitif etkilenir.',
+        'description': 'S&P500, Nasdaq, Dow Jones performansi.',
+        'why_matters': 'Hisse piyasasi iyi gidiyorsa risk ishtahi yuksek, kripto da genelde pozitif etkilenir.',
         'interpretation': {
-            '70-100': 'Hisse piyasaları rallide. Risk iştahı çok yüksek.',
-            '50-70': 'Hisse piyasaları pozitif. Stabil büyüme.',
-            '30-50': 'Hisse piyasaları karma. Belirsizlik var.',
-            '0-30': 'Hisse piyasaları düşüşte. Risk-off modu.'
+            '70-100': 'Hisse piyasalari rallide. Risk ishtahi cok yuksek.',
+            '50-70': 'Hisse piyasalari pozitif. Stabil buyume.',
+            '30-50': 'Hisse piyasalari karma. Belirsizlik var.',
+            '0-30': 'Hisse piyasalari dususte. Risk-off modu.'
         }
     }
 }
