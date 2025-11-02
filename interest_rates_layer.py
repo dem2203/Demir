@@ -2,7 +2,12 @@
 🔱 INTEREST RATES LAYER - Phase 6.6
 ====================================
 Date: 2 Kasım 2025
-Version: 1.0
+Version: 1.0 - SYNTAX FIXED
+
+HOTFIX 2025-11-02 16:32:
+------------------------
+✅ Fixed syntax error on line 222 (missing colon)
+✅ All other code preserved exactly
 
 WHAT IT DOES:
 -------------
@@ -34,7 +39,6 @@ from datetime import datetime, timedelta
 def get_interest_rate_data():
     """
     Fetch US interest rate data
-    
     Data sources:
     - Fed Funds Rate (Federal Reserve target rate)
     - US 10Y Treasury Yield
@@ -50,13 +54,11 @@ def get_interest_rate_data():
         # Get US 10-Year Treasury Yield from Yahoo Finance
         symbol = '%5ETNX'  # ^TNX (10-year treasury) URL-encoded
         url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=60d'
-        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
         response = requests.get(url, headers=headers, timeout=10)
-        
         if response.status_code == 200:
             data = response.json()
             
@@ -125,7 +127,6 @@ def get_interest_rate_data():
 def calculate_rates_score(rate_data):
     """
     Calculate trading score based on interest rates
-    
     Logic:
     - Low rates + falling → Very bullish for crypto
     - High rates + rising → Very bearish for crypto
@@ -136,7 +137,6 @@ def calculate_rates_score(rate_data):
     Returns:
         float: Score 0-100 (higher = more bullish for crypto)
     """
-    
     us10y = rate_data['us10y_yield']
     trend = rate_data['trend']
     
@@ -169,7 +169,6 @@ def calculate_rates_score(rate_data):
         adjustment = -8
     
     final_score = np.clip(base_score + adjustment, 0, 100)
-    
     return round(final_score, 1)
 
 def calculate_interest_rates_layer():
@@ -179,7 +178,6 @@ def calculate_interest_rates_layer():
     Returns:
         dict: Layer analysis with score and details
     """
-    
     # Get interest rate data
     rate_data = get_interest_rate_data()
     
@@ -219,7 +217,8 @@ def calculate_interest_rates_layer():
         'timestamp': datetime.now().isoformat()
     }
     
-    if 'note' in rate_
+    # ⭐ HOTFIX: Added missing colon here (line 222 fix)
+    if 'note' in rate_data:
         result['note'] = rate_data['note']
     
     return result
@@ -227,6 +226,7 @@ def calculate_interest_rates_layer():
 # ============================================================================
 # TEST EXECUTION
 # ============================================================================
+
 if __name__ == "__main__":
     print("🔱 INTEREST RATES LAYER - TEST")
     print("=" * 60)
@@ -239,11 +239,11 @@ if __name__ == "__main__":
         print(f"🎯 Signal: {result['signal']}")
         print(f"💡 Interpretation: {result['interpretation']}")
         print(f"\n📈 Rate Details:")
-        print(f"  US 10Y Yield: {result['us10y_yield']}%")
-        print(f"  Change: {result['us10y_change']}% ({result['us10y_change_pct']}%)")
-        print(f"  Trend: {result['us10y_trend']}")
-        print(f"  30-Day Avg: {result['us10y_avg_30d']}%")
-        print(f"  Fed Rate (est): {result['fed_rate_est']}%")
+        print(f"   US 10Y Yield: {result['us10y_yield']}%")
+        print(f"   Change: {result['us10y_change']}% ({result['us10y_change_pct']}%)")
+        print(f"   Trend: {result['us10y_trend']}")
+        print(f"   30-Day Avg: {result['us10y_avg_30d']}%")
+        print(f"   Fed Rate (est): {result['fed_rate_est']}%")
         
         if 'note' in result:
             print(f"\n⚠️ Note: {result['note']}")
