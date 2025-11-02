@@ -85,6 +85,14 @@ python-telegram-bot>=20.0  # Telegram bot for alerts & notifications
 # ============================================================================
 # mplfinance>=0.12.9b0      # Uncomment for candlestick charts
 
+# Phase 4.3: Machine Learning
+xgboost==2.0.3
+scikit-learn==1.4.0
+
+# Phase 4.4: News Sentiment v2  
+textblob==0.18.0
+
+
 # ============================================================================
 # INSTALLATION NOTES:
 # ============================================================================
