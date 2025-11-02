@@ -153,7 +153,7 @@ def make_trading_decision(symbol, timeframe, capital=10000, lookback=100):
     if STRATEGY_AVAILABLE:
         try:
             print(f"🎯 Calling strategy.analyze() for {symbol}...")
-            strategy_result = strategy.analyze(symbol, timeframe, lookback)
+            strategy_result = strategy.analyze_all_strategies(symbol, timeframe, lookback)
             
             if strategy_result:
                 final_score = strategy_result.get('score', 50)
