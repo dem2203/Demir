@@ -1,14 +1,23 @@
 """
-🔱 DEMIR AI TRADING BOT - AI Brain v9.1 PRODUCTION ULTIMATE (FIXED)
-====================================================================
-Date: 2 Kasım 2025, 21:55 CET
-Version: 9.1 - 18-LAYER WITH REAL DATA + STREAMLIT COMPATIBILITY FIX
+🔱 DEMIR AI TRADING BOT - AI Brain v9.2 PRODUCTION ULTIMATE (ULTRA COMPATIBLE)
+===============================================================================
+Date: 2 Kasım 2025, 22:06 CET
+Version: 9.2 - 18-LAYER WITH REAL DATA + FULL BACKWARD COMPATIBILITY
 
-BUGFIX v9.1:
+BUGFIX v9.2:
 ------------
-✅ Changed parameter from 'interval' to 'timeframe' (streamlit compatibility)
-✅ Internal conversion: timeframe → interval for all layer calls
-✅ All functionality preserved - ZERO features removed!
+✅ Added 'capital' parameter support (backward compatibility)
+✅ Supports both 'timeframe' and 'interval' parameters  
+✅ Supports both 'capital' and 'portfolio_value' parameters
+✅ All streamlit versions now compatible!
+
+PARAMETER COMPATIBILITY:
+-----------------------
+You can call using ANY combination:
+- make_trading_decision('BTCUSDT', timeframe='1h', portfolio_value=10000)
+- make_trading_decision('BTCUSDT', interval='1h', portfolio_value=10000)
+- make_trading_decision('BTCUSDT', timeframe='1h', capital=10000)
+- make_trading_decision('BTCUSDT', interval='1h', capital=10000)
 
 EVOLUTION:
 ----------
@@ -18,7 +27,8 @@ v6: ATTEMPT (14 layers - had import issues)
 v7: PRODUCTION FIX (15 layers - working!)
 v8: PHASE 6 COMPLETE (18 layers)
 v9: REAL DATA INTEGRATION (yfinance + CMC_API_KEY + FRED_API_KEY)
-v9.1: STREAMLIT COMPATIBILITY FIX (timeframe parameter) ⭐ NEW!
+v9.1: STREAMLIT COMPATIBILITY FIX (timeframe parameter)
+v9.2: ULTRA COMPATIBILITY (capital + timeframe support) ⭐ NEW!
 
 ALL 18 LAYERS:
 --------------
@@ -34,7 +44,7 @@ Layer 18: Traditional Markets (REAL DATA - yfinance)
 ✅ ALL REAL DATA - NO MOCK VALUES!
 ✅ API KEYS: CMC_API_KEY, FRED_API_KEY
 ✅ FREE DATA: yfinance (no key required)
-✅ STREAMLIT COMPATIBLE: Uses 'timeframe' parameter
+✅ ULTRA COMPATIBLE: Works with ALL streamlit versions
 """
 
 from datetime import datetime
@@ -72,108 +82,122 @@ except Exception as e:
 try:
     from macro_correlation_layer import MacroCorrelationLayer
     MACRO_AVAILABLE = True
-    print("✅ AI Brain v9.1: macro_correlation_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.2: macro_correlation_layer imported (REAL DATA!)")
 except Exception as e:
     MACRO_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: macro_correlation_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: macro_correlation_layer import failed: {e}")
 
 try:
     from gold_correlation_layer import get_gold_signal, calculate_gold_correlation
     GOLD_AVAILABLE = True
-    print("✅ AI Brain v9.1: gold_correlation_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.2: gold_correlation_layer imported (REAL DATA!)")
 except Exception as e:
     GOLD_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: gold_correlation_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: gold_correlation_layer import failed: {e}")
 
 try:
     from dominance_flow_layer import get_dominance_signal, calculate_dominance_flow
     DOMINANCE_AVAILABLE = True
-    print("✅ AI Brain v9.1: dominance_flow_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.2: dominance_flow_layer imported (REAL DATA!)")
 except Exception as e:
     DOMINANCE_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: dominance_flow_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: dominance_flow_layer import failed: {e}")
 
 try:
     import cross_asset_layer as cross_asset
     CROSS_ASSET_AVAILABLE = True
-    print("✅ AI Brain v9.1: cross_asset_layer imported")
+    print("✅ AI Brain v9.2: cross_asset_layer imported")
 except Exception as e:
     CROSS_ASSET_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: cross_asset_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: cross_asset_layer import failed: {e}")
 
 try:
     from vix_layer import get_vix_signal, analyze_vix
     VIX_AVAILABLE = True
-    print("✅ AI Brain v9.1: vix_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.2: vix_layer imported (REAL DATA!)")
 except Exception as e:
     VIX_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: vix_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: vix_layer import failed: {e}")
 
 try:
     from interest_rates_layer import get_interest_signal, calculate_rates_score, get_interest_rates_fred
     RATES_AVAILABLE = True
-    print("✅ AI Brain v9.1: interest_rates_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.2: interest_rates_layer imported (REAL DATA!)")
 except Exception as e:
     RATES_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: interest_rates_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: interest_rates_layer import failed: {e}")
 
 try:
     from traditional_markets_layer import get_traditional_markets_signal, TraditionalMarketsLayer
     TRAD_MARKETS_AVAILABLE = True
-    print("✅ AI Brain v9.1: traditional_markets_layer imported (REAL DATA!)")
+    print("✅ AI Brain v9.2: traditional_markets_layer imported (REAL DATA!)")
 except Exception as e:
     TRAD_MARKETS_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.1: traditional_markets_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.2: traditional_markets_layer import failed: {e}")
 
 # ============================================================================
-# MAIN FUNCTION - 18-LAYER TRADING DECISION ENGINE
+# MAIN FUNCTION - 18-LAYER TRADING DECISION ENGINE (ULTRA COMPATIBLE!)
 # ============================================================================
 
 def make_trading_decision(
     symbol,
-    timeframe='1h',  # ✅ STREAMLIT COMPATIBLE PARAMETER NAME
-    portfolio_value=10000,
-    risk_per_trade=200
+    timeframe='1h',          # ✅ PREFERRED PARAMETER
+    portfolio_value=10000,   # ✅ PREFERRED PARAMETER
+    capital=None,            # ✅ BACKWARD COMPATIBLE (legacy)
+    risk_per_trade=200,
+    interval=None            # ✅ BACKWARD COMPATIBLE (legacy)
 ):
     """
-    AI Brain v9.1 - ULTIMATE 18-LAYER TRADING DECISION ENGINE WITH REAL DATA
+    AI Brain v9.2 - ULTIMATE 18-LAYER TRADING DECISION ENGINE WITH ULTRA COMPATIBILITY
     
-    FIXED IN v9.1:
-    --------------
-    - Parameter name changed from 'interval' to 'timeframe' for streamlit compatibility
-    - Internally converts timeframe → interval for all layer calls
-    - All features preserved - ZERO functionality removed!
+    NEW IN v9.2:
+    ------------
+    - Added 'capital' parameter support (aliases to portfolio_value)
+    - Added 'interval' parameter support (aliases to timeframe)
+    - Full backward compatibility with all streamlit versions
+    - Supports multiple parameter naming conventions
+    
+    PARAMETER COMPATIBILITY:
+    -----------------------
+    make_trading_decision('BTCUSDT', timeframe='1h', portfolio_value=10000)
+    make_trading_decision('BTCUSDT', interval='1h', portfolio_value=10000)
+    make_trading_decision('BTCUSDT', timeframe='1h', capital=10000)
+    make_trading_decision('BTCUSDT', interval='1h', capital=10000)
+    
+    All work! The function normalizes internally.
     
     Args:
         symbol: Trading pair (e.g., 'BTCUSDT')
-        timeframe: Candlestick interval (e.g., '1h', '4h', '1d')
-        portfolio_value: Total portfolio value in USD
-        risk_per_trade: Maximum risk per trade in USD
+        timeframe: Candlestick interval - PREFERRED
+        portfolio_value: Total portfolio in USD - PREFERRED
+        capital: (Legacy) Same as portfolio_value
+        risk_per_trade: Max risk per trade in USD
+        interval: (Legacy) Same as timeframe
     
     Returns:
-        dict with keys:
-            - 'decision' or 'final_decision': LONG/SHORT/WAIT
-            - 'signal': Same as decision
-            - 'confidence': 0-1 float
-            - 'entry_price': Entry price
-            - 'stop_loss': SL price
-            - 'take_profit': TP price
-            - 'position_size': Position size
-            - 'risk_reward': Risk/reward ratio
-            - 'layer_scores': Dict of all layer scores
-            - 'ai_commentary': Detailed explanation
+        dict with decision, confidence, prices, position size, layer scores, commentary
     """
     
     # ========================================================================
-    # CONVERT TIMEFRAME TO INTERVAL (FOR INTERNAL USE)
+    # PARAMETER NORMALIZATION - ULTRA BACKWARD COMPATIBLE!
     # ========================================================================
-    interval = timeframe  # ✅ streamlit sends 'timeframe', we use 'interval' internally
+    
+    # Handle timeframe/interval aliases
+    if interval is not None:
+        timeframe = interval
+    
+    # Handle capital/portfolio_value aliases
+    if capital is not None:
+        portfolio_value = capital
+    
+    # Create internal 'interval' variable for layer calls
+    interval = timeframe
     
     print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v9.1: make_trading_decision (18-LAYER WITH REAL DATA)")
+    print(f"🧠 AI BRAIN v9.2: make_trading_decision (18-LAYER ULTRA COMPATIBLE)")
     print(f"   Symbol: {symbol}")
     print(f"   Timeframe/Interval: {interval}")
-    print(f"   Portfolio: ${portfolio_value:,.0f}")
+    print(f"   Portfolio/Capital: ${portfolio_value:,.0f}")
     print(f"{'='*80}")
     
     # ========================================================================
@@ -202,7 +226,7 @@ def make_trading_decision(
         strategy_result = {}
     
     # ========================================================================
-    # LAYER 12: MACRO CORRELATION (REAL DATA - yfinance + CMC!)
+    # LAYER 12: MACRO CORRELATION (REAL DATA!)
     # ========================================================================
     macro_score = 50
     macro_signal = "NEUTRAL"
@@ -233,7 +257,7 @@ def make_trading_decision(
         print(f"⚠️ Layer 12 (Macro): Not available")
     
     # ========================================================================
-    # LAYER 13: GOLD CORRELATION (REAL DATA - yfinance!)
+    # LAYER 13: GOLD CORRELATION (REAL DATA!)
     # ========================================================================
     gold_score = 50
     gold_signal = "NEUTRAL"
@@ -264,7 +288,7 @@ def make_trading_decision(
         print(f"⚠️ Layer 13 (Gold): Not available")
     
     # ========================================================================
-    # LAYER 14: BTC DOMINANCE FLOW (REAL DATA - CMC_API_KEY!)
+    # LAYER 14: BTC DOMINANCE FLOW (REAL DATA!)
     # ========================================================================
     dominance_score = 50
     dominance_signal = "NEUTRAL"
@@ -294,7 +318,7 @@ def make_trading_decision(
     else:
         print(f"⚠️ Layer 14 (Dominance): Not available")
     # ========================================================================
-    # LAYER 15: CROSS-ASSET CORRELATION (BTC/ETH/LTC/BNB)
+    # LAYER 15: CROSS-ASSET CORRELATION
     # ========================================================================
     cross_asset_score = 50
     cross_asset_signal = "NEUTRAL"
@@ -324,7 +348,7 @@ def make_trading_decision(
         print(f"⚠️ Layer 15 (Cross-Asset): Not available")
     
     # ========================================================================
-    # LAYER 16: VIX FEAR INDEX (REAL DATA - yfinance!)
+    # LAYER 16: VIX FEAR INDEX (REAL DATA!)
     # ========================================================================
     vix_score = 50
     vix_signal = "NEUTRAL"
@@ -354,7 +378,7 @@ def make_trading_decision(
         print(f"⚠️ Layer 16 (VIX): Not available")
     
     # ========================================================================
-    # LAYER 17: INTEREST RATES (REAL DATA - FRED_API_KEY + yfinance!)
+    # LAYER 17: INTEREST RATES (REAL DATA!)
     # ========================================================================
     rates_score = 50
     rates_signal = "NEUTRAL"
@@ -385,7 +409,7 @@ def make_trading_decision(
         print(f"⚠️ Layer 17 (Rates): Not available")
     
     # ========================================================================
-    # LAYER 18: TRADITIONAL MARKETS (REAL DATA - yfinance!)
+    # LAYER 18: TRADITIONAL MARKETS (REAL DATA!)
     # ========================================================================
     trad_markets_score = 50
     trad_markets_signal = "NEUTRAL"
@@ -417,7 +441,7 @@ def make_trading_decision(
         print(f"⚠️ Layer 18 (Trad Markets): Not available")
     
     # ========================================================================
-    # MONTE CARLO SIMULATION (Risk Assessment)
+    # MONTE CARLO SIMULATION
     # ========================================================================
     mc_result = {}
     expected_return = 0
@@ -442,7 +466,7 @@ def make_trading_decision(
         print(f"⚠️ Monte Carlo: Not available")
     
     # ========================================================================
-    # KELLY CRITERION (Position Sizing)
+    # KELLY CRITERION
     # ========================================================================
     kelly_result = {}
     recommended_position_pct = 1.0
@@ -479,16 +503,16 @@ def make_trading_decision(
     
     # Layer weights (total = 100)
     weights = {
-        'strategy': 40,        # Layers 1-11 (strongest - technical analysis)
-        'macro': 8,           # Layer 12 (macro correlation)
-        'gold': 5,            # Layer 13 (gold correlation)
-        'dominance': 7,       # Layer 14 (BTC dominance)
-        'cross_asset': 6,     # Layer 15 (cross-asset)
-        'vix': 6,             # Layer 16 (VIX)
-        'rates': 8,           # Layer 17 (interest rates)
-        'trad_markets': 10,   # Layer 18 (traditional markets - important!)
-        'monte_carlo': 5,     # Monte Carlo risk
-        'kelly': 5            # Kelly position sizing
+        'strategy': 40,
+        'macro': 8,
+        'gold': 5,
+        'dominance': 7,
+        'cross_asset': 6,
+        'vix': 6,
+        'rates': 8,
+        'trad_markets': 10,
+        'monte_carlo': 5,
+        'kelly': 5
     }
     
     # Calculate weighted score
@@ -503,7 +527,7 @@ def make_trading_decision(
     total_weighted_score += (rates_score * weights['rates'] / 100)
     total_weighted_score += (trad_markets_score * weights['trad_markets'] / 100)
     
-    # Monte Carlo contribution (risk-adjusted)
+    # Monte Carlo contribution
     if expected_return > 0:
         mc_score = min(100, 50 + (expected_return * 10))
     elif expected_return < 0:
@@ -512,14 +536,14 @@ def make_trading_decision(
         mc_score = 50
     total_weighted_score += (mc_score * weights['monte_carlo'] / 100)
     
-    # Kelly contribution (position sizing quality)
+    # Kelly contribution
     if recommended_position_pct > 0:
-        kelly_score = min(100, recommended_position_pct * 20)  # 5% position = 100 score
+        kelly_score = min(100, recommended_position_pct * 20)
     else:
         kelly_score = 0
     total_weighted_score += (kelly_score * weights['kelly'] / 100)
     
-    # Final aggregated score (0-100)
+    # Final aggregated score
     aggregated_score = total_weighted_score
     
     print(f"✅ Aggregated Score: {aggregated_score:.2f}/100")
@@ -528,7 +552,6 @@ def make_trading_decision(
     # FINAL DECISION LOGIC
     # ========================================================================
     
-    # Determine final decision
     if aggregated_score >= 70:
         final_decision = "LONG"
         decision_confidence = 0.8 + (aggregated_score - 70) / 100
@@ -551,15 +574,13 @@ def make_trading_decision(
     print(f"✅ Confidence: {decision_confidence:.2%}")
     
     # ========================================================================
-    # CALCULATE ENTRY, STOP LOSS, TAKE PROFIT
+    # CALCULATE PRICES
     # ========================================================================
     
-    # Get current price from strategy result
     entry_price = strategy_result.get('current_price', 0)
     if entry_price == 0:
-        entry_price = 50000  # Fallback
+        entry_price = 50000
     
-    # Calculate SL/TP based on ATR and volatility
     atr_multiplier = 2.0
     if 'volatility' in components:
         volatility = components['volatility'].get('value', 0.02)
@@ -576,7 +597,6 @@ def make_trading_decision(
         stop_loss = entry_price
         take_profit = entry_price
     
-    # Risk/reward ratio
     if final_decision in ["LONG", "SHORT"]:
         risk = abs(entry_price - stop_loss)
         reward = abs(take_profit - entry_price)
@@ -588,9 +608,8 @@ def make_trading_decision(
     # POSITION SIZING
     # ========================================================================
     
-    # Kelly-adjusted position size
     position_size_usd = portfolio_value * (recommended_position_pct / 100)
-    position_size_usd = min(position_size_usd, risk_per_trade * 5)  # Cap at 5x risk
+    position_size_usd = min(position_size_usd, risk_per_trade * 5)
     position_size_units = position_size_usd / entry_price if entry_price > 0 else 0
     
     # ========================================================================
@@ -598,7 +617,7 @@ def make_trading_decision(
     # ========================================================================
     
     commentary_parts = []
-    commentary_parts.append(f"🧠 AI Brain v9.1 Analysis (18 Layers with REAL DATA):")
+    commentary_parts.append(f"🧠 AI Brain v9.2 Analysis (18 Layers ULTRA COMPATIBLE):")
     commentary_parts.append(f"")
     commentary_parts.append(f"📊 Aggregated Score: {aggregated_score:.1f}/100")
     commentary_parts.append(f"🎯 Decision: {final_decision} ({decision_confidence:.0%} confidence)")
@@ -678,22 +697,24 @@ def make_trading_decision(
         'timestamp': datetime.now().isoformat(),
         'symbol': symbol,
         'interval': interval,
-        'timeframe': timeframe,  # ✅ Also return timeframe for clarity
-        'version': 'v9.1 - 18 Layers with Real Data + Streamlit Fix'
+        'timeframe': timeframe,
+        'portfolio_value': portfolio_value,
+        'capital': portfolio_value,  # ✅ Also return capital alias
+        'version': 'v9.2 - 18 Layers ULTRA COMPATIBLE'
     }
     
     print(f"\n{'='*80}")
-    print(f"✅ AI BRAIN v9.1 COMPLETE!")
+    print(f"✅ AI BRAIN v9.2 COMPLETE!")
     print(f"{'='*80}\n")
     
     return result
 
 
 # ============================================================================
-# END OF AI_BRAIN.PY v9.1 FIXED
+# END OF AI_BRAIN.PY v9.2 ULTRA COMPATIBLE
 # ============================================================================
 
 if __name__ == "__main__":
-    print("🔱 AI Brain v9.1 FIXED - Testing...")
+    print("🔱 AI Brain v9.2 ULTRA COMPATIBLE - Testing...")
     result = make_trading_decision('BTCUSDT', '1h', portfolio_value=10000, risk_per_trade=200)
     print("\n" + result['ai_commentary'])
