@@ -275,7 +275,61 @@ if page == "📊 Live Analysis":
                         )
                     else:
                         st.warning("No layer scores available")
+                                
+                # ============================================================
+                # LAYER 18: TRADITIONAL MARKETS (SPX, NASDAQ, DXY) ⭐ NEW
+                # ============================================================
+                layer_details = decision.get('layer_details', {})
                 
+                if layer_details and 'trad_markets' in layer_details:
+                    with st.expander("🌍 Layer 18: Traditional Markets (SPX, NASDAQ, DXY)", expanded=False):
+                        trad = layer_details['trad_markets']
+                        
+                        if trad:
+                            # Interpretation
+                            st.markdown(f"**Market Analysis:** {trad.get('interpretation', 'No analysis available')}")
+                            st.markdown("---")
+                            
+                            # Market Metrics
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                spx = trad.get('spx', {})
+                                spx_price = spx.get('price', 0)
+                                spx_change = spx.get('change_7d_pct', 0)
+                                spx_trend = spx.get('trend', 'UNKNOWN')
+                                
+                                st.metric("S&P 500", f"${spx_price:,.0f}", f"{spx_change:+.2f}%")
+                                st.caption(f"📊 Trend: {spx_trend}")
+                            
+                            with col2:
+                                nasdaq = trad.get('nasdaq', {})
+                                nasdaq_price = nasdaq.get('price', 0)
+                                nasdaq_change = nasdaq.get('change_7d_pct', 0)
+                                nasdaq_trend = nasdaq.get('trend', 'UNKNOWN')
+                                
+                                st.metric("NASDAQ", f"${nasdaq_price:,.0f}", f"{nasdaq_change:+.2f}%")
+                                st.caption(f"📊 Trend: {nasdaq_trend}")
+                            
+                            with col3:
+                                dxy = trad.get('dxy', {})
+                                dxy_price = dxy.get('price', 0)
+                                dxy_change = dxy.get('change_7d_pct', 0)
+                                dxy_trend = dxy.get('trend', 'UNKNOWN')
+                                
+                                st.metric("DXY (Dollar Index)", f"{dxy_price:.2f}", f"{dxy_change:+.2f}%")
+                                st.caption(f"📊 Trend: {dxy_trend}")
+                            
+                            # Market Signals
+                            signals = trad.get('signals', [])
+                            if signals:
+                                st.markdown("---")
+                                st.markdown("**🎯 Market Signals:**")
+                                for sig in signals:
+                                    st.write(f"• {sig}")
+                        else:
+                            st.info("Traditional Markets data not available")
+
                 # === SEND TO TELEGRAM ===
                 if send_telegram and TELEGRAM_AVAILABLE:
                     try:
