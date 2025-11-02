@@ -183,7 +183,7 @@ def detect_rotation(target_symbol, data, returns_data):
         dict: Rotation analysis
     """
     
-    if target_symbol not in 
+    if target_symbol not in data:
         return {'available': False}
     
     target = data[target_symbol]
