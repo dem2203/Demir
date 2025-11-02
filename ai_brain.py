@@ -219,7 +219,7 @@ def make_trading_decision(symbol, timeframe, capital=10000, lookback=100):
     if GOLD_AVAILABLE:
         try:
             print(f"\n🥇 Calling gold.analyze_gold_correlation (Layer 13)...")
-            gold_result = gold.analyze_gold_correlation(symbol)
+            gold_result = gold.calculate_gold_correlation_score(symbol)
             
             if gold_result and gold_result.get('available'):
                 gold_score = gold_result.get('score', 50)
@@ -252,7 +252,7 @@ def make_trading_decision(symbol, timeframe, capital=10000, lookback=100):
     if DOMINANCE_AVAILABLE:
         try:
             print(f"\n👑 Calling dominance.analyze_dominance_flow (Layer 14)...")
-            dominance_result = dominance.analyze_dominance_flow(symbol)
+            dominance_result = dominance.calculate_dominance_signal(symbol)
             
             if dominance_result and dominance_result.get('available'):
                 dominance_score = dominance_result.get('score', 50)
@@ -285,7 +285,7 @@ def make_trading_decision(symbol, timeframe, capital=10000, lookback=100):
     if CROSS_ASSET_AVAILABLE:
         try:
             print(f"\n🔗 Calling cross_asset.analyze_cross_correlations (Layer 15)...")
-            cross_asset_result = cross_asset.analyze_cross_correlations(symbol)
+            cross_asset_result = cross_asset.analyze_cross_asset_correlation(symbol)
             
             if cross_asset_result and cross_asset_result.get('available'):
                 cross_asset_score = cross_asset_result.get('score', 50)
