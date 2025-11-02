@@ -1,162 +1,115 @@
 """
-🔱 DEMIR AI TRADING BOT - AI Brain v9.4 PRODUCTION ULTIMATE FIX
-===============================================================
-Date: 2 Kasım 2025, 22:40 CET
-Version: 9.4 - 18-LAYER + MULTI-TIMEFRAME + ML + NEWS + PRICE FIX
-
-BUGFIX v9.4 (CRITICAL FIXES):
-----------------------------
-✅ Fixed: Entry/Stop/TP prices (REAL price from Binance API!)
-✅ Added: make_multi_timeframe_decision() function
-✅ Added: ML prediction stubs (XGBoost + Random Forest)
-✅ Added: News sentiment analysis stub
-✅ All previous v9.3 compatibility preserved!
-
-KEY IMPROVEMENTS:
------------------
-1. **REAL PRICE FETCH**: Uses Binance API to get actual coin price
-2. **MULTI-TIMEFRAME**: Analyzes 5 timeframes and provides consensus
-3. **ML PREDICTIONS**: XGBoost trend + Random Forest volatility
-4. **NEWS SENTIMENT**: Aggregates sentiment from multiple sources
-5. **ULTRA FLEXIBLE**: Still accepts ANY parameter combination
-
-EVOLUTION:
-----------
-v9.0: Real data integration
-v9.1: Streamlit timeframe compatibility
-v9.2: Ultra parameter compatibility
-v9.3: Ultimate flexibility (**kwargs)
-v9.4: Critical bug fixes + new features ⭐ NEW!
-
-ALL 18 LAYERS + NEW FEATURES:
-------------------------------
-Layers 1-11: Strategy (RSI, MACD, Bollinger, etc.)
-Layer 12: Macro Correlation
-Layer 13: Gold Correlation
-Layer 14: BTC Dominance Flow
-Layer 15: Cross-Asset Correlation
-Layer 16: VIX Fear Index
-Layer 17: Interest Rates
-Layer 18: Traditional Markets
-+ Multi-Timeframe Analysis
-+ ML Predictions (XGBoost, Random Forest)
-+ News Sentiment Analysis
-
-✅ ALL REAL DATA - NO MOCK VALUES!
-✅ REAL PRICES - DIRECT FROM BINANCE!
-✅ ULTIMATE FLEXIBLE - ALL PARAMETERS SUPPORTED!
-"""
 
 from datetime import datetime
 import requests
 
 # ============================================================================
-# IMPORTS - ALL LAYERS
+# IMPORTS - TÜM LAYER'LAR
 # ============================================================================
 
 # Phase 3A + 3B layers
 try:
     import strategy_layer as strategy
     STRATEGY_AVAILABLE = True
-    print("✅ AI Brain: strategy_layer imported")
+    print("✅ AI Brain: strategy_layer içe aktarıldı")
 except Exception as e:
     STRATEGY_AVAILABLE = False
-    print(f"⚠️ AI Brain: strategy_layer import failed: {e}")
+    print(f"⚠️ AI Brain: strategy_layer içe aktarma hatası: {e}")
 
 try:
     import monte_carlo_layer as mc
     MC_AVAILABLE = True
-    print("✅ AI Brain: monte_carlo_layer imported")
+    print("✅ AI Brain: monte_carlo_layer içe aktarıldı")
 except Exception as e:
     MC_AVAILABLE = False
-    print(f"⚠️ AI Brain: monte_carlo_layer import failed: {e}")
+    print(f"⚠️ AI Brain: monte_carlo_layer içe aktarma hatası: {e}")
 
 try:
     import kelly_enhanced_layer as kelly
     KELLY_AVAILABLE = True
-    print("✅ AI Brain: kelly_enhanced_layer imported")
+    print("✅ AI Brain: kelly_enhanced_layer içe aktarıldı")
 except Exception as e:
     KELLY_AVAILABLE = False
-    print(f"⚠️ AI Brain: kelly_enhanced_layer import failed: {e}")
+    print(f"⚠️ AI Brain: kelly_enhanced_layer içe aktarma hatası: {e}")
 
 # Phase 6 layers
 try:
     from macro_correlation_layer import MacroCorrelationLayer
     MACRO_AVAILABLE = True
-    print("✅ AI Brain v9.4: macro_correlation_layer imported")
+    print("✅ AI Brain v9.5: macro_correlation_layer içe aktarıldı")
 except Exception as e:
     MACRO_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: macro_correlation_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: macro_correlation_layer içe aktarma hatası: {e}")
 
 try:
     from gold_correlation_layer import get_gold_signal, calculate_gold_correlation
     GOLD_AVAILABLE = True
-    print("✅ AI Brain v9.4: gold_correlation_layer imported")
+    print("✅ AI Brain v9.5: gold_correlation_layer içe aktarıldı")
 except Exception as e:
     GOLD_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: gold_correlation_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: gold_correlation_layer içe aktarma hatası: {e}")
 
 try:
     from dominance_flow_layer import get_dominance_signal, calculate_dominance_flow
     DOMINANCE_AVAILABLE = True
-    print("✅ AI Brain v9.4: dominance_flow_layer imported")
+    print("✅ AI Brain v9.5: dominance_flow_layer içe aktarıldı")
 except Exception as e:
     DOMINANCE_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: dominance_flow_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: dominance_flow_layer içe aktarma hatası: {e}")
 
 try:
     import cross_asset_layer as cross_asset
     CROSS_ASSET_AVAILABLE = True
-    print("✅ AI Brain v9.4: cross_asset_layer imported")
+    print("✅ AI Brain v9.5: cross_asset_layer içe aktarıldı")
 except Exception as e:
     CROSS_ASSET_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: cross_asset_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: cross_asset_layer içe aktarma hatası: {e}")
 
 try:
     from vix_layer import get_vix_signal, analyze_vix
     VIX_AVAILABLE = True
-    print("✅ AI Brain v9.4: vix_layer imported")
+    print("✅ AI Brain v9.5: vix_layer içe aktarıldı")
 except Exception as e:
     VIX_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: vix_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: vix_layer içe aktarma hatası: {e}")
 
 try:
     from interest_rates_layer import get_interest_signal, calculate_rates_score, get_interest_rates_fred
     RATES_AVAILABLE = True
-    print("✅ AI Brain v9.4: interest_rates_layer imported")
+    print("✅ AI Brain v9.5: interest_rates_layer içe aktarıldı")
 except Exception as e:
     RATES_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: interest_rates_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: interest_rates_layer içe aktarma hatası: {e}")
 
 try:
     from traditional_markets_layer import get_traditional_markets_signal, TraditionalMarketsLayer
     TRAD_MARKETS_AVAILABLE = True
-    print("✅ AI Brain v9.4: traditional_markets_layer imported")
+    print("✅ AI Brain v9.5: traditional_markets_layer içe aktarıldı")
 except Exception as e:
     TRAD_MARKETS_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: traditional_markets_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: traditional_markets_layer içe aktarma hatası: {e}")
 
 try:
     import news_sentiment_layer as news
     NEWS_AVAILABLE = True
-    print("✅ AI Brain v9.4: news_sentiment_layer imported")
+    print("✅ AI Brain v9.5: news_sentiment_layer içe aktarıldı")
 except Exception as e:
     NEWS_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.4: news_sentiment_layer import failed: {e}")
+    print(f"⚠️ AI Brain v9.5: news_sentiment_layer içe aktarma hatası: {e}")
 
 # ============================================================================
-# HELPER: GET REAL PRICE FROM BINANCE (FIX FOR ISSUE #4!)
+# HELPER: GERÇEK FİYAT ÇEKME (BİNANCE API)
 # ============================================================================
 
 def get_real_price(symbol):
     """
-    Fetches REAL current price from Binance API
+    Binance API'den GERÇEK anlık fiyat çeker
     
     Args:
-        symbol: Trading pair (e.g., 'BTCUSDT', 'ETHUSDT')
+        symbol: Trading pair (örn: 'BTCUSDT', 'ETHUSDT')
     
     Returns:
-        float: Current price or 0 if failed
+        float: Anlık fiyat veya 0 (başarısız)
     """
     try:
         url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
@@ -165,37 +118,37 @@ def get_real_price(symbol):
         if response.status_code == 200:
             data = response.json()
             price = float(data['price'])
-            print(f"✅ Real price fetched: {symbol} = ${price:,.2f}")
+            print(f"✅ Gerçek fiyat çekildi: {symbol} = ${price:,.2f}")
             return price
         else:
-            print(f"⚠️ Binance API error: {response.status_code}")
+            print(f"⚠️ Binance API hatası: {response.status_code}")
             return 0
     except Exception as e:
-        print(f"⚠️ Price fetch error: {e}")
+        print(f"⚠️ Fiyat çekme hatası: {e}")
         return 0
 
 # ============================================================================
-# NEW FUNCTION: MULTI-TIMEFRAME ANALYSIS (FIX FOR ISSUE #1!)
+# YENİ FONKSİYON: MULTI-TIMEFRAME ANALİZİ
 # ============================================================================
 
 def make_multi_timeframe_decision(symbol, **kwargs):
     """
-    Analyzes multiple timeframes (1m, 5m, 15m, 1h, 4h) and provides consensus signal.
+    Çoklu zaman dilimi analizi (1m, 5m, 15m, 1h, 4h) ve consensus sinyal
     
     Args:
-        symbol: Trading pair (e.g., 'BTCUSDT')
-        **kwargs: Any parameters to pass to make_trading_decision
+        symbol: Trading pair (örn: 'BTCUSDT')
+        **kwargs: make_trading_decision'a geçilecek parametreler
     
     Returns:
         dict with:
-            - timeframe_scores: Individual scores for each timeframe
-            - consensus_signal: LONG/SHORT/WAIT based on majority
-            - consensus_confidence: Weighted average confidence
-            - details: Individual timeframe results
+            - timeframe_scores: Her zaman dilimi için skorlar
+            - consensus_signal: Çoğunluk oyuna göre LONG/SHORT/WAIT
+            - consensus_confidence: Ağırlıklı ortalama güven
+            - details: Detaylı zaman dilimi sonuçları
     """
     
     print(f"\n{'='*80}")
-    print(f"🔬 MULTI-TIMEFRAME ANALYSIS: {symbol}")
+    print(f"🔬 MULTI-TIMEFRAME ANALİZİ: {symbol}")
     print(f"{'='*80}")
     
     timeframes = ['1m', '5m', '15m', '1h', '4h']
@@ -214,7 +167,7 @@ def make_multi_timeframe_decision(symbol, **kwargs):
     
     for tf in timeframes:
         try:
-            print(f"\n📊 Analyzing {tf}...")
+            print(f"\n📊 {tf} analiz ediliyor...")
             result = make_trading_decision(symbol, timeframe=tf, **kwargs)
             results[tf] = result
             
@@ -227,20 +180,20 @@ def make_multi_timeframe_decision(symbol, **kwargs):
             weighted_confidence += confidence * weight
             signal_votes[signal] += weight
             
-            print(f"✅ {tf}: Score={score:.1f}, Signal={signal}, Confidence={confidence:.0%}")
+            print(f"✅ {tf}: Skor={score:.1f}, Sinyal={signal}, Güven={confidence:.0%}")
             
         except Exception as e:
-            print(f"❌ {tf} analysis failed: {e}")
+            print(f"❌ {tf} analiz hatası: {e}")
             results[tf] = {'error': str(e)}
     
-    # Determine consensus
+    # Consensus belirleme
     consensus_signal = max(signal_votes, key=signal_votes.get)
     consensus_strength = signal_votes[consensus_signal] / sum(timeframe_weights.values())
     
     print(f"\n{'='*80}")
-    print(f"🎯 CONSENSUS: {consensus_signal} (Strength: {consensus_strength:.0%})")
-    print(f"📊 Weighted Score: {weighted_score:.1f}/100")
-    print(f"💪 Weighted Confidence: {weighted_confidence:.0%}")
+    print(f"🎯 CONSENSUS: {consensus_signal} (Güç: {consensus_strength:.0%})")
+    print(f"📊 Ağırlıklı Skor: {weighted_score:.1f}/100")
+    print(f"💪 Ağırlıklı Güven: {weighted_confidence:.0%}")
     print(f"{'='*80}\n")
     
     return {
@@ -256,120 +209,120 @@ def make_multi_timeframe_decision(symbol, **kwargs):
     }
 
 # ============================================================================
-# NEW FUNCTION: ML PREDICTIONS (FIX FOR ISSUE #2!)
+# YENİ FONKSİYON: ML TAHMİNLERİ (STUB)
 # ============================================================================
 
 def make_ml_prediction(symbol, model_type='xgboost', **kwargs):
     """
-    Machine Learning prediction stub (XGBoost or Random Forest).
+    Machine Learning tahmin stub'ı (XGBoost veya Random Forest)
     
-    NOTE: This is a STUB for Phase 4.3. Full ML implementation requires:
-    - Historical data collection
-    - Feature engineering (20+ technical indicators)
-    - Model training and validation
-    - Model persistence
+    NOT: Bu Phase 4.3 için STUB. Tam ML implementasyonu gerektirir:
+    - Geçmiş veri toplama
+    - Feature engineering (20+ teknik indikatör)
+    - Model eğitimi ve validasyon
+    - Model saklama
     
-    For now, returns placeholder structure.
+    Şimdilik placeholder yapı döndürür.
     
     Args:
         symbol: Trading pair
-        model_type: 'xgboost' or 'random_forest'
-        **kwargs: Additional parameters
+        model_type: 'xgboost' veya 'random_forest'
+        **kwargs: Ek parametreler
     
     Returns:
-        dict with ML prediction results
+        dict: ML tahmin sonuçları
     """
     
     print(f"\n{'='*80}")
-    print(f"🤖 ML PREDICTION ({model_type.upper()}): {symbol}")
+    print(f"🤖 ML TAHMİNİ ({model_type.upper()}): {symbol}")
     print(f"{'='*80}")
-    print(f"⚠️ ML models require training data (Phase 4.3)")
-    print(f"⚠️ Returning placeholder structure for now")
+    print(f"⚠️ ML modelleri eğitim verisi gerektirir (Phase 4.3)")
+    print(f"⚠️ Şimdilik placeholder yapı döndürülüyor")
     print(f"{'='*80}\n")
     
     if model_type == 'xgboost':
         return {
             'success': False,
             'model': 'XGBoost',
-            'message': 'Requires xgboost package and trained model',
+            'message': 'xgboost paketi ve eğitilmiş model gerekiyor',
             'prediction': 'NEUTRAL',
             'confidence': 0.5,
             'probability_long': 0.5,
             'probability_short': 0.5,
             'feature_importance': {},
-            'note': 'Install: pip install xgboost'
+            'note': 'Kurulum: pip install xgboost'
         }
     elif model_type == 'random_forest':
         return {
             'success': False,
             'model': 'Random Forest',
-            'message': 'Requires scikit-learn package and trained model',
+            'message': 'scikit-learn paketi ve eğitilmiş model gerekiyor',
             'prediction': 'NEUTRAL',
             'confidence': 0.5,
             'volatility_forecast': 0.02,
-            'note': 'Install: pip install scikit-learn'
+            'note': 'Kurulum: pip install scikit-learn'
         }
     else:
         return {
             'success': False,
-            'error': f'Unknown model type: {model_type}'
+            'error': f'Bilinmeyen model tipi: {model_type}'
         }
 
 # ============================================================================
-# NEW FUNCTION: NEWS SENTIMENT (FIX FOR ISSUE #3!)
+# YENİ FONKSİYON: HABER SENTİMENT ANALİZİ
 # ============================================================================
 
 def analyze_news_sentiment(symbol, **kwargs):
     """
-    Aggregates news sentiment from multiple sources.
+    Çoklu kaynaklardan haber sentiment analizi
     
-    NOTE: This function attempts to use news_sentiment_layer if available.
-    If not available, returns placeholder structure.
+    NOT: news_sentiment_layer varsa kullanır.
+    Yoksa placeholder yapı döndürür.
     
     Args:
         symbol: Trading pair
-        **kwargs: Additional parameters
+        **kwargs: Ek parametreler
     
     Returns:
-        dict with news sentiment analysis
+        dict: Haber sentiment analiz sonuçları
     """
     
     print(f"\n{'='*80}")
-    print(f"📰 NEWS SENTIMENT ANALYSIS: {symbol}")
+    print(f"📰 HABER SENTİMENT ANALİZİ: {symbol}")
     print(f"{'='*80}")
     
     if NEWS_AVAILABLE:
         try:
             result = news.analyze_sentiment(symbol)
-            print(f"✅ News sentiment analyzed")
+            print(f"✅ Haber sentiment analiz edildi")
             return result
         except Exception as e:
-            print(f"⚠️ News sentiment layer error: {e}")
+            print(f"⚠️ News sentiment layer hatası: {e}")
             return _news_placeholder(symbol, error=str(e))
     else:
-        print(f"⚠️ news_sentiment_layer not available")
+        print(f"⚠️ news_sentiment_layer mevcut değil")
         return _news_placeholder(symbol)
 
 def _news_placeholder(symbol, error=None):
-    """Returns placeholder news sentiment structure"""
+    """Placeholder haber sentiment yapısı döndürür"""
     return {
         'success': False,
         'symbol': symbol,
-        'message': 'News sentiment requires API keys' if not error else f'Error: {error}',
+        'message': 'Haber sentiment API key\'leri gerekiyor' if not error else f'Hata: {error}',
         'sentiment_score': 0,
         'sentiment': 'NEUTRAL',
         'sources': {
-            'twitter': 'Requires Twitter API v2',
-            'reddit': 'Requires Reddit API',
-            'news': 'Requires News API key',
-            'fear_greed': 'Available (no key required)'
+            'twitter': 'Twitter API v2 gerekiyor',
+            'reddit': 'Reddit API gerekiyor',
+            'news': 'News API key gerekiyor',
+            'fear_greed': 'Mevcut (key gerektirmez)'
         },
-        'note': 'Configure API keys in config.py for full functionality',
+        'note': 'Tam fonksiyonellik için config.py\'de API key\'leri yapılandırın',
         'timestamp': datetime.now().isoformat()
     }
 
 # ============================================================================
-# MAIN FUNCTION - 18-LAYER TRADING DECISION ENGINE (v9.4 ENHANCED!)
+# ANA FONKSİYON - 18-LAYER TİCARET KARAR MOTORU (v9.5 GELİŞTİRİLMİŞ!)
 # ============================================================================
 
 def make_trading_decision(
@@ -382,30 +335,32 @@ def make_trading_decision(
     **kwargs
 ):
     """
-    AI Brain v9.4 - ULTIMATE 18-LAYER TRADING DECISION ENGINE WITH BUG FIXES
+    AI Brain v9.5 - 18-LAYER TİCARET KARAR MOTORU + SAĞLIK İZLEME
     
-    NEW IN v9.4:
+    YENİ v9.5'TE:
     ------------
-    - FIXED: Entry/Stop/TP prices now use REAL Binance price
-    - FIXED: Handles cases where strategy_layer returns no price
-    - Enhanced: Better error handling and fallbacks
-    - Compatible: All v9.3 functionality preserved
+    - DÜZELTİLDİ: Monte Carlo 'simulations' → 'num_simulations'
+    - DÜZELTİLDİ: Kelly 'calculate_kelly_position' → 'calculate_dynamic_kelly'
+    - EKLENDİ: Her layer için sağlık durumu izleme
+    - EKLENDİ: Gerçek data doğrulama
+    - EKLENDİ: Detaylı hata tracking
+    - EKLENDİ: Türkçe açıklamalar
     
     Args:
-        symbol: Trading pair (e.g., 'BTCUSDT')
-        timeframe: Candlestick interval
-        portfolio_value: Total portfolio in USD
-        capital: (Legacy) Same as portfolio_value
-        risk_per_trade: Max risk per trade in USD
-        interval: (Legacy) Same as timeframe
-        **kwargs: ANY other parameters
+        symbol: Trading pair (örn: 'BTCUSDT')
+        timeframe: Mum aralığı
+        portfolio_value: Toplam portföy (USD)
+        capital: (Legacy) portfolio_value ile aynı
+        risk_per_trade: Trade başına max risk (USD)
+        interval: (Legacy) timeframe ile aynı
+        **kwargs: DİĞER tüm parametreler
     
     Returns:
-        dict with decision, confidence, prices, position size, layer scores, commentary
+        dict: karar, güven, fiyatlar, pozisyon boyutu, layer skorları, açıklama
     """
     
     # ========================================================================
-    # PARAMETER NORMALIZATION
+    # PARAMETRE NORMALİZASYONU
     # ========================================================================
     
     if interval is not None:
@@ -419,16 +374,16 @@ def make_trading_decision(
     margin = kwargs.get('margin', 0.0)
     
     print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v9.4: make_trading_decision (BUG FIXES!)")
+    print(f"🧠 AI BRAIN v9.5: make_trading_decision (SAĞLIK İZLEME!)")
     print(f"   Symbol: {symbol}")
     print(f"   Timeframe: {interval}")
     print(f"   Portfolio: ${portfolio_value:,.0f}")
     if kwargs:
-        print(f"   Extra params: {list(kwargs.keys())}")
+        print(f"   Ekstra parametreler: {list(kwargs.keys())}")
     print(f"{'='*80}")
     
     # ========================================================================
-    # GET REAL PRICE (FIX FOR ISSUE #4!)
+    # GERÇEK FİYAT ÇEKME (BİNANCE API)
     # ========================================================================
     
     real_price = get_real_price(symbol)
@@ -438,15 +393,15 @@ def make_trading_decision(
     # ========================================================================
     if STRATEGY_AVAILABLE:
         try:
-            print(f"\n🔍 Calling strategy.calculate_comprehensive_score...")
+            print(f"\n🔍 strategy.calculate_comprehensive_score çağrılıyor...")
             strategy_result = strategy.calculate_comprehensive_score(symbol, interval)
             final_score = strategy_result['final_score']
             signal = strategy_result['signal']
             confidence = strategy_result['confidence']
             components = strategy_result['components']
-            print(f"✅ Strategy result (Layers 1-11): {final_score}/100")
+            print(f"✅ Strategy sonucu (Layers 1-11): {final_score}/100")
         except Exception as e:
-            print(f"❌ Strategy error: {e}")
+            print(f"❌ Strategy hatası: {e}")
             final_score = 50
             signal = 'NEUTRAL'
             confidence = 0.5
@@ -460,199 +415,388 @@ def make_trading_decision(
         strategy_result = {}
     
     # ========================================================================
-    # LAYERS 12-18 (SAME AS v9.3 - WORKING CODE PRESERVED)
+    # LAYERS 12-18 (SAĞLIK İZLEMELİ!)
     # ========================================================================
     
     # Layer 12: Macro Correlation
     macro_score = 50
     macro_signal = "NEUTRAL"
     macro_details = {}
+    macro_health = "UNKNOWN"
     
     if MACRO_AVAILABLE:
         try:
-            print(f"\n🌍 Calling MacroCorrelationLayer.analyze_all (Layer 12)...")
+            print(f"\n🌍 MacroCorrelationLayer.analyze_all çağrılıyor (Layer 12)...")
             macro_layer = MacroCorrelationLayer()
             macro_result = macro_layer.analyze_all(symbol, days=30)
             
             if macro_result.get('available', False):
                 macro_score = macro_result['total_score']
                 macro_signal = macro_result['signal']
+                macro_health = "HEALTHY"
                 macro_details = {
+                    'status': macro_health,
+                    'data_source': 'yfinance API',
                     'correlations': macro_result.get('correlations', {}),
                     'factor_scores': macro_result.get('factor_scores', {}),
-                    'explanation': macro_result.get('explanation', 'No details')
+                    'explanation': macro_result.get('explanation', 'Detay yok')
                 }
                 print(f"✅ Layer 12 (Macro): {macro_score:.2f}/100 - {macro_signal}")
+                print(f"   🏥 Durum: {macro_health}")
+                print(f"   📊 Data Source: yfinance API")
             else:
-                print("⚠️ Layer 12 (Macro) unavailable")
+                macro_health = "WARNING"
+                macro_details = {
+                    'status': macro_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 12 (Macro) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {macro_health}")
         except Exception as e:
-            print(f"⚠️ Layer 12 (Macro) error: {e}")
+            macro_health = "ERROR"
+            macro_details = {
+                'status': macro_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 12 (Macro) hatası: {e}")
+            print(f"   ❌ Durum: {macro_health}")
     else:
-        print(f"⚠️ Layer 12 (Macro): Not available")
+        macro_health = "NOT_AVAILABLE"
+        macro_details = {
+            'status': macro_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 12 (Macro): Mevcut değil")
     
     # Layer 13: Gold Correlation
     gold_score = 50
     gold_signal = "NEUTRAL"
     gold_details = {}
+    gold_health = "UNKNOWN"
     
     if GOLD_AVAILABLE:
         try:
-            print(f"\n🥇 Calling calculate_gold_correlation (Layer 13)...")
+            print(f"\n🥇 calculate_gold_correlation çağrılıyor (Layer 13)...")
             gold_result = calculate_gold_correlation(symbol, interval, limit=lookback)
             
             if gold_result and gold_result.get('available'):
                 gold_score = gold_result.get('score', 50)
                 gold_signal = gold_result.get('signal', 'NEUTRAL')
+                gold_health = "HEALTHY"
                 gold_details = {
+                    'status': gold_health,
+                    'data_source': 'yfinance API',
                     'gold_correlation': gold_result.get('gold_correlation', 0),
                     'silver_correlation': gold_result.get('silver_correlation', 0),
                     'gold_price': gold_result.get('gold_price', 0),
-                    'interpretation': gold_result.get('interpretation', 'No details')
+                    'interpretation': gold_result.get('interpretation', 'Detay yok')
                 }
                 print(f"✅ Layer 13 (Gold): {gold_score:.2f}/100 - {gold_signal}")
+                print(f"   🏥 Durum: {gold_health}")
+                print(f"   📊 Gold Corr: {gold_details['gold_correlation']:.2f}")
             else:
-                print("⚠️ Layer 13 (Gold) unavailable")
+                gold_health = "WARNING"
+                gold_details = {
+                    'status': gold_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 13 (Gold) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {gold_health}")
         except Exception as e:
-            print(f"⚠️ Layer 13 (Gold) error: {e}")
+            gold_health = "ERROR"
+            gold_details = {
+                'status': gold_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 13 (Gold) hatası: {e}")
+            print(f"   ❌ Durum: {gold_health}")
     else:
-        print(f"⚠️ Layer 13 (Gold): Not available")
+        gold_health = "NOT_AVAILABLE"
+        gold_details = {
+            'status': gold_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 13 (Gold): Mevcut değil")
     
     # Layer 14: BTC Dominance Flow
     dominance_score = 50
     dominance_signal = "NEUTRAL"
     dominance_details = {}
+    dominance_health = "UNKNOWN"
     
     if DOMINANCE_AVAILABLE:
         try:
-            print(f"\n📊 Calling calculate_dominance_flow (Layer 14)...")
+            print(f"\n📊 calculate_dominance_flow çağrılıyor (Layer 14)...")
             dominance_result = calculate_dominance_flow()
             
             if dominance_result and dominance_result.get('available'):
                 dominance_score = dominance_result.get('score', 50)
                 dominance_signal = dominance_result.get('altseason_signal', 'NEUTRAL')
+                dominance_health = "HEALTHY"
                 dominance_details = {
+                    'status': dominance_health,
+                    'data_source': 'CoinMarketCap API',
                     'btc_dominance': dominance_result.get('btc_dominance', 0),
                     'btc_dominance_24h_change': dominance_result.get('btc_dominance_24h_change', 0),
                     'money_flow': dominance_result.get('money_flow', 'UNKNOWN'),
-                    'interpretation': dominance_result.get('interpretation', 'No details')
+                    'interpretation': dominance_result.get('interpretation', 'Detay yok')
                 }
                 print(f"✅ Layer 14 (Dominance): {dominance_score:.2f}/100 - {dominance_signal}")
+                print(f"   🏥 Durum: {dominance_health}")
+                print(f"   📊 BTC Dom: {dominance_details['btc_dominance']:.2f}%")
             else:
-                print("⚠️ Layer 14 (Dominance) unavailable")
+                dominance_health = "WARNING"
+                dominance_details = {
+                    'status': dominance_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 14 (Dominance) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {dominance_health}")
         except Exception as e:
-            print(f"⚠️ Layer 14 (Dominance) error: {e}")
+            dominance_health = "ERROR"
+            dominance_details = {
+                'status': dominance_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 14 (Dominance) hatası: {e}")
+            print(f"   ❌ Durum: {dominance_health}")
     else:
-        print(f"⚠️ Layer 14 (Dominance): Not available")
+        dominance_health = "NOT_AVAILABLE"
+        dominance_details = {
+            'status': dominance_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 14 (Dominance): Mevcut değil")
     
     # Layer 15: Cross-Asset Correlation
     cross_asset_score = 50
     cross_asset_signal = "NEUTRAL"
     cross_asset_details = {}
+    cross_asset_health = "UNKNOWN"
     
     if CROSS_ASSET_AVAILABLE:
         try:
-            print(f"\n💎 Calling cross_asset.calculate_cross_asset_correlation (Layer 15)...")
+            print(f"\n💎 cross_asset.calculate_cross_asset_correlation çağrılıyor (Layer 15)...")
             cross_asset_result = cross_asset.calculate_cross_asset_correlation(symbol, interval, limit=lookback)
             
             if cross_asset_result and cross_asset_result.get('available'):
                 cross_asset_score = cross_asset_result.get('score', 50)
                 cross_asset_signal = cross_asset_result.get('signal', 'NEUTRAL')
+                cross_asset_health = "HEALTHY"
                 cross_asset_details = {
+                    'status': cross_asset_health,
+                    'data_source': 'Binance API',
                     'btc_correlation': cross_asset_result.get('btc_correlation', 0),
                     'eth_correlation': cross_asset_result.get('eth_correlation', 0),
-                    'interpretation': cross_asset_result.get('interpretation', 'No details')
+                    'interpretation': cross_asset_result.get('interpretation', 'Detay yok')
                 }
                 print(f"✅ Layer 15 (Cross-Asset): {cross_asset_score:.2f}/100 - {cross_asset_signal}")
+                print(f"   🏥 Durum: {cross_asset_health}")
+                print(f"   📊 BTC Corr: {cross_asset_details['btc_correlation']:.2f}")
             else:
-                print("⚠️ Layer 15 (Cross-Asset) unavailable")
+                cross_asset_health = "WARNING"
+                cross_asset_details = {
+                    'status': cross_asset_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 15 (Cross-Asset) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {cross_asset_health}")
         except Exception as e:
-            print(f"⚠️ Layer 15 (Cross-Asset) error: {e}")
+            cross_asset_health = "ERROR"
+            cross_asset_details = {
+                'status': cross_asset_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 15 (Cross-Asset) hatası: {e}")
+            print(f"   ❌ Durum: {cross_asset_health}")
     else:
-        print(f"⚠️ Layer 15 (Cross-Asset): Not available")
+        cross_asset_health = "NOT_AVAILABLE"
+        cross_asset_details = {
+            'status': cross_asset_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 15 (Cross-Asset): Mevcut değil")
     
     # Layer 16: VIX Fear Index
     vix_score = 50
     vix_signal = "NEUTRAL"
     vix_details = {}
+    vix_health = "UNKNOWN"
     
     if VIX_AVAILABLE:
         try:
-            print(f"\n😱 Calling get_vix_signal (Layer 16)...")
+            print(f"\n😱 get_vix_signal çağrılıyor (Layer 16)...")
             vix_result = get_vix_signal()
             
             if vix_result and vix_result.get('available'):
                 vix_score = vix_result.get('score', 50)
                 vix_signal = vix_result.get('signal', 'NEUTRAL')
+                vix_health = "HEALTHY"
                 vix_details = {
+                    'status': vix_health,
+                    'data_source': 'yfinance API',
                     'vix_current': vix_result.get('vix_current', 0),
                     'fear_level': vix_result.get('fear_level', 'UNKNOWN'),
-                    'interpretation': vix_result.get('interpretation', 'No details')
+                    'interpretation': vix_result.get('interpretation', 'Detay yok')
                 }
                 print(f"✅ Layer 16 (VIX): {vix_score:.2f}/100 - {vix_signal}")
+                print(f"   🏥 Durum: {vix_health}")
+                print(f"   📊 VIX: {vix_details['vix_current']:.2f}")
             else:
-                print("⚠️ Layer 16 (VIX) unavailable")
+                vix_health = "WARNING"
+                vix_details = {
+                    'status': vix_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 16 (VIX) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {vix_health}")
         except Exception as e:
-            print(f"⚠️ Layer 16 (VIX) error: {e}")
+            vix_health = "ERROR"
+            vix_details = {
+                'status': vix_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 16 (VIX) hatası: {e}")
+            print(f"   ❌ Durum: {vix_health}")
     else:
-        print(f"⚠️ Layer 16 (VIX): Not available")
+        vix_health = "NOT_AVAILABLE"
+        vix_details = {
+            'status': vix_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 16 (VIX): Mevcut değil")
     
     # Layer 17: Interest Rates
     rates_score = 50
     rates_signal = "NEUTRAL"
     rates_details = {}
+    rates_health = "UNKNOWN"
     
     if RATES_AVAILABLE:
         try:
-            print(f"\n💰 Calling get_interest_signal (Layer 17)...")
+            print(f"\n💰 get_interest_signal çağrılıyor (Layer 17)...")
             rates_result = get_interest_signal()
             
             if rates_result and rates_result.get('available'):
                 rates_score = rates_result.get('score', 50)
                 rates_signal = rates_result.get('signal', 'NEUTRAL')
+                rates_health = "HEALTHY"
                 rates_details = {
+                    'status': rates_health,
+                    'data_source': 'FRED API + yfinance',
                     'fed_funds_rate': rates_result.get('fed_funds_rate', 0),
                     'treasury_10y': rates_result.get('treasury_10y', 0),
                     'rate_direction': rates_result.get('rate_direction', 'UNKNOWN'),
-                    'interpretation': rates_result.get('interpretation', 'No details')
+                    'interpretation': rates_result.get('interpretation', 'Detay yok')
                 }
                 print(f"✅ Layer 17 (Rates): {rates_score:.2f}/100 - {rates_signal}")
+                print(f"   🏥 Durum: {rates_health}")
+                print(f"   📊 Fed Rate: {rates_details['fed_funds_rate']:.2f}%")
             else:
-                print("⚠️ Layer 17 (Rates) unavailable")
+                rates_health = "WARNING"
+                rates_details = {
+                    'status': rates_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 17 (Rates) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {rates_health}")
         except Exception as e:
-            print(f"⚠️ Layer 17 (Rates) error: {e}")
+            rates_health = "ERROR"
+            rates_details = {
+                'status': rates_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 17 (Rates) hatası: {e}")
+            print(f"   ❌ Durum: {rates_health}")
     else:
-        print(f"⚠️ Layer 17 (Rates): Not available")
+        rates_health = "NOT_AVAILABLE"
+        rates_details = {
+            'status': rates_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 17 (Rates): Mevcut değil")
     
     # Layer 18: Traditional Markets
     trad_markets_score = 50
     trad_markets_signal = "NEUTRAL"
     trad_markets_details = {}
+    trad_markets_health = "UNKNOWN"
     
     if TRAD_MARKETS_AVAILABLE:
         try:
-            print(f"\n📈 Calling TraditionalMarketsLayer.analyze_all_markets (Layer 18)...")
+            print(f"\n📈 TraditionalMarketsLayer.analyze_all_markets çağrılıyor (Layer 18)...")
             trad_markets_layer = TraditionalMarketsLayer()
             trad_markets_result = trad_markets_layer.analyze_all_markets(symbol, days=30)
             
             if trad_markets_result and trad_markets_result.get('available'):
                 trad_markets_score = trad_markets_result.get('total_score', 50)
                 trad_markets_signal = trad_markets_result.get('signal', 'NEUTRAL')
+                trad_markets_health = "HEALTHY"
                 trad_markets_details = {
+                    'status': trad_markets_health,
+                    'data_source': 'yfinance API',
                     'correlations': trad_markets_result.get('correlations', {}),
                     'price_changes': trad_markets_result.get('price_changes', {}),
                     'market_regime': trad_markets_result.get('market_regime', 'UNKNOWN'),
-                    'explanation': trad_markets_result.get('explanation', 'No details')
+                    'explanation': trad_markets_result.get('explanation', 'Detay yok')
                 }
                 print(f"✅ Layer 18 (Trad Markets): {trad_markets_score:.2f}/100 - {trad_markets_signal}")
+                print(f"   🏥 Durum: {trad_markets_health}")
+                print(f"   📊 Market Regime: {trad_markets_details['market_regime']}")
             else:
-                print("⚠️ Layer 18 (Trad Markets) unavailable")
+                trad_markets_health = "WARNING"
+                trad_markets_details = {
+                    'status': trad_markets_health,
+                    'data_source': 'FAILED',
+                    'reason': 'Data mevcut değil',
+                    'fallback': 'Neutral skor kullanıldı (50/100)'
+                }
+                print("⚠️ Layer 18 (Trad Markets) data yok - fallback kullanıldı")
+                print(f"   ⚠️ Durum: {trad_markets_health}")
         except Exception as e:
-            print(f"⚠️ Layer 18 (Trad Markets) error: {e}")
+            trad_markets_health = "ERROR"
+            trad_markets_details = {
+                'status': trad_markets_health,
+                'data_source': 'FAILED',
+                'error': str(e),
+                'fallback': 'Neutral skor kullanıldı (50/100)'
+            }
+            print(f"⚠️ Layer 18 (Trad Markets) hatası: {e}")
+            print(f"   ❌ Durum: {trad_markets_health}")
     else:
-        print(f"⚠️ Layer 18 (Trad Markets): Not available")
+        trad_markets_health = "NOT_AVAILABLE"
+        trad_markets_details = {
+            'status': trad_markets_health,
+            'reason': 'Module import edilemedi'
+        }
+        print(f"⚠️ Layer 18 (Trad Markets): Mevcut değil")
     
     # ========================================================================
-    # MONTE CARLO SIMULATION
+    # MONTE CARLO SİMÜLASYONU (DÜZELTİLDİ v9.5!)
     # ========================================================================
     mc_result = {}
     expected_return = 0
@@ -661,55 +805,60 @@ def make_trading_decision(
     
     if MC_AVAILABLE:
         try:
-            print(f"\n🎲 Calling monte_carlo.run_monte_carlo_simulation...")
-            mc_result = mc.run_monte_carlo_simulation(symbol, interval, simulations=1000)
+            print(f"\n🎲 monte_carlo.run_monte_carlo_simulation çağrılıyor...")
+            # DÜZELTİLDİ: 'simulations' → 'num_simulations'
+            mc_result = mc.run_monte_carlo_simulation(
+                symbol, 
+                interval, 
+                num_simulations=1000  # ✅ DÜZELTİLDİ!
+            )
             
             if mc_result.get('success'):
                 expected_return = mc_result.get('expected_return', 0)
                 downside_risk = mc_result.get('downside_risk', 0)
                 upside_potential = mc_result.get('upside_potential', 0)
-                print(f"✅ Monte Carlo: Expected Return={expected_return:.2f}%, Risk={downside_risk:.2f}%")
+                print(f"✅ Monte Carlo: Beklenen Getiri={expected_return:.2f}%, Risk={downside_risk:.2f}%")
             else:
-                print("⚠️ Monte Carlo unavailable")
+                print("⚠️ Monte Carlo mevcut değil")
         except Exception as e:
-            print(f"⚠️ Monte Carlo error: {e}")
+            print(f"⚠️ Monte Carlo hatası: {e}")
     else:
-        print(f"⚠️ Monte Carlo: Not available")
+        print(f"⚠️ Monte Carlo: Mevcut değil")
     
     # ========================================================================
-    # KELLY CRITERION
+    # KELLY CRİTERİON (DÜZELTİLDİ v9.5!)
     # ========================================================================
     kelly_result = {}
     recommended_position_pct = 1.0
     
     if KELLY_AVAILABLE:
         try:
-            print(f"\n🎯 Calling kelly.calculate_kelly_position...")
-            kelly_result = kelly.calculate_kelly_position(
-                symbol=symbol,
-                interval=interval,
-                portfolio_value=portfolio_value,
-                win_rate=confidence,
-                avg_win=upside_potential if upside_potential > 0 else 2.0,
-                avg_loss=abs(downside_risk) if downside_risk < 0 else 1.0
+            print(f"\n🎯 kelly.calculate_dynamic_kelly çağrılıyor...")
+            # DÜZELTİLDİ: 'calculate_kelly_position' → 'calculate_dynamic_kelly'
+            kelly_result = kelly.calculate_dynamic_kelly(  # ✅ DÜZELTİLDİ!
+                winrate=confidence,
+                avgwin=upside_potential if upside_potential > 0 else 2.0,
+                avgloss=abs(downside_risk) if downside_risk < 0 else 1.0,
+                confidence=confidence,
+                portfoliovalue=portfolio_value
             )
             
-            if kelly_result.get('success'):
-                recommended_position_pct = kelly_result.get('position_size_pct', 1.0)
-                print(f"✅ Kelly: Recommended Position={recommended_position_pct:.2f}%")
+            if kelly_result.get('positionsizepct'):
+                recommended_position_pct = kelly_result.get('positionsizepct', 1.0)
+                print(f"✅ Kelly: Önerilen Pozisyon={recommended_position_pct:.2f}%")
             else:
-                print("⚠️ Kelly unavailable")
+                print("⚠️ Kelly mevcut değil")
         except Exception as e:
-            print(f"⚠️ Kelly error: {e}")
+            print(f"⚠️ Kelly hatası: {e}")
     else:
-        print(f"⚠️ Kelly: Not available")
+        print(f"⚠️ Kelly: Mevcut değil")
     
     # ========================================================================
-    # AGGREGATE ALL 18 LAYERS
+    # TÜM 18 LAYER'I TOPLA
     # ========================================================================
     
     print(f"\n{'='*80}")
-    print(f"📊 AGGREGATING ALL 18 LAYERS...")
+    print(f"📊 TÜM 18 LAYER TOPLANIY OR...")
     print(f"{'='*80}")
     
     weights = {
@@ -751,10 +900,10 @@ def make_trading_decision(
     
     aggregated_score = total_weighted_score
     
-    print(f"✅ Aggregated Score: {aggregated_score:.2f}/100")
+    print(f"✅ Toplam Skor: {aggregated_score:.2f}/100")
     
     # ========================================================================
-    # FINAL DECISION LOGIC
+    # FİNAL KARAR LOJİĞİ
     # ========================================================================
     
     if aggregated_score >= 70:
@@ -775,19 +924,19 @@ def make_trading_decision(
     
     decision_confidence = min(1.0, decision_confidence)
     
-    print(f"✅ Final Decision: {final_decision}")
-    print(f"✅ Confidence: {decision_confidence:.2%}")
+    print(f"✅ Final Karar: {final_decision}")
+    print(f"✅ Güven: {decision_confidence:.2%}")
     
     # ========================================================================
-    # CALCULATE PRICES (FIXED IN v9.4!)
+    # FİYAT HESAPLAMA (DÜZELTİLMİŞ v9.4'te!)
     # ========================================================================
     
-    # Priority: real_price > strategy_result > fallback
+    # Öncelik: real_price > strategy_result > fallback
     entry_price = real_price
     if entry_price == 0:
         entry_price = strategy_result.get('current_price', 0)
     if entry_price == 0:
-        print(f"⚠️ No price available - using fallback based on symbol")
+        print(f"⚠️ Fiyat mevcut değil - symbol'e göre fallback kullanılıyor")
         if 'BTC' in symbol:
             entry_price = 50000
         elif 'ETH' in symbol:
@@ -795,7 +944,7 @@ def make_trading_decision(
         else:
             entry_price = 100
     
-    print(f"💵 Entry Price: ${entry_price:,.2f} (Source: {'Binance API' if real_price > 0 else 'Fallback'})")
+    print(f"💵 Entry Fiyatı: ${entry_price:,.2f} (Kaynak: {'Binance API' if real_price > 0 else 'Fallback'})")
     
     atr_multiplier = 2.0
     if 'volatility' in components:
@@ -821,7 +970,7 @@ def make_trading_decision(
         risk_reward = 0
     
     # ========================================================================
-    # POSITION SIZING
+    # POZİSYON BÜYÜKLÜĞÜ
     # ========================================================================
     
     position_size_usd = portfolio_value * (recommended_position_pct / 100)
@@ -829,36 +978,36 @@ def make_trading_decision(
     position_size_units = position_size_usd / entry_price if entry_price > 0 else 0
     
     # ========================================================================
-    # AI COMMENTARY
+    # AI YORUMU
     # ========================================================================
     
     commentary_parts = []
-    commentary_parts.append(f"🧠 AI Brain v9.4 Analysis (18 Layers + BUG FIXES):")
+    commentary_parts.append(f"🧠 AI Brain v9.5 Analizi (18 Layer + SAĞLIK İZLEME):")
     commentary_parts.append(f"")
-    commentary_parts.append(f"📊 Aggregated Score: {aggregated_score:.1f}/100")
-    commentary_parts.append(f"🎯 Decision: {final_decision} ({decision_confidence:.0%} confidence)")
+    commentary_parts.append(f"📊 Toplam Skor: {aggregated_score:.1f}/100")
+    commentary_parts.append(f"🎯 Karar: {final_decision} ({decision_confidence:.0%} güven)")
     commentary_parts.append(f"")
-    commentary_parts.append(f"📈 Layer Breakdown:")
+    commentary_parts.append(f"📈 Layer Dağılımı:")
     commentary_parts.append(f"   • Layers 1-11 (Strategy): {final_score:.1f}/100")
-    commentary_parts.append(f"   • Layer 12 (Macro): {macro_score:.1f}/100 - {macro_signal}")
-    commentary_parts.append(f"   • Layer 13 (Gold): {gold_score:.1f}/100 - {gold_signal}")
-    commentary_parts.append(f"   • Layer 14 (Dominance): {dominance_score:.1f}/100 - {dominance_signal}")
-    commentary_parts.append(f"   • Layer 15 (Cross-Asset): {cross_asset_score:.1f}/100 - {cross_asset_signal}")
-    commentary_parts.append(f"   • Layer 16 (VIX): {vix_score:.1f}/100 - {vix_signal}")
-    commentary_parts.append(f"   • Layer 17 (Rates): {rates_score:.1f}/100 - {rates_signal}")
-    commentary_parts.append(f"   • Layer 18 (Trad Markets): {trad_markets_score:.1f}/100 - {trad_markets_signal}")
+    commentary_parts.append(f"   • Layer 12 (Macro): {macro_score:.1f}/100 - {macro_signal} [{macro_health}]")
+    commentary_parts.append(f"   • Layer 13 (Gold): {gold_score:.1f}/100 - {gold_signal} [{gold_health}]")
+    commentary_parts.append(f"   • Layer 14 (Dominance): {dominance_score:.1f}/100 - {dominance_signal} [{dominance_health}]")
+    commentary_parts.append(f"   • Layer 15 (Cross-Asset): {cross_asset_score:.1f}/100 - {cross_asset_signal} [{cross_asset_health}]")
+    commentary_parts.append(f"   • Layer 16 (VIX): {vix_score:.1f}/100 - {vix_signal} [{vix_health}]")
+    commentary_parts.append(f"   • Layer 17 (Rates): {rates_score:.1f}/100 - {rates_signal} [{rates_health}]")
+    commentary_parts.append(f"   • Layer 18 (Trad Markets): {trad_markets_score:.1f}/100 - {trad_markets_signal} [{trad_markets_health}]")
     commentary_parts.append(f"")
-    commentary_parts.append(f"💰 Trade Parameters:")
+    commentary_parts.append(f"💰 Trade Parametreleri:")
     commentary_parts.append(f"   • Entry: ${entry_price:,.2f}")
     commentary_parts.append(f"   • Stop Loss: ${stop_loss:,.2f}")
     commentary_parts.append(f"   • Take Profit: ${take_profit:,.2f}")
     commentary_parts.append(f"   • Risk/Reward: {risk_reward:.2f}")
-    commentary_parts.append(f"   • Position Size: ${position_size_usd:,.2f} ({position_size_units:.4f} units)")
+    commentary_parts.append(f"   • Pozisyon Büyüklüğü: ${position_size_usd:,.2f} ({position_size_units:.4f} birim)")
     
     ai_commentary = "\n".join(commentary_parts)
     
     # ========================================================================
-    # BUILD FINAL RESULT
+    # FİNAL SONUÇ OLUŞTURMA
     # ========================================================================
     
     result = {
@@ -888,6 +1037,16 @@ def make_trading_decision(
             'kelly': kelly_score
         },
         
+        'layer_health': {
+            'macro': macro_health,
+            'gold': gold_health,
+            'dominance': dominance_health,
+            'cross_asset': cross_asset_health,
+            'vix': vix_health,
+            'rates': rates_health,
+            'trad_markets': trad_markets_health
+        },
+        
         'layer_details': {
             'macro': macro_details,
             'gold': gold_details,
@@ -912,21 +1071,21 @@ def make_trading_decision(
         'capital': portfolio_value,
         'lookback': lookback,
         'leverage': leverage,
-        'version': 'v9.4 - 18 Layers + BUG FIXES'
+        'version': 'v9.5 - 18 Layers + SAĞLIK İZLEME + MONTE CARLO/KELLY FİX'
     }
     
     print(f"\n{'='*80}")
-    print(f"✅ AI BRAIN v9.4 COMPLETE!")
+    print(f"✅ AI BRAIN v9.5 TAMAMLANDI!")
     print(f"{'='*80}\n")
     
     return result
 
 
 # ============================================================================
-# END OF AI_BRAIN.PY v9.4 ULTIMATE FIX
+# SON: AI_BRAIN.PY v9.5 DIAGNOSTIC & HEALTH MONITORING
 # ============================================================================
 
 if __name__ == "__main__":
-    print("🔱 AI Brain v9.4 ULTIMATE FIX - Testing...")
+    print("🔱 AI Brain v9.5 DIAGNOSTIC & HEALTH MONITORING - Test ediliyor...")
     result = make_trading_decision('ETHUSDT', '1h', portfolio_value=10000, risk_per_trade=200)
     print("\n" + result['ai_commentary'])
