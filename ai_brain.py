@@ -186,7 +186,7 @@ def make_trading_decision(symbol, timeframe, capital=10000, lookback=100):
     if MACRO_AVAILABLE:
         try:
             print(f"\n🌍 Calling macro.analyze_macro_correlation (Layer 12)...")
-            macro_result = macro.analyze_macro_correlation(symbol)
+            macro_result = macro.analyze_macro_correlation_advanced(symbol)
             
             if macro_result and macro_result.get('available'):
                 macro_score = macro_result.get('score', 50)
