@@ -190,12 +190,12 @@ if page == "📊 Live Analysis":
             
             try:
                 # Call AI Brain
-                decision = make_trading_decision(
-                    symbol=symbol,
-                    interval=interval,
-                    portfolio_value=capital,
-                    risk_per_trade=risk_per_trade
-                )
+                decision = ai_brain.make_trading_decision(
+    symbol=backtest_symbol,
+    timeframe=backtest_interval,
+    capital=bt_capital,
+    lookback=100
+)
                 
                 # Store in session state
                 st.session_state['last_decision'] = decision
@@ -694,11 +694,11 @@ elif page == "🤖 Auto-Trade Manager":
             try:
                 # Generate AI decision
                 decision = make_trading_decision(
-                    symbol=trade_symbol,
-                    interval=trade_interval,
-                    portfolio_value=capital,
-                    risk_per_trade=risk_per_trade
-                )
+    symbol=symbol,
+    timeframe=interval,  # ✅ DÜZELTME: interval → timeframe
+    capital=capital,     # ✅ DÜZELTME: portfoliovalue → capital
+    lookback=100         # ✅ DÜZELTME: lookback parametresi eklendi
+)
                 
                 # Store in session state
                 st.session_state['pending_trade'] = decision
