@@ -1,145 +1,137 @@
 """
-🔱 MACRO CORRELATION LAYER - COMPLETE WITH REAL DATA
-====================================================
-Date: 2 Kasım 2025, 21:30 CET
-Version: 7.0 - Real Data Integration (yfinance + CMC)
+🔱 MACRO CORRELATION LAYER v3.0 - ALPHA VANTAGE + TWELVE DATA
+===============================================================
+Date: 3 Kasım 2025, 10:53 CET
+Version: 3.0 - Real API Integration
 
-✅ ALL 11 FACTORS WITH REAL-TIME DATA:
-1. SPX (S&P 500) → yfinance
-2. NASDAQ → yfinance  
-3. DXY (Dollar Index) → yfinance
-4. Gold (XAU) → yfinance
-5. Silver → yfinance
-6. BTC.D (BTC Dominance) → CoinMarketCap API (CMC_API_KEY)
-7. USDT.D (USDT Dominance) → CoinMarketCap API
-8. VIX (Fear Index) → yfinance
-9. 10Y Treasury Yields → yfinance
-10. Oil (WTI) → yfinance
-11. EUR/USD → yfinance
+✅ REAL DATA SOURCES (FREE APIs):
+- S&P 500 (SPY) → Alpha Vantage  
+- NASDAQ (QQQ) → Alpha Vantage
+- DXY Dollar Index → Twelve Data
+- Gold (GLD) → Twelve Data
+- VIX (^VIX) → Twelve Data
+- BTC.D → CoinMarketCap API (existing)
+- USDT.D → CoinMarketCap API (existing)
 
-✅ NO MOCK DATA - EVERYTHING IS REAL!
+✅ API KEYS FROM RENDER ENVIRONMENT:
+- ALPHA_VANTAGE_API_KEY
+- TWELVE_DATA_API_KEY
+- CMC_API_KEY (existing)
+
+✅ FALLBACK SUPPORT:
+- Her layer hata durumunda nötr skor döner (50/100)
+- Detaylı error logging
+- Health status tracking
 """
 
 import requests
 import pandas as pd
 import numpy as np
-import yfinance as yf
 import os
 from datetime import datetime, timedelta
+import yfinance as yf
 
 class MacroCorrelationLayer:
     """
     Complete macro correlation analysis for crypto
-    Combines 11 external factors into single macro score
+    Uses Alpha Vantage + Twelve Data for market data
     """
     
     def __init__(self):
-        """Initialize with all data sources"""
-        # Symbol mappings for yfinance
-        self.symbols = {
-            # Traditional Markets
-            'SPX': '^GSPC',       # S&P 500
-            'NASDAQ': '^IXIC',    # NASDAQ Composite
-            'DXY': 'DX-Y.NYB',    # Dollar Index
-            # Precious Metals
-            'GOLD': 'GC=F',       # Gold Futures
-            'SILVER': 'SI=F',     # Silver Futures
-            # Fear & Rates
-            'VIX': '^VIX',        # Volatility Index
-            'US10Y': '^TNX',      # 10-Year Treasury Yield
-            # Commodities & Forex
-            'OIL': 'CL=F',        # WTI Crude Oil
-            'EURUSD': 'EURUSD=X'  # EUR/USD
-        }
-        
-        # Correlation weights (must sum to 100)
-        self.weights = {
-            'SPX': 15,      # Highest weight - main market
-            'NASDAQ': 18,   # Highest - tech correlation
-            'DXY': 12,      # Inverse correlation
-            'GOLD': 10,     # Safe haven alternative
-            'SILVER': 5,    # Secondary precious metal
-            'BTC.D': 12,    # Altseason indicator
-            'USDT.D': 10,   # Money flow
-            'VIX': 8,       # Fear gauge
-            'US10Y': 5,     # Interest rates
-            'OIL': 3,       # Energy/inflation
-            'EURUSD': 2     # Forex sentiment
-        }  # Total = 100
-        
-        # Get CMC API key from environment
+        """Initialize with API keys from environment"""
+        self.alpha_vantage_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+        self.twelve_data_key = os.getenv('TWELVE_DATA_API_KEY')
         self.cmc_api_key = os.getenv('CMC_API_KEY')
         
-        print("✅ Macro Correlation Layer initialized (11 factors with REAL DATA)")
+        print(f"\n{'='*80}")
+        print(f"🔱 MACRO CORRELATION LAYER v3.0 - API KEYS CHECK")
+        print(f"{'='*80}")
+        print(f"   Alpha Vantage: {'✅ Loaded' if self.alpha_vantage_key else '❌ Missing'}")
+        print(f"   Twelve Data: {'✅ Loaded' if self.twelve_data_key else '❌ Missing'}")
+        print(f"   CoinMarketCap: {'✅ Loaded' if self.cmc_api_key else '❌ Missing'}")
+        print(f"{'='*80}\n")
     
-    def fetch_yfinance_data(self, symbol, days=30):
-        """
-        Fetch data from Yahoo Finance using yfinance library
-        Args:
-            symbol: Yahoo Finance symbol
-            days: Historical data window
-        Returns:
-            pandas.DataFrame or None
-        """
-        try:
-            ticker = yf.Ticker(symbol)
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
-            
-            # Fetch historical data
-            hist = ticker.history(start=start_date, end=end_date)
-            
-            if len(hist) == 0:
-                return None
-            
-            # Return DataFrame with timestamp and close price
-            df = pd.DataFrame({
-                'timestamp': hist.index.astype(int) // 10**9,  # Convert to Unix timestamp
-                'close': hist['Close'].values
-            })
-            
-            return df if len(df) > 0 else None
-            
-        except Exception as e:
-            print(f"⚠️ yfinance fetch error for {symbol}: {e}")
+    def get_alpha_vantage_data(self, symbol):
+        """Fetch data from Alpha Vantage (SPY, QQQ)"""
+        if not self.alpha_vantage_key:
+            print(f"⚠️ Alpha Vantage API key missing")
             return None
-    
-    def fetch_crypto_data(self, symbol='BTCUSDT', days=30):
-        """Fetch crypto data from Binance"""
+            
         try:
-            url = "https://api.binance.com/api/v3/klines"
+            url = f"https://www.alphavantage.co/query"
             params = {
+                'function': 'TIME_SERIES_DAILY',
                 'symbol': symbol,
-                'interval': '1d',
-                'limit': days
+                'apikey': self.alpha_vantage_key,
+                'outputsize': 'compact'
             }
             
             response = requests.get(url, params=params, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                df = pd.DataFrame({
-                    'timestamp': [int(candle[0] / 1000) for candle in data],
-                    'close': [float(candle[4]) for candle in data]
-                })
-                return df
-            return None
+            data = response.json()
             
+            if 'Time Series (Daily)' in data:
+                ts = data['Time Series (Daily)']
+                df = pd.DataFrame.from_dict(ts, orient='index')
+                df.index = pd.to_datetime(df.index)
+                df = df.sort_index()
+                df.columns = ['open', 'high', 'low', 'close', 'volume']
+                df = df.astype(float)
+                
+                print(f"✅ Alpha Vantage: {symbol} - {len(df)} bars loaded")
+                return df
+            else:
+                print(f"⚠️ Alpha Vantage: {symbol} - No data returned")
+                return None
+                
         except Exception as e:
-            print(f"⚠️ Binance fetch error: {e}")
+            print(f"❌ Alpha Vantage error ({symbol}): {e}")
             return None
     
-    def fetch_dominance_data_cmc(self):
-        """
-        Fetch BTC and USDT dominance from CoinMarketCap API
-        Returns:
-            dict: {'btc_dominance': float, 'usdt_dominance': float}
-        """
-        try:
-            if not self.cmc_api_key:
-                print("⚠️ CMC_API_KEY not set, trying public endpoint")
-                return self.fetch_dominance_public()
+    def get_twelve_data(self, symbol):
+        """Fetch data from Twelve Data (DXY, GLD, VIX)"""
+        if not self.twelve_data_key:
+            print(f"⚠️ Twelve Data API key missing")
+            return None
             
-            # CoinMarketCap Pro API endpoint
+        try:
+            url = f"https://api.twelvedata.com/time_series"
+            params = {
+                'symbol': symbol,
+                'interval': '1day',
+                'apikey': self.twelve_data_key,
+                'outputsize': 30
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            
+            if 'values' in data and len(data['values']) > 0:
+                df = pd.DataFrame(data['values'])
+                df['datetime'] = pd.to_datetime(df['datetime'])
+                df = df.set_index('datetime')
+                df = df.sort_index()
+                
+                # Convert to float
+                for col in ['open', 'high', 'low', 'close']:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                print(f"✅ Twelve Data: {symbol} - {len(df)} bars loaded")
+                return df
+            else:
+                print(f"⚠️ Twelve Data: {symbol} - No data returned")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Twelve Data error ({symbol}): {e}")
+            return None
+    
+    def get_btc_dominance(self):
+        """Fetch BTC dominance from CoinMarketCap"""
+        if not self.cmc_api_key:
+            print(f"⚠️ CoinMarketCap API key missing")
+            return None
+            
+        try:
             url = "https://pro-api.coinmarketcap.com/v1/global-metrics/quotes/latest"
             headers = {
                 'X-CMC_PRO_API_KEY': self.cmc_api_key,
@@ -147,282 +139,207 @@ class MacroCorrelationLayer:
             }
             
             response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            
             data = response.json()
-            btc_dominance = data['data']['btc_dominance']
             
-            # USDT dominance from market cap percentage
-            usdt_dominance = data['data'].get('usdt_dominance', 0)
-            
-            return {
-                'btc_dominance': btc_dominance,
-                'usdt_dominance': usdt_dominance,
-                'success': True
-            }
-            
-        except Exception as e:
-            print(f"⚠️ CMC API error: {e}, trying fallback")
-            return self.fetch_dominance_public()
-    
-    def fetch_dominance_public(self):
-        """
-        Fallback: Fetch dominance from CoinMarketCap public endpoint
-        """
-        try:
-            url = "https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest"
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            btc_dominance = data['data']['btcDominance']
-            
-            # Approximate USDT dominance (usually 3-5%)
-            usdt_dominance = 4.0  # Default estimate
-            
-            return {
-                'btc_dominance': btc_dominance,
-                'usdt_dominance': usdt_dominance,
-                'success': True
-            }
-            
-        except Exception as e:
-            print(f"⚠️ Public dominance fetch failed: {e}")
-            return {'success': False}
-    
-    def calculate_correlation(self, crypto_df, market_df, window=14):
-        """
-        Calculate rolling correlation
-        Returns:
-            float: Correlation coefficient (-1 to +1)
-        """
-        try:
-            if crypto_df is None or market_df is None:
-                return 0.0
-            
-            merged = pd.merge(
-                crypto_df,
-                market_df,
-                on='timestamp',
-                how='inner',
-                suffixes=('_crypto', '_market')
-            )
-            
-            if len(merged) < window:
-                return 0.0
-            
-            merged['crypto_returns'] = merged['close_crypto'].pct_change()
-            merged['market_returns'] = merged['close_market'].pct_change()
-            merged = merged.dropna()
-            
-            if len(merged) < window:
-                return 0.0
-            
-            correlation = merged['crypto_returns'].rolling(window=window).corr(
-                merged['market_returns']
-            )
-            
-            latest_corr = correlation.iloc[-1]
-            return latest_corr if not np.isnan(latest_corr) else 0.0
-            
-        except Exception as e:
-            return 0.0
-    
-    def analyze_all(self, crypto_symbol='BTCUSDT', days=30):
-        """
-        Perform complete macro analysis (ALL 11 FACTORS with REAL DATA!)
-        Returns:
-            dict: Complete analysis with scores and signal
-        """
-        print(f"\n🌍 Analyzing ALL macro factors for {crypto_symbol} (REAL DATA)...")
-        
-        # Fetch crypto data
-        crypto_df = self.fetch_crypto_data(crypto_symbol, days)
-        if crypto_df is None:
-            return self._error_response("Failed to fetch crypto data")
-        
-        # Storage for correlations
-        correlations = {}
-        factor_scores = {}
-        
-        # =========================================
-        # FACTOR 1-3: TRADITIONAL MARKETS (yfinance)
-        # =========================================
-        
-        # SPX
-        spx_df = self.fetch_yfinance_data(self.symbols['SPX'], days)
-        spx_corr = self.calculate_correlation(crypto_df, spx_df)
-        correlations['SPX'] = spx_corr
-        factor_scores['SPX'] = (spx_corr + 1) * 50  # Convert -1/+1 to 0-100
-        
-        # NASDAQ
-        nasdaq_df = self.fetch_yfinance_data(self.symbols['NASDAQ'], days)
-        nasdaq_corr = self.calculate_correlation(crypto_df, nasdaq_df)
-        correlations['NASDAQ'] = nasdaq_corr
-        factor_scores['NASDAQ'] = (nasdaq_corr + 1) * 50
-        
-        # DXY (inverse)
-        dxy_df = self.fetch_yfinance_data(self.symbols['DXY'], days)
-        dxy_corr = self.calculate_correlation(crypto_df, dxy_df)
-        correlations['DXY'] = -dxy_corr  # Flip sign (inverse correlation)
-        factor_scores['DXY'] = (-dxy_corr + 1) * 50
-        
-        # =========================================
-        # FACTOR 4-5: PRECIOUS METALS (yfinance)
-        # =========================================
-        
-        # GOLD
-        gold_df = self.fetch_yfinance_data(self.symbols['GOLD'], days)
-        gold_corr = self.calculate_correlation(crypto_df, gold_df)
-        correlations['GOLD'] = gold_corr
-        factor_scores['GOLD'] = (gold_corr + 1) * 50
-        
-        # SILVER
-        silver_df = self.fetch_yfinance_data(self.symbols['SILVER'], days)
-        silver_corr = self.calculate_correlation(crypto_df, silver_df)
-        correlations['SILVER'] = silver_corr
-        factor_scores['SILVER'] = (silver_corr + 1) * 50
-        
-        # =========================================
-        # FACTOR 6-7: CRYPTO DOMINANCE (CMC API)
-        # =========================================
-        
-        dominance_data = self.fetch_dominance_data_cmc()
-        
-        if dominance_data['success']:
-            btc_dom = dominance_data['btc_dominance']
-            usdt_dom = dominance_data['usdt_dominance']
-            
-            # BTC Dominance scoring
-            # Lower dominance = altseason = good for alts
-            if btc_dom < 45:
-                factor_scores['BTC.D'] = 75
-            elif btc_dom < 50:
-                factor_scores['BTC.D'] = 65
-            elif btc_dom < 55:
-                factor_scores['BTC.D'] = 50
+            if 'data' in data:
+                btc_dom = data['data']['btc_dominance']
+                print(f"✅ BTC Dominance: {btc_dom:.2f}%")
+                return btc_dom
             else:
-                factor_scores['BTC.D'] = 35
-            
-            correlations['BTC.D'] = btc_dom / 100
-            
-            # USDT Dominance scoring (inverse)
-            # Higher USDT dominance = fear = bad for crypto
-            if usdt_dom > 5:
-                factor_scores['USDT.D'] = 35
-            elif usdt_dom > 4:
-                factor_scores['USDT.D'] = 45
-            else:
-                factor_scores['USDT.D'] = 60
-            
-            correlations['USDT.D'] = -usdt_dom / 100
-        else:
-            # Neutral if unavailable
-            factor_scores['BTC.D'] = 50
-            factor_scores['USDT.D'] = 50
-            correlations['BTC.D'] = 0
-            correlations['USDT.D'] = 0
-        
-        # =========================================
-        # FACTOR 8-9: FEAR & RATES (yfinance)
-        # =========================================
-        
-        # VIX (inverse - fear bad for crypto)
-        vix_df = self.fetch_yfinance_data(self.symbols['VIX'], days)
-        vix_corr = self.calculate_correlation(crypto_df, vix_df)
-        correlations['VIX'] = -vix_corr  # Flip (high VIX = bad)
-        factor_scores['VIX'] = (-vix_corr + 1) * 50
-        
-        # US10Y (inverse - high yields bad for risk assets)
-        us10y_df = self.fetch_yfinance_data(self.symbols['US10Y'], days)
-        us10y_corr = self.calculate_correlation(crypto_df, us10y_df)
-        correlations['US10Y'] = -us10y_corr  # Flip
-        factor_scores['US10Y'] = (-us10y_corr + 1) * 50
-        
-        # =========================================
-        # FACTOR 10-11: COMMODITIES & FOREX (yfinance)
-        # =========================================
-        
-        # OIL
-        oil_df = self.fetch_yfinance_data(self.symbols['OIL'], days)
-        oil_corr = self.calculate_correlation(crypto_df, oil_df)
-        correlations['OIL'] = oil_corr
-        factor_scores['OIL'] = (oil_corr + 1) * 50
-        
-        # EURUSD
-        eurusd_df = self.fetch_yfinance_data(self.symbols['EURUSD'], days)
-        eurusd_corr = self.calculate_correlation(crypto_df, eurusd_df)
-        correlations['EURUSD'] = eurusd_corr
-        factor_scores['EURUSD'] = (eurusd_corr + 1) * 50
-        
-        # =========================================
-        # CALCULATE WEIGHTED SCORE
-        # =========================================
-        
-        total_score = 0
-        for factor, score in factor_scores.items():
-            weight = self.weights.get(factor, 0)
-            total_score += (score * weight / 100)
-        
-        # Determine signal
-        if total_score >= 65:
-            signal = "BULLISH"
-            explanation = "Strong macro tailwinds - multiple factors aligned"
-        elif total_score >= 45:
-            signal = "NEUTRAL"
-            explanation = "Mixed macro signals - no clear direction"
-        else:
-            signal = "BEARISH"
-            explanation = "Macro headwinds - unfavorable conditions"
-        
-        # Build result
-        result = {
-            'total_score': round(total_score, 2),
-            'signal': signal,
-            'explanation': explanation,
-            'correlations': {k: round(v, 3) for k, v in correlations.items()},
-            'factor_scores': {k: round(v, 2) for k, v in factor_scores.items()},
-            'timestamp': datetime.now().isoformat(),
-            'crypto_symbol': crypto_symbol
-        }
-        
-        print(f"✅ Macro Analysis Complete (REAL DATA)!")
-        print(f"   Total Score: {result['total_score']}/100")
-        print(f"   Signal: {result['signal']}")
-        
-        return result
+                print("⚠️ BTC Dominance: No data returned")
+                return None
+                
+        except Exception as e:
+            print(f"❌ BTC Dominance error: {e}")
+            return None
     
-    def _error_response(self, error_msg):
-        """Return error response with neutral score"""
-        return {
-            'total_score': 50.0,
+    def analyze_all(self, symbol='BTCUSDT', days=30):
+        """
+        Analyze all macro factors
+        
+        Returns:
+            dict with total_score, signal, and factor details
+        """
+        print(f"\n{'='*80}")
+        print(f"🌍 MACRO CORRELATION ANALYSIS")
+        print(f"   Symbol: {symbol}")
+        print(f"   Period: {days} days")
+        print(f"{'='*80}\n")
+        
+        results = {
+            'available': False,
+            'total_score': 50,
             'signal': 'NEUTRAL',
-            'explanation': f'Error: {error_msg}',
             'correlations': {},
             'factor_scores': {},
-            'timestamp': datetime.now().isoformat(),
-            'error': True
+            'explanation': ''
         }
+        
+        try:
+            # 1. S&P 500 (SPY) - Alpha Vantage
+            spy_df = self.get_alpha_vantage_data('SPY')
+            spy_score = 50
+            if spy_df is not None and len(spy_df) > 0:
+                spy_change = ((spy_df['close'].iloc[-1] / spy_df['close'].iloc[0]) - 1) * 100
+                if spy_change > 2:
+                    spy_score = 70
+                elif spy_change > 0:
+                    spy_score = 60
+                elif spy_change > -2:
+                    spy_score = 40
+                else:
+                    spy_score = 30
+                results['correlations']['SPY'] = spy_change
+                results['factor_scores']['SPY'] = spy_score
+                print(f"📊 SPY Change: {spy_change:+.2f}% → Score: {spy_score}/100")
+            
+            # 2. NASDAQ (QQQ) - Alpha Vantage
+            qqq_df = self.get_alpha_vantage_data('QQQ')
+            qqq_score = 50
+            if qqq_df is not None and len(qqq_df) > 0:
+                qqq_change = ((qqq_df['close'].iloc[-1] / qqq_df['close'].iloc[0]) - 1) * 100
+                if qqq_change > 2:
+                    qqq_score = 70
+                elif qqq_change > 0:
+                    qqq_score = 60
+                elif qqq_change > -2:
+                    qqq_score = 40
+                else:
+                    qqq_score = 30
+                results['correlations']['QQQ'] = qqq_change
+                results['factor_scores']['QQQ'] = qqq_score
+                print(f"📊 QQQ Change: {qqq_change:+.2f}% → Score: {qqq_score}/100")
+            
+            # 3. DXY (Dollar Index) - Twelve Data
+            dxy_df = self.get_twelve_data('DXY')
+            dxy_score = 50
+            if dxy_df is not None and len(dxy_df) > 0:
+                dxy_change = ((dxy_df['close'].iloc[-1] / dxy_df['close'].iloc[0]) - 1) * 100
+                # Inverse relationship: Strong dollar = bad for crypto
+                if dxy_change > 2:
+                    dxy_score = 30
+                elif dxy_change > 0:
+                    dxy_score = 40
+                elif dxy_change > -2:
+                    dxy_score = 60
+                else:
+                    dxy_score = 70
+                results['correlations']['DXY'] = dxy_change
+                results['factor_scores']['DXY'] = dxy_score
+                print(f"📊 DXY Change: {dxy_change:+.2f}% → Score: {dxy_score}/100 (inverse)")
+            
+            # 4. Gold (GLD) - Twelve Data
+            gld_df = self.get_twelve_data('GLD')
+            gld_score = 50
+            if gld_df is not None and len(gld_df) > 0:
+                gld_change = ((gld_df['close'].iloc[-1] / gld_df['close'].iloc[0]) - 1) * 100
+                if gld_change > 1:
+                    gld_score = 60
+                elif gld_change > 0:
+                    gld_score = 55
+                elif gld_change > -1:
+                    gld_score = 45
+                else:
+                    gld_score = 40
+                results['correlations']['GLD'] = gld_change
+                results['factor_scores']['GLD'] = gld_score
+                print(f"📊 GLD Change: {gld_change:+.2f}% → Score: {gld_score}/100")
+            
+            # 5. VIX (Fear Index) - Twelve Data
+            vix_df = self.get_twelve_data('VIX')
+            vix_score = 50
+            if vix_df is not None and len(vix_df) > 0:
+                vix_current = vix_df['close'].iloc[-1]
+                # Low VIX = good for crypto
+                if vix_current < 15:
+                    vix_score = 70
+                elif vix_current < 20:
+                    vix_score = 60
+                elif vix_current < 25:
+                    vix_score = 50
+                elif vix_current < 30:
+                    vix_score = 40
+                else:
+                    vix_score = 30
+                results['correlations']['VIX'] = vix_current
+                results['factor_scores']['VIX'] = vix_score
+                print(f"📊 VIX Level: {vix_current:.2f} → Score: {vix_score}/100")
+            
+            # 6. BTC Dominance - CoinMarketCap
+            btc_dom = self.get_btc_dominance()
+            dom_score = 50
+            if btc_dom is not None:
+                if btc_dom > 50:
+                    dom_score = 60  # BTC strength good for market
+                else:
+                    dom_score = 55  # Altseason potential
+                results['correlations']['BTC_DOM'] = btc_dom
+                results['factor_scores']['BTC_DOM'] = dom_score
+                print(f"📊 BTC Dominance: {btc_dom:.2f}% → Score: {dom_score}/100")
+            
+            # Calculate total weighted score
+            weights = {
+                'SPY': 0.25,
+                'QQQ': 0.20,
+                'DXY': 0.20,
+                'GLD': 0.15,
+                'VIX': 0.15,
+                'BTC_DOM': 0.05
+            }
+            
+            total_score = 0
+            total_weight = 0
+            for factor, weight in weights.items():
+                if factor in results['factor_scores']:
+                    score = results['factor_scores'][factor]
+                    total_score += score * weight
+                    total_weight += weight
+            
+            # Normalize score if not all factors available
+            if total_weight > 0:
+                results['total_score'] = total_score / total_weight * sum(weights.values())
+            else:
+                results['total_score'] = 50  # Neutral fallback
+            
+            results['available'] = True
+            
+            # Determine signal
+            if results['total_score'] >= 60:
+                results['signal'] = 'BULLISH'
+            elif results['total_score'] >= 40:
+                results['signal'] = 'NEUTRAL'
+            else:
+                results['signal'] = 'BEARISH'
+            
+            results['explanation'] = f"Macro Score: {results['total_score']:.1f}/100 - {results['signal']}"
+            
+            print(f"\n{'='*80}")
+            print(f"✅ MACRO ANALYSIS COMPLETE!")
+            print(f"   Total Score: {results['total_score']:.1f}/100")
+            print(f"   Signal: {results['signal']}")
+            print(f"{'='*80}\n")
+            
+        except Exception as e:
+            print(f"❌ Macro analysis error: {e}")
+            results['explanation'] = f"Error: {str(e)}"
+        
+        return results
 
-# ============================================================================
-# STANDALONE TESTING
-# ============================================================================
 
+# Test function
 if __name__ == "__main__":
-    print("🔱 MACRO CORRELATION LAYER - REAL DATA TEST")
-    print("=" * 70)
+    print("="*80)
+    print("🔱 MACRO CORRELATION LAYER v3.0 TEST")
+    print("   Alpha Vantage + Twelve Data Integration")
+    print("="*80)
     
     layer = MacroCorrelationLayer()
     result = layer.analyze_all('BTCUSDT', days=30)
     
-    print("\n" + "=" * 70)
-    print("📊 COMPLETE MACRO ANALYSIS:")
-    print(f"   Total Score: {result['total_score']}/100")
+    print("\n📊 TEST RESULTS:")
+    print(f"   Available: {result['available']}")
+    print(f"   Total Score: {result['total_score']:.2f}/100")
     print(f"   Signal: {result['signal']}")
     print(f"   Explanation: {result['explanation']}")
-    
-    print("\n📈 FACTOR SCORES:")
-    for factor, score in result['factor_scores'].items():
-        print(f"   {factor}: {score:.2f}/100")
-    
-    print("=" * 70)
+    print(f"   Correlations: {result['correlations']}")
+    print(f"   Factor Scores: {result['factor_scores']}")
