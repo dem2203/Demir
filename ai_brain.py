@@ -1,13 +1,12 @@
-# ai_brain.py v11.0 - WEIGHTED ENSEMBLE SCORING (SYNTAX FIXED!)
+# ai_brain.py v11.0 - WEIGHTED ENSEMBLE SCORING
 """
 🧠 DEMIR AI TRADING BOT - AI Brain v11.0
 ================================================================
 Versiyon: 11.0 - WEIGHTED ENSEMBLE SCORING
-Tarih: 3 Kasım 2025, 20:15 CET
+Tarih: 3 Kasım 2025, 21:00 CET
 
-✅ SYNTAX ERROR FIXED!
+✅ GİRİNTİ HATASI FİXED!
 ✅ Weighted Ensemble Scoring sistemi
-✅ Başarısız layerlar diğerlerini etkilemez
 ✅ Confidence göstergesi
 ✅ Dinamik skorlama
 """
@@ -344,7 +343,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
     
     # LAYER 15: CROSS-ASSET
     try:
-        if get_multi_coin_
+        if get_multi_coin_data:
             print("\n💎 cross_asset.get_multi_coin_data çağrılıyor...\n")
             cross_result = get_multi_coin_data()
             
