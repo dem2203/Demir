@@ -1,15 +1,14 @@
 # ============================================================================
-# DEMIR AI TRADING BOT - requirements.txt - PHASE 3 ULTIMATE UPDATE
+# DEMIR AI TRADING BOT - requirements.txt - SPRINT 1 UPDATE
 # ============================================================================
-# Date: 2 Kasım 2025, 14:55 CET
-# Version: PHASE 3 ULTIMATE - Full Automation
+# Date: 3 Kasım 2025, 23:32 CET
+# Version: PHASE 1-6 SPRINT 1 COMPLETE
 #
-# UPDATED PACKAGES:
-# -----------------
+# UPDATED (3 Nov 2025):
+# ---------------------
+# ✅ Added bcrypt>=4.1.1 (auth_system.py)
 # ✅ All Phase 1-6 packages maintained
-# ✅ Added Phase 3 automation dependencies
-# ✅ Telegram bot support enabled
-# ✅ GARCH volatility support (arch package)
+# ✅ Plotly already present (chart_generator.py)
 # ============================================================================
 
 # ============================================================================
@@ -17,7 +16,7 @@
 # ============================================================================
 streamlit>=1.28.0
 requests>=2.31.0
-bcrypt==4.1.1
+
 # ============================================================================
 # DATA PROCESSING & ANALYSIS
 # ============================================================================
@@ -29,6 +28,7 @@ numpy>=1.24.0
 # ============================================================================
 plotly>=5.17.0
 matplotlib>=3.7.0
+
 # ============================================================================
 # TECHNICAL ANALYSIS (Phase 1-5)
 # ============================================================================
@@ -76,14 +76,19 @@ pytz>=2023.3             # Timezone handling
 python-telegram-bot>=20.0  # Telegram bot for alerts & notifications
 
 # ============================================================================
+# PHASE 5 AUTHENTICATION (NEW! - 3 Nov 2025)
+# ============================================================================
+bcrypt>=4.1.1            # Password hashing for auth_system.py
+
+# ============================================================================
 # OPTIONAL: EMAIL ALERTS
 # ============================================================================
 # sendgrid>=6.10.0           # Uncomment if using SendGrid
 
 # ============================================================================
-# OPTIONAL: ADVANCED CHARTING
+# OPTIONAL: ADVANCED CHARTING (PNG export)
 # ============================================================================
-# mplfinance>=0.12.9b0      # Uncomment for candlestick charts
+# kaleido>=0.2.1            # Uncomment for PNG export (chart_generator.py)
 
 # Phase 4.3: Machine Learning
 xgboost==2.0.3
@@ -108,6 +113,14 @@ fredapi==0.5.1          # Federal Reserve data - FREE!
 # For Telegram Alerts:
 #   - python-telegram-bot required
 #   - Bot token & chat ID in config.py
+#
+# For Authentication (NEW!):
+#   - bcrypt required (password hashing)
+#   - auth_system.py handles user management
+#
+# For Chart Export to PNG (OPTIONAL):
+#   - Uncomment kaleido if you need PNG export
+#   - HTML export works without kaleido
 #
 # Install all:
 #   pip install -r requirements.txt
