@@ -1,19 +1,34 @@
-# ai_brain.py v12.0 - FIXED IMPORTS FOR v2.0 LAYERS
+# ai_brain.py v13.0 - MULTI-TIMEFRAME INTEGRATION
 
 """
-🧠 DEMIR AI TRADING BOT - AI Brain v12.0
+🧠 DEMIR AI TRADING BOT - AI Brain v13.0
 ================================================================
-Versiyon: 12.0 - FIXED IMPORTS FOR NEW LAYERS
-Tarih: 3 Kasım 2025, 22:32 CET
+Versiyon: 13.0 - MULTI-TIMEFRAME INTEGRATION
+Tarih: 3 Kasım 2025, 23:11 CET
 
-✅ YENİ v12.0 DEĞİŞİKLİKLER:
------------------------------------------
-✅ strategy_layer: StrategyEngine → get_strategy_signal
-✅ cross_asset_layer: get_multi_coin_data → get_cross_asset_signal  
-✅ news_sentiment_layer: get_news_score → get_news_signal
-✅ kelly_enhanced_layer: calculate_dynamic_kelly → get_kelly_signal
-✅ Tüm layer'lar v2.0 function signatures kullanıyor
-✅ Weighted Ensemble Scoring korundu
+✅ YENİ v13.0:
+--------------
+✅ Multi-Timeframe Analyzer entegrasyonu (12. layer!)
+✅ 5 farklı timeframe konsensüsü (5min, 15min, 1h, 4h, 1d)
+✅ Weighted scoring güncellendi
+✅ 12 layer toplam
+
+AĞIRLIKLAR:
+-----------
+1. strategy: 18% (teknik analiz)
+2. multi_timeframe: 8% (YENİ!)
+3. macro: 7%
+4. gold: 5%
+5. dominance: 6%
+6. cross_asset: 9%
+7. vix: 5%
+8. rates: 5%
+9. trad_markets: 7%
+10. news: 9%
+11. monte_carlo: 11%
+12. kelly: 10%
+
+TOPLAM: 100%
 """
 
 import os
@@ -23,115 +38,112 @@ from datetime import datetime
 import requests
 
 # ============================================================================
-# LAYER AĞIRLIKLARI (WEIGHTED ENSEMBLE)
+# LAYER AĞIRLIKLARI (WEIGHTED ENSEMBLE) - UPDATED v13.0!
 # ============================================================================
 LAYER_WEIGHTS = {
-    'strategy': 20,
-    'news': 10,
-    'macro': 8,
+    'strategy': 18,           # Teknik analiz - azaltıldı (20→18)
+    'multi_timeframe': 8,     # YENİ! - Multi-timeframe konsensüsü
+    'macro': 7,               # 8→7
     'gold': 5,
-    'dominance': 7,
-    'cross_asset': 10,
-    'vix': 6,
-    'rates': 6,
-    'trad_markets': 8,
-    'monte_carlo': 10,
+    'dominance': 6,           # 7→6
+    'cross_asset': 9,         # 10→9
+    'vix': 5,                 # 6→5
+    'rates': 5,               # 6→5
+    'trad_markets': 7,        # 8→7
+    'news': 9,                # 10→9
+    'monte_carlo': 11,        # 10→11
     'kelly': 10
 }
 
-TOTAL_WEIGHT = sum(LAYER_WEIGHTS.values())
+TOTAL_WEIGHT = sum(LAYER_WEIGHTS.values())  # Should be 100
 
 # ============================================================================
-# LAYER IMPORTS - v12.0 UPDATED
+# LAYER IMPORTS - UPDATED v13.0!
 # ============================================================================
-
-# LAYER 1-11: STRATEGY (v2.0)
 try:
-    from strategy_layer import get_strategy_signal  # ✅ YENİ v2.0
-    print("✅ AI Brain v12.0: strategy_layer v2.0 içe aktarıldı")
+    from strategy_layer import StrategyEngine
+    print("✅ AI Brain v13.0: strategy_layer içe aktarıldı")
 except Exception as e:
-    print(f"⚠️ AI Brain v12.0: strategy_layer hatası: {e}")
-    get_strategy_signal = None
+    print(f"⚠️ AI Brain v13.0: strategy_layer hatası: {e}")
+    StrategyEngine = None
 
-# LAYER 12: MACRO CORRELATION (v4.0 - rate safe)
+# YENİ v13.0: Multi-Timeframe Analyzer
 try:
-    from macro_correlation_layer import get_macro_signal  # ✅ v4.0
-    print("✅ AI Brain v12.0: macro_correlation_layer v4.0 içe aktarıldı")
+    from multi_timeframe_analyzer import MultiTimeframeAnalyzer
+    print("✅ AI Brain v13.0: multi_timeframe_analyzer içe aktarıldı")
 except Exception as e:
-    print(f"⚠️ AI Brain v12.0: macro_correlation_layer hatası: {e}")
-    get_macro_signal = None
+    print(f"⚠️ AI Brain v13.0: multi_timeframe_analyzer hatası: {e}")
+    MultiTimeframeAnalyzer = None
 
-# LAYER 13: GOLD CORRELATION
-try:
-    from gold_correlation_layer import calculate_gold_correlation
-    print("✅ AI Brain v12.0: gold_correlation_layer içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: gold_correlation_layer hatası: {e}")
-    calculate_gold_correlation = None
-
-# LAYER 14: DOMINANCE FLOW
-try:
-    from dominance_flow_layer import calculate_dominance_flow
-    print("✅ AI Brain v12.0: dominance_flow_layer içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: dominance_flow_layer hatası: {e}")
-    calculate_dominance_flow = None
-
-# LAYER 15: CROSS-ASSET (v2.0)
-try:
-    from cross_asset_layer import get_cross_asset_signal  # ✅ YENİ v2.0
-    print("✅ AI Brain v12.0: cross_asset_layer v2.0 içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: cross_asset_layer hatası: {e}")
-    get_cross_asset_signal = None
-
-# LAYER 16: VIX (v4.0 - rate safe)
-try:
-    from vix_layer import get_vix_signal  # ✅ v4.0
-    print("✅ AI Brain v12.0: vix_layer v4.0 içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: vix_layer hatası: {e}")
-    get_vix_signal = None
-
-# LAYER 17: INTEREST RATES (v3.0 - rate safe)
-try:
-    from interest_rates_layer import get_interest_signal  # ✅ v3.0
-    print("✅ AI Brain v12.0: interest_rates_layer v3.0 içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: interest_rates_layer hatası: {e}")
-    get_interest_signal = None
-
-# LAYER 18: TRADITIONAL MARKETS
-try:
-    from traditional_markets_layer import TraditionalMarketsLayer
-    print("✅ AI Brain v12.0: traditional_markets_layer içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: traditional_markets_layer hatası: {e}")
-    TraditionalMarketsLayer = None
-
-# LAYER 19: NEWS SENTIMENT (v2.0)
-try:
-    from news_sentiment_layer import get_news_signal  # ✅ YENİ v2.0
-    print("✅ AI Brain v12.0: news_sentiment_layer v2.0 içe aktarıldı")
-except Exception as e:
-    print(f"⚠️ AI Brain v12.0: news_sentiment_layer hatası: {e}")
-    get_news_signal = None
-
-# LAYER 20: MONTE CARLO
 try:
     from monte_carlo_layer import run_monte_carlo_simulation
-    print("✅ AI Brain v12.0: monte_carlo_layer içe aktarıldı")
+    print("✅ AI Brain v13.0: monte_carlo_layer içe aktarıldı")
 except Exception as e:
-    print(f"⚠️ AI Brain v12.0: monte_carlo_layer hatası: {e}")
+    print(f"⚠️ AI Brain v13.0: monte_carlo_layer hatası: {e}")
     run_monte_carlo_simulation = None
 
-# LAYER 21: KELLY CRITERION (v2.0)
 try:
-    from kelly_enhanced_layer import get_kelly_signal  # ✅ YENİ v2.0
-    print("✅ AI Brain v12.0: kelly_enhanced_layer v2.0 içe aktarıldı")
+    from kelly_enhanced_layer import calculate_dynamic_kelly
+    print("✅ AI Brain v13.0: kelly_enhanced_layer içe aktarıldı")
 except Exception as e:
-    print(f"⚠️ AI Brain v12.0: kelly_enhanced_layer hatası: {e}")
-    get_kelly_signal = None
+    print(f"⚠️ AI Brain v13.0: kelly_enhanced_layer hatası: {e}")
+    calculate_dynamic_kelly = None
+
+try:
+    from macro_correlation_layer import get_macro_signal
+    print("✅ AI Brain v13.0: macro_correlation_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: macro_correlation_layer hatası: {e}")
+    get_macro_signal = None
+
+try:
+    from gold_correlation_layer import calculate_gold_correlation
+    print("✅ AI Brain v13.0: gold_correlation_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: gold_correlation_layer hatası: {e}")
+    calculate_gold_correlation = None
+
+try:
+    from dominance_flow_layer import calculate_dominance_flow
+    print("✅ AI Brain v13.0: dominance_flow_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: dominance_flow_layer hatası: {e}")
+    calculate_dominance_flow = None
+
+try:
+    from cross_asset_layer import get_cross_asset_signal
+    print("✅ AI Brain v13.0: cross_asset_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: cross_asset_layer hatası: {e}")
+    get_cross_asset_signal = None
+
+try:
+    from vix_layer import get_vix_signal
+    print("✅ AI Brain v13.0: vix_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: vix_layer hatası: {e}")
+    get_vix_signal = None
+
+try:
+    from interest_rates_layer import get_interest_signal
+    print("✅ AI Brain v13.0: interest_rates_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: interest_rates_layer hatası: {e}")
+    get_interest_signal = None
+
+try:
+    from traditional_markets_layer import TraditionalMarketsLayer
+    print("✅ AI Brain v13.0: traditional_markets_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: traditional_markets_layer hatası: {e}")
+    TraditionalMarketsLayer = None
+
+try:
+    from news_sentiment_layer import get_news_signal
+    print("✅ AI Brain v13.0: news_sentiment_layer içe aktarıldı")
+except Exception as e:
+    print(f"⚠️ AI Brain v13.0: news_sentiment_layer hatası: {e}")
+    get_news_signal = None
 
 # ============================================================================
 # WEIGHTED ENSEMBLE SCORING FUNCTION
@@ -143,7 +155,7 @@ def calculate_ai_confidence_score(layer_results):
     layer_breakdown = {}
     
     print("\n" + "="*80)
-    print("🎯 WEIGHTED ENSEMBLE SCORING")
+    print("🎯 WEIGHTED ENSEMBLE SCORING v13.0 (12 LAYERS)")
     print("="*80)
     
     for layer_name, result in layer_results.items():
@@ -153,7 +165,7 @@ def calculate_ai_confidence_score(layer_results):
         
         if is_available or is_success:
             score = result.get('score', 50)
-            weighted_score = score * weight
+            weighted_score = score * weight / 100  # Normalize to percentage
             successful_layers.append(weighted_score)
             successful_weights.append(weight)
             
@@ -190,10 +202,12 @@ def calculate_ai_confidence_score(layer_results):
             'reason': 'No data available from any layer'
         }
     
+    # Weighted score calculation
     total_successful_weight = sum(successful_weights)
-    weighted_score = sum(successful_layers) / total_successful_weight
+    weighted_score = (sum(successful_layers) / total_successful_weight) * 100
     confidence = (len(successful_layers) / len(LAYER_WEIGHTS)) * 100
     
+    # Signal determination
     if weighted_score >= 70:
         signal = 'STRONG_BUY'
     elif weighted_score >= 55:
@@ -239,12 +253,13 @@ def get_realtime_price(symbol="BTCUSDT"):
         return None
 
 # ============================================================================
-# ANA KARAR FONKSİYONU - v12.0 UPDATED
+# ANA KARAR FONKSİYONU - UPDATED v13.0!
 # ============================================================================
 def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=10000, **kwargs):
-    """Ana AI karar motoru - Weighted Ensemble Scoring ile (v12.0)"""
+    """Ana AI karar motoru - v13.0 Multi-Timeframe ile"""
+    
     print("\n" + "="*80)
-    print(f"🧠 AI BRAIN v12.0: make_trading_decision (UPDATED IMPORTS!)")
+    print(f"🧠 AI BRAIN v13.0: make_trading_decision (MULTI-TIMEFRAME!)")
     print(f"   Symbol: {symbol}")
     print(f"   Timeframe: {timeframe}")
     print(f"   Portfolio: ${portfolio_value:,.2f}")
@@ -255,36 +270,62 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
     current_price = get_realtime_price(symbol)
     layer_results = {}
     
-    # LAYER 1-11: STRATEGY (v2.0)
+    # LAYER 1: STRATEGY (Technical Analysis)
     try:
-        if get_strategy_signal:
+        if StrategyEngine:
             print("\n🔍 strategy.get_strategy_signal çağrılıyor (v2.0)...\n")
-            strategy_result = get_strategy_signal(symbol)
+            from strategy_layer import get_strategy_signal
+            strategy_result = get_strategy_signal(symbol, timeframe)
             strategy_score = strategy_result.get('score', 50)
             
             layer_results['strategy'] = {
-                'available': strategy_result.get('available', False),
+                'available': True,
                 'score': strategy_score,
                 'success': True
             }
             
-            print(f"✅ Strategy (v2.0): {strategy_score}/100\n")
+            print(f"✅ Strategy (v2.0): {strategy_score:.2f}/100\n")
         else:
             layer_results['strategy'] = {'available': False, 'score': 0, 'success': False}
     except Exception as e:
         print(f"⚠️ Strategy layer hatası: {e}")
         layer_results['strategy'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 12: MACRO CORRELATION (v4.0)
+    # LAYER 2: MULTI-TIMEFRAME (YENİ v13.0!)
+    try:
+        if MultiTimeframeAnalyzer:
+            print("\n📊 multi_timeframe.analyze_all_timeframes çağrılıyor...\n")
+            mtf_analyzer = MultiTimeframeAnalyzer()
+            mtf_result = mtf_analyzer.analyze_all_timeframes(symbol)
+            mtf_score = mtf_result.get('consensus_score', 50)
+            mtf_signal = mtf_result.get('consensus_signal', 'NEUTRAL')
+            
+            layer_results['multi_timeframe'] = {
+                'available': True,
+                'score': mtf_score,
+                'signal': mtf_signal,
+                'success': True
+            }
+            
+            print(f"✅ Multi-Timeframe: {mtf_score:.2f}/100 - {mtf_signal}\n")
+        else:
+            layer_results['multi_timeframe'] = {'available': False, 'score': 0, 'success': False}
+    except Exception as e:
+        print(f"⚠️ Multi-Timeframe layer hatası: {e}")
+        layer_results['multi_timeframe'] = {'available': False, 'score': 0, 'success': False}
+    
+    # LAYER 3: MACRO CORRELATION
     try:
         if get_macro_signal:
             print("\n🌍 macro.get_macro_signal çağrılıyor (v4.0)...\n")
             macro_result = get_macro_signal(symbol)
             macro_score = macro_result.get('score', 50)
+            macro_signal = macro_result.get('signal', 'NEUTRAL')
             
             layer_results['macro'] = {
                 'available': macro_result.get('available', False),
                 'score': macro_score,
+                'signal': macro_signal,
                 'success': True
             }
             
@@ -295,7 +336,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         print(f"⚠️ Macro layer hatası: {e}")
         layer_results['macro'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 13: GOLD CORRELATION
+    # LAYER 4: GOLD CORRELATION
     try:
         if calculate_gold_correlation:
             print("\n🥇 calculate_gold_correlation çağrılıyor...\n")
@@ -315,7 +356,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         print(f"⚠️ Gold layer hatası: {e}")
         layer_results['gold'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 14: DOMINANCE FLOW
+    # LAYER 5: DOMINANCE FLOW
     try:
         if calculate_dominance_flow:
             print("\n📊 calculate_dominance_flow çağrılıyor...\n")
@@ -335,15 +376,15 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         print(f"⚠️ Dominance layer hatası: {e}")
         layer_results['dominance'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 15: CROSS-ASSET (v2.0)
+    # LAYER 6: CROSS-ASSET
     try:
         if get_cross_asset_signal:
             print("\n💎 cross_asset.get_cross_asset_signal çağrılıyor (v2.0)...\n")
-            cross_result = get_cross_asset_signal(symbol)
+            cross_result = get_cross_asset_signal(symbol, timeframe)
             cross_score = cross_result.get('score', 50)
             
             layer_results['cross_asset'] = {
-                'available': cross_result.get('available', False),
+                'available': True,
                 'score': cross_score,
                 'success': True
             }
@@ -352,10 +393,10 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         else:
             layer_results['cross_asset'] = {'available': False, 'score': 0, 'success': False}
     except Exception as e:
-        print(f"⚠️ Cross-asset layer hatası: {e}")
+        print(f"⚠️ Cross-Asset layer hatası: {e}")
         layer_results['cross_asset'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 16: VIX (v4.0)
+    # LAYER 7: VIX
     try:
         if get_vix_signal:
             print("\n⚡ get_vix_signal çağrılıyor (v4.0)...\n")
@@ -375,7 +416,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         print(f"⚠️ VIX layer hatası: {e}")
         layer_results['vix'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 17: INTEREST RATES (v3.0)
+    # LAYER 8: INTEREST RATES
     try:
         if get_interest_signal:
             print("\n💰 get_interest_signal çağrılıyor (v3.0)...\n")
@@ -383,7 +424,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
             rates_score = rates_result.get('score', 50)
             
             layer_results['rates'] = {
-                'available': rates_result.get('available', False),
+                'available': True,
                 'score': rates_score,
                 'success': True
             }
@@ -392,10 +433,10 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         else:
             layer_results['rates'] = {'available': False, 'score': 0, 'success': False}
     except Exception as e:
-        print(f"⚠️ Interest rates layer hatası: {e}")
+        print(f"⚠️ Interest Rates layer hatası: {e}")
         layer_results['rates'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 18: TRADITIONAL MARKETS
+    # LAYER 9: TRADITIONAL MARKETS
     try:
         if TraditionalMarketsLayer:
             print("\n📈 TraditionalMarketsLayer.analyze_all_markets çağrılıyor...\n")
@@ -413,10 +454,10 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         else:
             layer_results['trad_markets'] = {'available': False, 'score': 0, 'success': False}
     except Exception as e:
-        print(f"⚠️ Traditional markets layer hatası: {e}")
+        print(f"⚠️ Traditional Markets layer hatası: {e}")
         layer_results['trad_markets'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 19: NEWS SENTIMENT (v2.0)
+    # LAYER 10: NEWS SENTIMENT
     try:
         if get_news_signal:
             print("\n📰 news.get_news_signal çağrılıyor (v2.0)...\n")
@@ -424,7 +465,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
             news_score = news_result.get('score', 50)
             
             layer_results['news'] = {
-                'available': news_result.get('available', False),
+                'available': True,
                 'score': news_score,
                 'success': True
             }
@@ -433,21 +474,22 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         else:
             layer_results['news'] = {'available': False, 'score': 0, 'success': False}
     except Exception as e:
-        print(f"⚠️ News sentiment layer hatası: {e}")
+        print(f"⚠️ News Sentiment layer hatası: {e}")
         layer_results['news'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 20: MONTE CARLO
+    # LAYER 11: MONTE CARLO
     try:
         if run_monte_carlo_simulation:
             print("\n🎲 monte_carlo.run_monte_carlo_simulation çağrılıyor...\n")
             mc_result = run_monte_carlo_simulation(symbol, timeframe)
             mc_return = mc_result.get('expected_return', 0)
-            mc_score = 50 + (mc_return * 50)
+            mc_score = 50 + (mc_return * 50)  # Convert return to 0-100 score
             mc_score = max(0, min(100, mc_score))
             
             layer_results['monte_carlo'] = {
                 'available': True,
                 'score': mc_score,
+                'expected_return': mc_return,
                 'success': True
             }
             
@@ -458,24 +500,27 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         print(f"⚠️ Monte Carlo layer hatası: {e}")
         layer_results['monte_carlo'] = {'available': False, 'score': 0, 'success': False}
     
-    # LAYER 21: KELLY CRITERION (v2.0)
+    # LAYER 12: KELLY CRITERION
     try:
-        if get_kelly_signal:
-            print("\n🎯 kelly.get_kelly_signal çağrılıyor (v2.0)...\n")
-            kelly_result = get_kelly_signal(symbol)
-            kelly_score = kelly_result.get('score', 50)
+        if calculate_dynamic_kelly:
+            print("\n🎯 kelly.calculate_dynamic_kelly çağrılıyor (v2.0)...\n")
+            kelly_result = calculate_dynamic_kelly(symbol, timeframe, portfolio_value)
+            kelly_fraction = kelly_result.get('kelly_fraction', 0)
+            kelly_score = (kelly_fraction / 0.5) * 100  # 0.5 = max reasonable Kelly
+            kelly_score = max(0, min(100, kelly_score))
             
             layer_results['kelly'] = {
-                'available': kelly_result.get('available', False),
+                'available': True,
                 'score': kelly_score,
+                'kelly_fraction': kelly_fraction,
                 'success': True
             }
             
-            print(f"✅ Kelly (v2.0): Score={kelly_score:.2f}/100\n")
+            print(f"✅ Kelly (v2.0): Fraction={kelly_fraction:.3f} → Score={kelly_score:.2f}/100\n")
         else:
             layer_results['kelly'] = {'available': False, 'score': 0, 'success': False}
     except Exception as e:
-        print(f"⚠️ Kelly layer hatası: {e}")
+        print(f"⚠️ Kelly Criterion layer hatası: {e}")
         layer_results['kelly'] = {'available': False, 'score': 0, 'success': False}
     
     # WEIGHTED ENSEMBLE SCORING
@@ -495,7 +540,7 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
         'total_layers': ensemble_result['total_layers'],
         'layer_breakdown': ensemble_result['layer_breakdown'],
         'layer_results': layer_results,
-        'version': 'v12.0 - Fixed Imports for v2.0 Layers'
+        'version': 'v13.0 - Multi-Timeframe Integration'
     }
     
     print("\n" + "="*80)
@@ -512,20 +557,11 @@ def make_trading_decision(symbol="BTCUSDT", timeframe="1h", portfolio_value=1000
     return final_decision
 
 # ============================================================================
-# STREAMLIT INTEGRATION FUNCTION
-# ============================================================================
-def analyze_coin(symbol="BTCUSDT", timeframe="1h"):
-    """
-    Streamlit app tarafından çağrılacak main function
-    """
-    return make_trading_decision(symbol=symbol, timeframe=timeframe)
-
-# ============================================================================
 # TEST
 # ============================================================================
 if __name__ == "__main__":
     print("="*80)
-    print("🧠 AI BRAIN v12.0 - FIXED IMPORTS TEST!")
+    print("🧠 AI BRAIN v13.0 - MULTI-TIMEFRAME TEST!")
     print("="*80)
     print()
     
