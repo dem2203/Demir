@@ -1,334 +1,414 @@
+# ===========================================
+# news_sentiment_layer.py v2.0 - CRYPTOPANIC API
+# ===========================================
+# ✅ CryptoPanic API for real crypto news
+# ✅ Sentiment analysis (positive/negative/neutral)
+# ✅ Importance filtering
+# ✅ Multi-coin support
+# ===========================================
+
 """
-🔱 DEMIR AI TRADING BOT - News Sentiment v2 (Phase 4.4)
-========================================================
-Date: 2 Kasım 2025, 20:30 CET
-Version: 2.0 - Advanced Real-Time Sentiment Analysis
+🔱 DEMIR AI TRADING BOT - News Sentiment Layer v2.0
+====================================================================
+Tarih: 3 Kasım 2025, 22:25 CET
+Versiyon: 2.0 - REAL CRYPTOPANIC DATA + SENTIMENT ANALYSIS
 
-PURPOSE:
---------
-Real-time crypto news sentiment from multiple sources
-Twitter + Reddit + Fear & Greed Index
+YENİ v2.0:
+----------
+✅ CryptoPanic API integration
+✅ Real-time crypto news
+✅ Sentiment classification (positive/negative/neutral)
+✅ Importance weighting (hot/important/regular)
+✅ Multi-coin filtering (BTC, ETH, LTC)
+✅ Time-decay scoring
 
-SOURCES:
---------
-• Twitter API v2 - Crypto influencer tweets
-• Reddit PRAW - r/CryptoCurrency, r/Bitcoin
-• Alternative.me - Crypto Fear & Greed Index
-• NewsAPI - Crypto news headlines
+DATA SOURCE:
+------------
+- CryptoPanic API (CRYPTOPANIC_KEY)
+- Free tier: 60 requests/hour
+- News from 300+ sources
+- Sentiment pre-classified
 
-FEATURES:
----------
-• Real-time sentiment scoring (-1 to +1)
-• Volume-weighted sentiment
-• Trend detection (bullish/bearish momentum)
-• Source reliability weighting
+SCORING LOGIC:
+--------------
+Positive sentiment → 60-80 (bullish)
+Negative sentiment → 20-40 (bearish)
+Neutral/Mixed → 45-55 (neutral)
+
+Importance multiplier:
+- Hot news: 2x weight
+- Important news: 1.5x weight
+- Regular news: 1x weight
+
+Time decay:
+- Last 6 hours: 100% weight
+- 6-12 hours: 75% weight
+- 12-24 hours: 50% weight
+- >24 hours: 25% weight
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, Any, List, Optional
+import os
+import requests
 from datetime import datetime, timedelta
-import warnings
-warnings.filterwarnings('ignore')
+from typing import Dict, Any, List
 
-try:
-    import requests
-    REQUESTS_AVAILABLE = True
-except:
-    REQUESTS_AVAILABLE = False
-    print("⚠️ requests not installed: pip install requests")
+# ============================================================================
+# CRYPTOPANIC API FUNCTIONS
+# ============================================================================
 
-try:
-    from textblob import TextBlob
-    TEXTBLOB_AVAILABLE = True
-except:
-    TEXTBLOB_AVAILABLE = False
-    print("⚠️ textblob not installed: pip install textblob")
-
-
-class NewsSentimentV2:
+def get_cryptopanic_news(currency: str = 'BTC', filter_type: str = 'rising') -> List[Dict[str, Any]]:
     """
-    Advanced news sentiment aggregator
-    Real-time sentiment from Twitter, Reddit, Fear & Greed
-    """
+    Fetch news from CryptoPanic API
     
-    def __init__(self):
-        self.fear_greed_url = "https://api.alternative.me/fng/"
-        self.newsapi_url = "https://newsapi.org/v2/everything"
+    Args:
+        currency: Coin symbol (BTC, ETH, LTC)
+        filter_type: News filter (rising, hot, bullish, bearish, important, saved, lol)
+    
+    Returns:
+        List of news articles
+    """
+    api_key = os.getenv('CRYPTOPANIC_KEY')
+    
+    if not api_key:
+        print("⚠️ CRYPTOPANIC_KEY not set in environment")
+        return []
+    
+    try:
+        url = "https://cryptopanic.com/api/v1/posts/"
+        params = {
+            'auth_token': api_key,
+            'currencies': currency,
+            'filter': filter_type,
+            'public': 'true'
+        }
         
-        # Source weights (more reliable sources get higher weight)
-        self.source_weights = {
-            'fear_greed': 0.30,
-            'twitter': 0.25,
-            'reddit': 0.25,
-            'news': 0.20
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'results' in data:
+            news_list = data['results']
+            print(f"✅ CryptoPanic: {len(news_list)} news articles fetched ({currency})")
+            return news_list
+        else:
+            print("⚠️ CryptoPanic: No results in response")
+            return []
+        
+    except Exception as e:
+        print(f"❌ CryptoPanic API error: {e}")
+        return []
+
+
+def classify_sentiment(news_item: Dict[str, Any]) -> str:
+    """
+    Classify news sentiment
+    
+    CryptoPanic provides votes: positive, negative, neutral
+    
+    Returns:
+        'positive', 'negative', or 'neutral'
+    """
+    try:
+        votes = news_item.get('votes', {})
+        
+        positive = votes.get('positive', 0)
+        negative = votes.get('negative', 0)
+        neutral = votes.get('liked', 0)  # CryptoPanic uses 'liked' for neutral
+        
+        # Determine sentiment based on votes
+        if positive > negative and positive > neutral:
+            return 'positive'
+        elif negative > positive and negative > neutral:
+            return 'negative'
+        else:
+            return 'neutral'
+        
+    except Exception as e:
+        print(f"❌ Sentiment classification error: {e}")
+        return 'neutral'
+
+
+def get_news_importance(news_item: Dict[str, Any]) -> str:
+    """
+    Get news importance level
+    
+    Returns:
+        'hot', 'important', or 'regular'
+    """
+    try:
+        # CryptoPanic marks important/hot news
+        metadata = news_item.get('metadata', {})
+        
+        if metadata.get('hot', False):
+            return 'hot'
+        elif metadata.get('important', False):
+            return 'important'
+        else:
+            return 'regular'
+        
+    except Exception as e:
+        return 'regular'
+
+
+def calculate_time_decay(published_at: str) -> float:
+    """
+    Calculate time decay weight
+    
+    Args:
+        published_at: ISO timestamp string
+    
+    Returns:
+        float: Time decay multiplier (0.25 to 1.0)
+    """
+    try:
+        published_time = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
+        now = datetime.now(published_time.tzinfo)
+        
+        hours_ago = (now - published_time).total_seconds() / 3600
+        
+        if hours_ago < 6:
+            return 1.0  # Full weight
+        elif hours_ago < 12:
+            return 0.75
+        elif hours_ago < 24:
+            return 0.50
+        else:
+            return 0.25
+        
+    except Exception as e:
+        print(f"❌ Time decay error: {e}")
+        return 0.5
+
+
+# ============================================================================
+# SCORING FUNCTIONS
+# ============================================================================
+
+def score_sentiment(sentiment: str) -> float:
+    """
+    Base score based on sentiment
+    
+    Returns:
+        float: Base score (0-100)
+    """
+    if sentiment == 'positive':
+        return 70
+    elif sentiment == 'negative':
+        return 30
+    else:
+        return 50
+
+
+def get_importance_weight(importance: str) -> float:
+    """
+    Get importance multiplier
+    
+    Returns:
+        float: Weight multiplier
+    """
+    if importance == 'hot':
+        return 2.0
+    elif importance == 'important':
+        return 1.5
+    else:
+        return 1.0
+
+
+def calculate_weighted_sentiment(news_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calculate weighted sentiment score from multiple news articles
+    
+    Returns:
+        dict: Aggregated sentiment metrics
+    """
+    if not news_list:
+        return {
+            'score': 50,
+            'sentiment': 'neutral',
+            'article_count': 0,
+            'positive_count': 0,
+            'negative_count': 0,
+            'neutral_count': 0
         }
     
-    def analyze_sentiment(
-        self, 
-        symbol: str = 'BTC',
-        lookback_hours: int = 24
-    ) -> Dict[str, Any]:
-        """
-        Aggregate sentiment from all sources
-        
-        Args:
-            symbol: Crypto symbol (BTC, ETH, etc.)
-            lookback_hours: How far back to analyze
-        
-        Returns:
-            Comprehensive sentiment analysis
-        """
-        
-        print(f"\n{'='*70}")
-        print(f"📰 NEWS SENTIMENT V2 - {symbol}")
-        print(f"{'='*70}")
-        
-        # Fetch from all sources
-        fear_greed = self._get_fear_greed_index()
-        twitter_sentiment = self._get_twitter_sentiment(symbol, lookback_hours)
-        reddit_sentiment = self._get_reddit_sentiment(symbol, lookback_hours)
-        news_sentiment = self._get_news_sentiment(symbol, lookback_hours)
-        
-        # Aggregate weighted sentiment
-        aggregated = self._aggregate_sentiment(
-            fear_greed,
-            twitter_sentiment,
-            reddit_sentiment,
-            news_sentiment
-        )
-        
-        return aggregated
+    weighted_scores = []
+    sentiment_counts = {'positive': 0, 'negative': 0, 'neutral': 0}
     
-    def _get_fear_greed_index(self) -> Dict[str, Any]:
-        """Fetch Crypto Fear & Greed Index"""
-        
-        if not REQUESTS_AVAILABLE:
-            return {'score': 50, 'sentiment': 'neutral', 'available': False}
-        
+    for news in news_list[:20]:  # Limit to most recent 20
         try:
-            print("📊 Fetching Fear & Greed Index...")
-            response = requests.get(self.fear_greed_url, timeout=5)
-            data = response.json()
+            # Get sentiment
+            sentiment = classify_sentiment(news)
+            sentiment_counts[sentiment] += 1
             
-            if 'data' in data and len(data['data']) > 0:
-                latest = data['data'][0]
-                score = int(latest['value'])
-                classification = latest['value_classification'].lower()
-                
-                # Normalize to -1 to +1
-                normalized = (score - 50) / 50
-                
-                print(f"✅ Fear & Greed: {score}/100 ({classification})")
-                
-                return {
-                    'score': score,
-                    'normalized': normalized,
-                    'classification': classification,
-                    'available': True
-                }
+            # Get base score
+            base_score = score_sentiment(sentiment)
+            
+            # Get importance weight
+            importance = get_news_importance(news)
+            importance_weight = get_importance_weight(importance)
+            
+            # Get time decay
+            published_at = news.get('published_at', '')
+            time_decay = calculate_time_decay(published_at) if published_at else 0.5
+            
+            # Calculate weighted score
+            weighted_score = base_score * importance_weight * time_decay
+            weighted_scores.append(weighted_score)
+            
         except Exception as e:
-            print(f"⚠️ Fear & Greed fetch error: {e}")
-        
-        return {'score': 50, 'normalized': 0.0, 'classification': 'neutral', 'available': False}
+            print(f"❌ News scoring error: {e}")
+            continue
     
-    def _get_twitter_sentiment(self, symbol: str, hours: int) -> Dict[str, Any]:
-        """
-        Simulated Twitter sentiment (API v2 requires authentication)
-        In production, use tweepy with Bearer Token
-        """
-        
-        print(f"🐦 Analyzing Twitter sentiment for {symbol}...")
-        
-        # MOCK DATA - Replace with real Twitter API v2 in production
-        # Example: tweepy.Client(bearer_token=os.getenv('TWITTER_BEARER_TOKEN'))
-        
-        mock_tweets = [
-            f"{symbol} to the moon! 🚀",
-            f"Bullish on {symbol}",
-            f"{symbol} looks weak today",
-            f"Major {symbol} breakout incoming",
-            f"Selling my {symbol}"
-        ]
-        
-        if not TEXTBLOB_AVAILABLE:
-            sentiment_score = 0.15  # Default bullish
-        else:
-            sentiments = [TextBlob(tweet).sentiment.polarity for tweet in mock_tweets]
-            sentiment_score = np.mean(sentiments)
-        
-        print(f"✅ Twitter: {sentiment_score:+.2f} (from {len(mock_tweets)} tweets)")
-        
+    # Calculate final score
+    if weighted_scores:
+        final_score = sum(weighted_scores) / len(weighted_scores)
+    else:
+        final_score = 50
+    
+    # Determine overall sentiment
+    if final_score >= 60:
+        overall_sentiment = 'positive'
+    elif final_score <= 40:
+        overall_sentiment = 'negative'
+    else:
+        overall_sentiment = 'neutral'
+    
+    return {
+        'score': round(final_score, 2),
+        'sentiment': overall_sentiment,
+        'article_count': len(news_list),
+        'positive_count': sentiment_counts['positive'],
+        'negative_count': sentiment_counts['negative'],
+        'neutral_count': sentiment_counts['neutral']
+    }
+
+
+# ============================================================================
+# MAIN ANALYSIS
+# ============================================================================
+
+def analyze_news_sentiment(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
+    """
+    Complete news sentiment analysis
+    
+    Args:
+        symbol: Trading pair (BTCUSDT, ETHUSDT, LTCUSDT)
+    
+    Returns:
+        dict with score, signal, and sentiment details
+    """
+    print(f"\n{'='*80}")
+    print(f"📰 NEWS SENTIMENT LAYER v2.0 - CRYPTOPANIC ANALYSIS")
+    print(f"   Symbol: {symbol}")
+    print(f"{'='*80}\n")
+    
+    # Convert symbol to currency code
+    currency_map = {
+        'BTCUSDT': 'BTC',
+        'ETHUSDT': 'ETH',
+        'LTCUSDT': 'LTC'
+    }
+    
+    currency = currency_map.get(symbol, 'BTC')
+    
+    # Fetch news
+    news_list = get_cryptopanic_news(currency, filter_type='rising')
+    
+    if not news_list:
+        print("❌ News Sentiment: No news available")
         return {
-            'sentiment': sentiment_score,
-            'tweet_count': len(mock_tweets),
-            'available': True
+            'available': False,
+            'score': 50,
+            'signal': 'NEUTRAL',
+            'reason': 'No news data from CryptoPanic'
         }
     
-    def _get_reddit_sentiment(self, symbol: str, hours: int) -> Dict[str, Any]:
-        """
-        Simulated Reddit sentiment (PRAW requires API credentials)
-        In production, use praw with Reddit API
-        """
+    try:
+        # Calculate weighted sentiment
+        sentiment_result = calculate_weighted_sentiment(news_list)
         
-        print(f"💬 Analyzing Reddit sentiment for {symbol}...")
+        score = sentiment_result['score']
+        sentiment = sentiment_result['sentiment']
         
-        # MOCK DATA - Replace with real Reddit API (praw) in production
-        # Example: reddit = praw.Reddit(client_id=..., client_secret=...)
-        
-        mock_posts = [
-            f"{symbol} analysis: Strong buy signal",
-            f"Why I'm bearish on {symbol}",
-            f"{symbol} breaking resistance!",
-            f"Holding {symbol} long term"
-        ]
-        
-        if not TEXTBLOB_AVAILABLE:
-            sentiment_score = 0.10
+        # Determine signal
+        if score >= 60:
+            signal = 'BULLISH'
+        elif score <= 40:
+            signal = 'BEARISH'
         else:
-            sentiments = [TextBlob(post).sentiment.polarity for post in mock_posts]
-            sentiment_score = np.mean(sentiments)
+            signal = 'NEUTRAL'
         
-        print(f"✅ Reddit: {sentiment_score:+.2f} (from {len(mock_posts)} posts)")
+        # Print results
+        print(f"📊 NEWS ANALYSIS:")
+        print(f"   Total Articles: {sentiment_result['article_count']}")
+        print(f"   Positive: {sentiment_result['positive_count']}")
+        print(f"   Negative: {sentiment_result['negative_count']}")
+        print(f"   Neutral: {sentiment_result['neutral_count']}")
+        
+        print(f"\n{'='*80}")
+        print(f"✅ NEWS SENTIMENT ANALYSIS COMPLETE!")
+        print(f"   Score: {score:.1f}/100")
+        print(f"   Overall Sentiment: {sentiment.upper()}")
+        print(f"   Signal: {signal}")
+        print(f"{'='*80}\n")
         
         return {
-            'sentiment': sentiment_score,
-            'post_count': len(mock_posts),
-            'available': True
-        }
-    
-    def _get_news_sentiment(self, symbol: str, hours: int) -> Dict[str, Any]:
-        """
-        Fetch crypto news headlines and analyze sentiment
-        Uses NewsAPI (requires API key)
-        """
-        
-        print(f"📰 Analyzing news sentiment for {symbol}...")
-        
-        # MOCK DATA - Replace with real NewsAPI in production
-        # Requires: NEWSAPI_KEY environment variable
-        
-        mock_headlines = [
-            f"{symbol} price surges on institutional adoption",
-            f"Analysts predict {symbol} rally",
-            f"{symbol} faces regulatory concerns",
-            f"New {symbol} ETF approved"
-        ]
-        
-        if not TEXTBLOB_AVAILABLE:
-            sentiment_score = 0.05
-        else:
-            sentiments = [TextBlob(headline).sentiment.polarity for headline in mock_headlines]
-            sentiment_score = np.mean(sentiments)
-        
-        print(f"✅ News: {sentiment_score:+.2f} (from {len(mock_headlines)} articles)")
-        
-        return {
-            'sentiment': sentiment_score,
-            'article_count': len(mock_headlines),
-            'available': True
-        }
-    
-    def _aggregate_sentiment(
-        self,
-        fear_greed: Dict,
-        twitter: Dict,
-        reddit: Dict,
-        news: Dict
-    ) -> Dict[str, Any]:
-        """
-        Aggregate all sentiment sources with weighted average
-        """
-        
-        # Extract normalized sentiments
-        fg_sent = fear_greed.get('normalized', 0) if fear_greed.get('available') else 0
-        tw_sent = twitter.get('sentiment', 0) if twitter.get('available') else 0
-        rd_sent = reddit.get('sentiment', 0) if reddit.get('available') else 0
-        nw_sent = news.get('sentiment', 0) if news.get('available') else 0
-        
-        # Weighted average
-        weighted_sentiment = (
-            fg_sent * self.source_weights['fear_greed'] +
-            tw_sent * self.source_weights['twitter'] +
-            rd_sent * self.source_weights['reddit'] +
-            nw_sent * self.source_weights['news']
-        )
-        
-        # Normalize to 0-100 score
-        sentiment_score = 50 + (weighted_sentiment * 50)
-        
-        # Classify
-        if weighted_sentiment > 0.30:
-            sentiment_label = 'VERY BULLISH'
-            signal = 'STRONG BUY'
-        elif weighted_sentiment > 0.10:
-            sentiment_label = 'BULLISH'
-            signal = 'BUY'
-        elif weighted_sentiment > -0.10:
-            sentiment_label = 'NEUTRAL'
-            signal = 'HOLD'
-        elif weighted_sentiment > -0.30:
-            sentiment_label = 'BEARISH'
-            signal = 'SELL'
-        else:
-            sentiment_label = 'VERY BEARISH'
-            signal = 'STRONG SELL'
-        
-        result = {
+            'available': True,
+            'score': score,
             'signal': signal,
-            'sentiment_score': round(sentiment_score, 1),
-            'sentiment_label': sentiment_label,
-            'weighted_sentiment': round(weighted_sentiment, 3),
-            'sources': {
-                'fear_greed': round(fg_sent, 2),
-                'twitter': round(tw_sent, 2),
-                'reddit': round(rd_sent, 2),
-                'news': round(nw_sent, 2)
-            },
-            'data_points': {
-                'fear_greed': fear_greed.get('score', 'N/A'),
-                'tweets': twitter.get('tweet_count', 0),
-                'reddit_posts': reddit.get('post_count', 0),
-                'news_articles': news.get('article_count', 0)
-            },
-            'timestamp': datetime.now().isoformat(),
-            'version': 'v2.0-phase4.4'
+            'sentiment': sentiment,
+            'article_count': sentiment_result['article_count'],
+            'positive_count': sentiment_result['positive_count'],
+            'negative_count': sentiment_result['negative_count'],
+            'neutral_count': sentiment_result['neutral_count'],
+            'timestamp': datetime.now().isoformat()
         }
         
-        print(f"\n{'='*70}")
-        print(f"📊 AGGREGATED SENTIMENT")
-        print(f"{'='*70}")
-        print(f"Signal: {signal}")
-        print(f"Score: {sentiment_score:.1f}/100")
-        print(f"Label: {sentiment_label}")
-        print(f"Weighted: {weighted_sentiment:+.3f}")
-        print(f"{'='*70}\n")
-        
-        return result
+    except Exception as e:
+        print(f"❌ News sentiment analysis error: {e}")
+        return {
+            'available': False,
+            'score': 50,
+            'signal': 'NEUTRAL',
+            'reason': str(e)
+        }
 
 
-# =====================================================
-# STANDALONE TEST
-# =====================================================
+def get_news_signal(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
+    """
+    Main function called by ai_brain.py
+    
+    Returns:
+        dict: {'available': bool, 'score': float, 'signal': str}
+    """
+    result = analyze_news_sentiment(symbol)
+    
+    return {
+        'available': result['available'],
+        'score': result.get('score', 50),
+        'signal': result.get('signal', 'NEUTRAL'),
+        'sentiment': result.get('sentiment', 'neutral'),
+        'article_count': result.get('article_count', 0)
+    }
 
+
+# ============================================================================
+# STANDALONE TESTING
+# ============================================================================
 if __name__ == "__main__":
-    print("🔱 News Sentiment V2 - Standalone Test")
-    print("=" * 70)
+    print("="*80)
+    print("🔱 NEWS SENTIMENT LAYER v2.0 TEST")
+    print("   CRYPTOPANIC API INTEGRATION")
+    print("="*80)
     
-    analyzer = NewsSentimentV2()
+    # Test with BTCUSDT
+    result = get_news_signal('BTCUSDT')
     
-    result = analyzer.analyze_sentiment(
-        symbol='BTC',
-        lookback_hours=24
-    )
-    
-    print(f"\n📊 Final Result:")
-    print(f"Signal: {result['signal']}")
-    print(f"Sentiment Score: {result['sentiment_score']}/100")
-    print(f"Label: {result['sentiment_label']}")
-    
-    print(f"\n📈 Source Breakdown:")
-    for source, value in result['sources'].items():
-        print(f"  {source}: {value:+.2f}")
-    
-    print("\n✅ News Sentiment V2 test complete!")
+    print("\n" + "="*80)
+    print("📊 NEWS SENTIMENT TEST RESULTS:")
+    print(f"   Available: {result['available']}")
+    print(f"   Score: {result.get('score', 'N/A')}/100")
+    print(f"   Signal: {result.get('signal', 'N/A')}")
+    print(f"   Overall Sentiment: {result.get('sentiment', 'N/A')}")
+    print(f"   Article Count: {result.get('article_count', 'N/A')}")
+    print("="*80)
