@@ -1,40 +1,40 @@
 # ===========================================
-# ai_brain.py v9.7 PRODUCTION READY (3 Kasım 2025, 09:30 CET)
+# ai_brain.py v10.0 REAL API INTEGRATION (3 Kasım 2025, 11:20 CET)
 # ===========================================
-# ✅ DÜZELTMELER (6 KRİTİK):
-# 1. Cross-Asset: get_multi_coin_data() (GERÇEK fonksiyon adı)
-# 2. Kelly: avg_win, avg_loss (SNAKE_CASE)
-# 3. Entry/SL/TP: WAIT durumunda bile hesapla
-# 4. Monte Carlo: num_simulations (düzeltildi)
-# 5. yfinance timeout handling
-# 6. Layer health monitoring
+# ✅ DÜZELTMELER v10.0 (YENİ API'LER):
+# 1. Macro: Alpha Vantage + Twelve Data (GERÇEK DATA!)
+# 2. Gold: Twelve Data + Binance (GERÇEK DATA!)
+# 3. VIX: Twelve Data (GERÇEK DATA!)
+# 4. Trad Markets: Alpha Vantage + Twelve Data (GERÇEK DATA!)
+# 5. Tüm eski yfinance kodları KALDIRILDI!
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - AI Brain v9.7 PRODUCTION READY!
+🔱 DEMIR AI TRADING BOT - AI Brain v10.0 REAL API INTEGRATION!
 ====================================================================
-Tarih: 3 Kasım 2025, 09:30 CET
-Versiyon: 9.7 FINAL - 6 KRİTİK HATA DÜZELTİLDİ + LOG ANALİZİ
+Tarih: 3 Kasım 2025, 11:20 CET
+Versiyon: 10.0 FINAL - GERÇEK API'LER ENTEGRE!
 
-BUGFIX v9.7 (KRİTİK DÜZELTMELER):
----------------------------------
-✅ Düzeltildi: Cross-Asset get_multi_coin_data() (log'dan tespit)
-✅ Düzeltildi: Kelly avg_win, avg_loss (SNAKE_CASE parametreler)
-✅ Düzeltildi: Entry/SL/TP WAIT durumunda gerçek değerler
-✅ Düzeltildi: Monte Carlo num_simulations parametresi
-✅ İyileştirildi: yfinance timeout handling
-✅ Eklendi: Layer skorları için gerçek data validasyonu
+MAJOR UPDATE v10.0:
+-------------------
+✅ YENİ: Alpha Vantage API (SPY, QQQ)
+✅ YENİ: Twelve Data API (DXY, VIX, Gold, Silver)
+✅ KALDIRILDI: Tüm eski yfinance kodları
+✅ DÜZELTİLDİ: Layer 12 Macro - GERÇEK veriler
+✅ DÜZELTİLDİ: Layer 13 Gold - GERÇEK veriler
+✅ DÜZELTİLDİ: Layer 16 VIX - GERÇEK veriler
+✅ DÜZELTİLDİ: Layer 18 Trad Markets - GERÇEK veriler
 
-ALL 18 LAYERS:
---------------
+ALL 18 LAYERS - GERÇEK DATA:
+-----------------------------
 Layers 1-11: From strategy_layer (working code PRESERVED!)
-Layer 12: Macro Correlation
-Layer 13: Gold Correlation (XAU, XAG)
-Layer 14: BTC Dominance Flow (Altseason)
-Layer 15: Cross-Asset Correlation (BTC/ETH/LTC/BNB) - FIXED!
-Layer 16: VIX Fear Index
-Layer 17: Interest Rates Impact
-Layer 18: Traditional Markets (SPX, NASDAQ, DXY)
+Layer 12: Macro Correlation (Alpha Vantage + Twelve Data) ← YENİ!
+Layer 13: Gold Correlation (Twelve Data + Binance) ← YENİ!
+Layer 14: BTC Dominance Flow (CoinMarketCap)
+Layer 15: Cross-Asset Correlation (Binance)
+Layer 16: VIX Fear Index (Twelve Data) ← YENİ!
+Layer 17: Interest Rates (FRED API)
+Layer 18: Traditional Markets (Alpha Vantage + Twelve Data) ← YENİ!
 
 Win Rate Target: 70-75%
 Monthly Return Target: 30-50%
@@ -51,91 +51,91 @@ import requests
 try:
     import strategy_layer as strategy
     STRATEGY_AVAILABLE = True
-    print("✅ AI Brain: strategy_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: strategy_layer içe aktarıldı")
 except Exception as e:
     STRATEGY_AVAILABLE = False
-    print(f"⚠️ AI Brain: strategy_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: strategy_layer içe aktarma hatası: {e}")
 
 try:
     import monte_carlo_layer as mc
     MC_AVAILABLE = True
-    print("✅ AI Brain: monte_carlo_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: monte_carlo_layer içe aktarıldı")
 except Exception as e:
     MC_AVAILABLE = False
-    print(f"⚠️ AI Brain: monte_carlo_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: monte_carlo_layer içe aktarma hatası: {e}")
 
 try:
     import kelly_enhanced_layer as kelly
     KELLY_AVAILABLE = True
-    print("✅ AI Brain: kelly_enhanced_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: kelly_enhanced_layer içe aktarıldı")
 except Exception as e:
     KELLY_AVAILABLE = False
-    print(f"⚠️ AI Brain: kelly_enhanced_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: kelly_enhanced_layer içe aktarma hatası: {e}")
 
-# Phase 6 layers
+# Phase 6 layers - YENİ API'LER!
 try:
     from macro_correlation_layer import MacroCorrelationLayer
     MACRO_AVAILABLE = True
-    print("✅ AI Brain v9.7: macro_correlation_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: macro_correlation_layer içe aktarıldı (Alpha Vantage + Twelve Data)")
 except Exception as e:
     MACRO_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: macro_correlation_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: macro_correlation_layer içe aktarma hatası: {e}")
 
 try:
     from gold_correlation_layer import get_gold_signal, calculate_gold_correlation
     GOLD_AVAILABLE = True
-    print("✅ AI Brain v9.7: gold_correlation_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: gold_correlation_layer içe aktarıldı (Twelve Data + Binance)")
 except Exception as e:
     GOLD_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: gold_correlation_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: gold_correlation_layer içe aktarma hatası: {e}")
 
 try:
     from dominance_flow_layer import get_dominance_signal, calculate_dominance_flow
     DOMINANCE_AVAILABLE = True
-    print("✅ AI Brain v9.7: dominance_flow_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: dominance_flow_layer içe aktarıldı")
 except Exception as e:
     DOMINANCE_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: dominance_flow_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: dominance_flow_layer içe aktarma hatası: {e}")
 
 try:
     import cross_asset_layer as cross_asset
     CROSS_ASSET_AVAILABLE = True
-    print("✅ AI Brain v9.7: cross_asset_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: cross_asset_layer içe aktarıldı")
 except Exception as e:
     CROSS_ASSET_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: cross_asset_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: cross_asset_layer içe aktarma hatası: {e}")
 
 try:
     from vix_layer import get_vix_signal, analyze_vix
     VIX_AVAILABLE = True
-    print("✅ AI Brain v9.7: vix_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: vix_layer içe aktarıldı (Twelve Data)")
 except Exception as e:
     VIX_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: vix_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: vix_layer içe aktarma hatası: {e}")
 
 try:
     from interest_rates_layer import get_interest_signal, calculate_rates_score, get_interest_rates_fred
     RATES_AVAILABLE = True
-    print("✅ AI Brain v9.7: interest_rates_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: interest_rates_layer içe aktarıldı")
 except Exception as e:
     RATES_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: interest_rates_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: interest_rates_layer içe aktarma hatası: {e}")
 
 try:
     from traditional_markets_layer import get_traditional_markets_signal, TraditionalMarketsLayer
     TRAD_MARKETS_AVAILABLE = True
-    print("✅ AI Brain v9.7: traditional_markets_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: traditional_markets_layer içe aktarıldı (Alpha Vantage + Twelve Data)")
 except Exception as e:
     TRAD_MARKETS_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: traditional_markets_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: traditional_markets_layer içe aktarma hatası: {e}")
 
 try:
     import news_sentiment_layer as news
     NEWS_AVAILABLE = True
-    print("✅ AI Brain v9.7: news_sentiment_layer içe aktarıldı")
+    print("✅ AI Brain v10.0: news_sentiment_layer içe aktarıldı")
 except Exception as e:
     NEWS_AVAILABLE = False
-    print(f"⚠️ AI Brain v9.7: news_sentiment_layer içe aktarma hatası: {e}")
+    print(f"⚠️ AI Brain v10.0: news_sentiment_layer içe aktarma hatası: {e}")
 
 # ============================================================================
 # HELPER: GERÇEK FİYAT ÇEKME (BİNANCE API)
@@ -246,7 +246,7 @@ def make_multi_timeframe_decision(symbol, **kwargs):
     }
 
 # ============================================================================
-# ANA FONKSİYON - 18-LAYER TİCARET KARAR MOTORU (v9.7 PRODUCTION!)
+# ANA FONKSİYON - 18-LAYER TİCARET KARAR MOTORU (v10.0 REAL API!)
 # ============================================================================
 
 def make_trading_decision(
@@ -259,17 +259,17 @@ def make_trading_decision(
     **kwargs
 ):
     """
-    AI Brain v9.7 - 18-LAYER TİCARET KARAR MOTORU + SAĞLIK İZLEME
+    AI Brain v10.0 - 18-LAYER TİCARET KARAR MOTORU + GERÇEK API'LER
     
-    YENİ v9.7'DE:
-    ------------
-    - DÜZELTİLDİ: Cross-Asset get_multi_coin_data() (GERÇEK fonksiyon adı)
-    - DÜZELTİLDİ: Kelly avg_win, avg_loss (SNAKE_CASE)
-    - DÜZELTİLDİ: Entry/SL/TP WAIT durumunda bile hesapla
-    - İYİLEŞTİRİLDİ: yfinance timeout handling
-    - EKLENDİ: Her layer için sağlık durumu izleme
-    - EKLENDİ: Gerçek data doğrulama
-    - EKLENDİ: Türkçe açıklamalar
+    YENİ v10.0'DA:
+    --------------
+    - YENİ: Alpha Vantage API (SPY, QQQ)
+    - YENİ: Twelve Data API (DXY, VIX, Gold, Silver)
+    - KALDIRILDI: Tüm eski yfinance kodları
+    - DÜZELTİLDİ: Layer 12 Macro - Alpha Vantage + Twelve Data
+    - DÜZELTİLDİ: Layer 13 Gold - Twelve Data + Binance
+    - DÜZELTİLDİ: Layer 16 VIX - Twelve Data
+    - DÜZELTİLDİ: Layer 18 Trad Markets - Alpha Vantage + Twelve Data
     
     Args:
         symbol: Trading pair (örn: 'BTCUSDT')
@@ -299,7 +299,7 @@ def make_trading_decision(
     margin = kwargs.get('margin', 0.0)
     
     print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v9.7: make_trading_decision (PRODUCTION READY!)")
+    print(f"🧠 AI BRAIN v10.0: make_trading_decision (REAL API INTEGRATION!)")
     print(f"   Symbol: {symbol}")
     print(f"   Timeframe: {interval}")
     print(f"   Portfolio: ${portfolio_value:,.0f}")
@@ -341,10 +341,10 @@ def make_trading_decision(
         strategy_result = {}
     
     # ========================================================================
-    # LAYERS 12-18 (SAĞLIK İZLEMELİ!)
+    # LAYERS 12-18 (GERÇEK API'LER!)
     # ========================================================================
     
-    # Layer 12: Macro Correlation
+    # Layer 12: Macro Correlation (YENİ - Alpha Vantage + Twelve Data!)
     macro_score = 50
     macro_signal = "NEUTRAL"
     macro_details = {}
@@ -352,7 +352,7 @@ def make_trading_decision(
     
     if MACRO_AVAILABLE:
         try:
-            print(f"\n🌍 MacroCorrelationLayer.analyze_all çağrılıyor (Layer 12)...")
+            print(f"\n🌍 MacroCorrelationLayer.analyze_all çağrılıyor (Layer 12 - YENİ API!)...")
             macro_layer = MacroCorrelationLayer()
             macro_result = macro_layer.analyze_all(symbol, days=30)
             
@@ -362,22 +362,22 @@ def make_trading_decision(
                 macro_health = "HEALTHY"
                 macro_details = {
                     'status': macro_health,
-                    'data_source': 'yfinance API',
+                    'data_source': 'Alpha Vantage + Twelve Data + CMC',
                     'correlations': macro_result.get('correlations', {}),
                     'factor_scores': macro_result.get('factor_scores', {}),
                     'explanation': macro_result.get('explanation', 'Detay yok')
                 }
                 print(f"✅ Layer 12 (Macro): {macro_score:.2f}/100 - {macro_signal}")
-                print(f"   🏥 Durum: {macro_health}")
+                print(f"   🏥 Durum: {macro_health} (GERÇEK DATA!)")
             else:
                 macro_health = "WARNING"
                 macro_details = {
                     'status': macro_health,
                     'data_source': 'FAILED',
-                    'reason': 'Data mevcut değil',
+                    'reason': 'API data mevcut değil',
                     'fallback': 'Neutral skor kullanıldı (50/100)'
                 }
-                print("⚠️ Layer 12 (Macro) data yok - fallback kullanıldı")
+                print("⚠️ Layer 12 (Macro) API data yok - fallback kullanıldı")
         except Exception as e:
             macro_health = "ERROR"
             macro_details = {
@@ -394,7 +394,7 @@ def make_trading_decision(
             'reason': 'Module import edilemedi'
         }
     
-    # Layer 13: Gold Correlation
+    # Layer 13: Gold Correlation (YENİ - Twelve Data + Binance!)
     gold_score = 50
     gold_signal = "NEUTRAL"
     gold_details = {}
@@ -402,7 +402,7 @@ def make_trading_decision(
     
     if GOLD_AVAILABLE:
         try:
-            print(f"\n🥇 calculate_gold_correlation çağrılıyor (Layer 13)...")
+            print(f"\n🥇 calculate_gold_correlation çağrılıyor (Layer 13 - YENİ API!)...")
             gold_result = calculate_gold_correlation(symbol, interval, limit=lookback)
             
             if gold_result and gold_result.get('available'):
@@ -411,21 +411,21 @@ def make_trading_decision(
                 gold_health = "HEALTHY"
                 gold_details = {
                     'status': gold_health,
-                    'data_source': 'yfinance API',
-                    'gold_correlation': gold_result.get('gold_correlation', 0),
-                    'silver_correlation': gold_result.get('silver_correlation', 0),
+                    'data_source': 'Twelve Data + Binance',
                     'gold_price': gold_result.get('gold_price', 0),
+                    'silver_price': gold_result.get('silver_price', 0),
                     'interpretation': gold_result.get('interpretation', 'Detay yok')
                 }
                 print(f"✅ Layer 13 (Gold): {gold_score:.2f}/100 - {gold_signal}")
+                print(f"   🏥 Durum: {macro_health} (GERÇEK DATA!)")
             else:
                 gold_health = "WARNING"
                 gold_details = {
                     'status': gold_health,
                     'data_source': 'FAILED',
-                    'reason': 'Data mevcut değil'
+                    'reason': 'API data mevcut değil'
                 }
-                print("⚠️ Layer 13 (Gold) data yok - fallback kullanıldı")
+                print("⚠️ Layer 13 (Gold) API data yok - fallback kullanıldı")
         except Exception as e:
             gold_health = "ERROR"
             gold_details = {
@@ -471,7 +471,7 @@ def make_trading_decision(
     else:
         dominance_health = "NOT_AVAILABLE"
     
-    # Layer 15: Cross-Asset Correlation (✅ DÜZELTME!)
+    # Layer 15: Cross-Asset Correlation
     cross_asset_score = 50
     cross_asset_signal = "NEUTRAL"
     cross_asset_details = {}
@@ -479,7 +479,6 @@ def make_trading_decision(
     
     if CROSS_ASSET_AVAILABLE:
         try:
-            # ✅ DÜZELTME: get_multi_coin_data() (GERÇEK fonksiyon adı!)
             print(f"\n💎 cross_asset.get_multi_coin_data çağrılıyor (Layer 15)...")
             symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT']
             cross_asset_result = cross_asset.get_multi_coin_data(symbols, interval, limit=lookback)
@@ -522,7 +521,7 @@ def make_trading_decision(
     else:
         cross_asset_health = "NOT_AVAILABLE"
     
-    # Layer 16: VIX Fear Index
+    # Layer 16: VIX Fear Index (YENİ - Twelve Data!)
     vix_score = 50
     vix_signal = "NEUTRAL"
     vix_details = {}
@@ -530,8 +529,8 @@ def make_trading_decision(
     
     if VIX_AVAILABLE:
         try:
-            print(f"\n😱 get_vix_signal çağrılıyor (Layer 16)...")
-            vix_result = get_vix_signal()
+            print(f"\n😱 analyze_vix çağrılıyor (Layer 16 - YENİ API!)...")
+            vix_result = analyze_vix()
             
             if vix_result and vix_result.get('available'):
                 vix_score = vix_result.get('score', 50)
@@ -539,11 +538,16 @@ def make_trading_decision(
                 vix_health = "HEALTHY"
                 vix_details = {
                     'status': vix_health,
-                    'vix_current': vix_result.get('vix_current', 0)
+                    'data_source': 'Twelve Data',
+                    'vix_current': vix_result.get('vix_current', 0),
+                    'fear_level': vix_result.get('fear_level', 'UNKNOWN'),
+                    'interpretation': vix_result.get('interpretation', 'Detay yok')
                 }
-                print(f"✅ Layer 16 (VIX): {vix_score:.2f}/100")
+                print(f"✅ Layer 16 (VIX): {vix_score:.2f}/100 - VIX={vix_details['vix_current']:.2f}")
+                print(f"   🏥 Durum: {vix_health} (GERÇEK DATA!)")
             else:
                 vix_health = "WARNING"
+                print("⚠️ Layer 16 (VIX) API data yok - fallback kullanıldı")
         except Exception as e:
             vix_health = "ERROR"
             print(f"⚠️ Layer 16 (VIX) hatası: {e}")
@@ -578,7 +582,7 @@ def make_trading_decision(
     else:
         rates_health = "NOT_AVAILABLE"
     
-    # Layer 18: Traditional Markets
+    # Layer 18: Traditional Markets (YENİ - Alpha Vantage + Twelve Data!)
     trad_markets_score = 50
     trad_markets_signal = "NEUTRAL"
     trad_markets_details = {}
@@ -586,7 +590,7 @@ def make_trading_decision(
     
     if TRAD_MARKETS_AVAILABLE:
         try:
-            print(f"\n📈 TraditionalMarketsLayer.analyze_all_markets çağrılıyor (Layer 18)...")
+            print(f"\n📈 TraditionalMarketsLayer.analyze_all_markets çağrılıyor (Layer 18 - YENİ API!)...")
             trad_markets_layer = TraditionalMarketsLayer()
             trad_markets_result = trad_markets_layer.analyze_all_markets(symbol, days=30)
             
@@ -594,9 +598,16 @@ def make_trading_decision(
                 trad_markets_score = trad_markets_result.get('total_score', 50)
                 trad_markets_signal = trad_markets_result.get('signal', 'NEUTRAL')
                 trad_markets_health = "HEALTHY"
+                trad_markets_details = {
+                    'status': trad_markets_health,
+                    'data_source': 'Alpha Vantage + Twelve Data',
+                    'markets': trad_markets_result.get('markets', {})
+                }
                 print(f"✅ Layer 18 (Trad Markets): {trad_markets_score:.2f}/100")
+                print(f"   🏥 Durum: {trad_markets_health} (GERÇEK DATA!)")
             else:
                 trad_markets_health = "WARNING"
+                print("⚠️ Layer 18 (Trad Markets) API data yok - fallback kullanıldı")
         except Exception as e:
             trad_markets_health = "ERROR"
             print(f"⚠️ Layer 18 (Trad Markets) hatası: {e}")
@@ -637,7 +648,7 @@ def make_trading_decision(
             print(f"⚠️ Monte Carlo hatası: {e}")
     
     # ========================================================================
-    # KELLY CRİTERİON (✅ DÜZELTME!)
+    # KELLY CRİTERİON
     # ========================================================================
     
     kelly_result = {}
@@ -648,7 +659,6 @@ def make_trading_decision(
         try:
             print(f"\n🎯 kelly.calculate_dynamic_kelly çağrılıyor...")
             
-            # ✅ DÜZELTME: avg_win, avg_loss (SNAKE_CASE!)
             kelly_result = kelly.calculate_dynamic_kelly(
                 win_rate=confidence,
                 avg_win=upside_potential if upside_potential > 0 else 2.0,
@@ -745,7 +755,7 @@ def make_trading_decision(
     atr_multiplier = 2.0
     volatility = components.get('volatility', {}).get('value', 0.02) if 'volatility' in components else 0.02
     
-    # ✅ DÜZELTME: WAIT durumunda bile SL/TP hesapla!
+    # WAIT durumunda bile SL/TP hesapla!
     stop_loss = entry_price * (1 - volatility * atr_multiplier)
     take_profit = entry_price * (1 + volatility * atr_multiplier * 2)
     
@@ -810,31 +820,31 @@ def make_trading_decision(
         'timestamp': datetime.now().isoformat(),
         'symbol': symbol,
         'interval': interval,
-        'version': 'v9.7 PRODUCTION - 6 KRİTİK FİX!'
+        'version': 'v10.0 REAL API INTEGRATION!'
     }
     
     print(f"\n{'='*80}")
-    print(f"✅ AI BRAIN v9.7 TAMAMLANDI!")
+    print(f"✅ AI BRAIN v10.0 TAMAMLANDI!")
     print(f"{'='*80}\n")
     
     return result
 
 # ============================================================================
-# SON: AI_BRAIN.PY v9.7 PRODUCTION READY
+# SON: AI_BRAIN.PY v10.0 REAL API INTEGRATION
 # ============================================================================
 
 if __name__ == "__main__":
     print("=" * 80)
-    print("🔱 AI BRAIN v9.7 PRODUCTION READY - 6 KRİTİK HATA DÜZELTİLDİ!")
+    print("🔱 AI BRAIN v10.0 REAL API INTEGRATION!")
     print("=" * 80)
     print()
-    print("DÜZELTİLEN HATALAR:")
-    print("  ✅ Cross-Asset: get_multi_coin_data() (GERÇEK fonksiyon)")
-    print("  ✅ Kelly: avg_win, avg_loss (SNAKE_CASE)")
-    print("  ✅ Entry/SL/TP: WAIT durumunda bile hesapla")
-    print("  ✅ Monte Carlo: num_simulations parametresi")
-    print("  ✅ yfinance timeout handling")
-    print("  ✅ Layer health monitoring")
+    print("YENİ v10.0'DA:")
+    print("  ✅ Alpha Vantage API (SPY, QQQ)")
+    print("  ✅ Twelve Data API (DXY, VIX, Gold, Silver)")
+    print("  ✅ Layer 12 Macro - GERÇEK veriler!")
+    print("  ✅ Layer 13 Gold - GERÇEK veriler!")
+    print("  ✅ Layer 16 VIX - GERÇEK veriler!")
+    print("  ✅ Layer 18 Trad Markets - GERÇEK veriler!")
     print()
-    print("ALL 18 LAYERS ACTIVE!")
+    print("ALL 18 LAYERS WITH REAL DATA ACTIVE!")
     print("=" * 80)
