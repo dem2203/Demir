@@ -336,15 +336,60 @@ def calculate_cross_asset(target_symbol='BTCUSDT', interval='1h', limit=168):
     if target_symbol not in symbols:
         symbols.append(target_symbol)
     
-    # Get multi-coin data
-    result = get_multi_coin_data(symbols, interval, limit)
+    # cross_asset_layer.py - RETURN FORMAT FIX (Satır 450 civarı)
+# Sadece bu fonksiyonun return kısmını düzeltiyoruz!
+
+def get_multi_coin_data(symbols, interval='1h', limit=100):
+    """
+    ✅ DÜZELTME: Return formatı standardize edildi
     
-    if not result['success'] or len(result.get('data', {})) < 2:
+    Birden fazla coin için fiyat verisi çeker (Binance API)
+    """
+    try:
+        result_data = {}
+        
+        for symbol in symbols:
+            url = f"https://api.binance.com/api/v3/klines"
+            params = {
+                'symbol': symbol,
+                'interval': interval,
+                'limit': limit
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                klines = response.json()
+                bars = []
+                
+                for kline in klines:
+                    bars.append({
+                        'timestamp': int(kline[0]),
+                        'open': float(kline[1]),
+                        'high': float(kline[2]),
+                        'low': float(kline[3]),
+                        'close': float(kline[4]),
+                        'volume': float(kline[5])
+                    })
+                
+                result_data[symbol] = bars
+        
+        # ✅ DÜZELTME: Standardize return format
         return {
-            'available': False,
-            'score': 50,
-            'reason': 'Cross-asset data unavailable',
-            'sentiment': 'NEUTRAL'
+            'success': True,
+            'data': result_data,
+            'symbols': list(result_data.keys()),
+            'count': len(result_data)
+        }
+    
+    except Exception as e:
+        print(f"⚠️ get_multi_coin_data hatası: {e}")
+        return {
+            'success': False,
+            'data': {},
+            'symbols': [],
+            'count': 0,
+            'error': str(e)
         }
     
     data = result['data']
