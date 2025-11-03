@@ -1,6 +1,7 @@
 # ===========================================
-# vix_layer.py v4.0 - RATE LIMIT SAFE + MULTI-SOURCE
+# vix_layer.py v4.1 - SYNTAX ERROR FIXED
 # ===========================================
+# ✅ Line 210 syntax error fixed: print(f( → print(f"
 # ✅ api_cache_manager entegrasyonu
 # ✅ Multi-source fallback (Twelve Data → yfinance)
 # ✅ 15 dakika cache
@@ -8,10 +9,15 @@
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - VIX Layer v4.0 RATE LIMIT SAFE
+🔱 DEMIR AI TRADING BOT - VIX Layer v4.1 (SYNTAX FIXED!)
 ====================================================================
-Tarih: 3 Kasım 2025, 14:45 CET
-Versiyon: 4.0 - RATE LIMIT SAFE + MULTI-SOURCE
+Tarih: 3 Kasım 2025, 22:45 CET
+Versiyon: 4.1 - SYNTAX ERROR FIXED
+
+✅ YENİ v4.1:
+------------
+✅ Line 210 fixed: print(f( → print(f"
+✅ Parantez hatası düzeltildi
 
 YENİ v4.0:
 ----------
@@ -43,7 +49,7 @@ def analyze_vix() -> Dict[str, Any]:
     """
     VIX Fear Index analizi (RATE LIMIT SAFE!)
     
-    KAYNAK ÖNCE LİĞİ:
+    KAYNAK ÖNCELİĞİ:
     1. Twelve Data API (with cache)
     2. yfinance fallback
     
@@ -132,7 +138,6 @@ def analyze_vix() -> Dict[str, Any]:
         
         if not vix_hist.empty:
             vix_current = float(vix_hist['Close'].iloc[-1])
-            
             print(f"✅ VIX verisi (yfinance direct): {vix_current:.2f}")
             
             if vix_current < 12:
@@ -182,6 +187,7 @@ def analyze_vix() -> Dict[str, Any]:
         'timestamp': datetime.now().isoformat()
     }
 
+
 # ============================================================================
 # LEGACY FONKSİYON (GERİYE UYUMLULUK)
 # ============================================================================
@@ -192,23 +198,23 @@ def get_vix_signal() -> Dict[str, Any]:
     """
     return analyze_vix()
 
+
 # ============================================================================
 # TEST
 # ============================================================================
-
 if __name__ == "__main__":
     print("=" * 80)
-    print("🔱 VIX LAYER v4.0 - RATE LIMIT SAFE TEST!")
+    print("🔱 VIX LAYER v4.1 - SYNTAX FIXED TEST!")
     print("=" * 80)
     print()
     
     result = analyze_vix()
     
     print("\n📊 SONUÇ:")
-    print(f"  ✅ Başarılı: {result['success']}")
-    print(f"  ✅ VIX: {result.get('vix_current', 0):.2f}")
-    print(f("  ✅ Level: {result.get('vix_level', 'UNKNOWN')}")
-    print(f"  ✅ Score: {result.get('score', 0)}/100")
-    print(f"  ✅ Signal: {result.get('signal', 'UNKNOWN')}")
-    print(f"  ✅ Source: {result.get('data_source', 'UNKNOWN')}")
+    print(f"   ✅ Başarılı: {result['success']}")
+    print(f"   ✅ VIX: {result.get('vix_current', 0):.2f}")
+    print(f"   ✅ Level: {result.get('vix_level', 'UNKNOWN')}")  # ✅ FIXED: print(f" → print(f"
+    print(f"   ✅ Score: {result.get('score', 0)}/100")
+    print(f"   ✅ Signal: {result.get('signal', 'UNKNOWN')}")
+    print(f"   ✅ Source: {result.get('data_source', 'UNKNOWN')}")
     print("=" * 80)
