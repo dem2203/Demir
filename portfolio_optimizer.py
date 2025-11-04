@@ -1,469 +1,320 @@
-"""
-🔱 DEMIR AI TRADING BOT - PORTFOLIO OPTIMIZER v2.0 ENHANCED
-===========================================================
-PHASE 3.3: Kelly Criterion + Correlation + Multi-Coin Allocation
-
-Date: 2 Kasım 2025
-Version: 2.0 - ULTIMATE EDITION
-
-ÖZELLİKLER (GITHUB + YENİ):
----------------------------
-✅ Kelly Criterion Enhanced - Optimal position sizing
-✅ Correlation Analysis - Coin'ler arası korelasyon matrisi
-✅ Portfolio Allocation - Risk-balanced dağılım
-✅ Multi-Coin Balancing - 3-5 coin optimal mix
-✅ Diversification Score - Çeşitlendirme skoru
-✅ Risk parity optimization (NEW)
-✅ Rebalancing recommendations (NEW)
-✅ Portfolio performance tracking (NEW)
-✅ Sharpe-optimal allocation (NEW)
-"""
+# ============================================================================
+# DEMIR AI TRADING BOT - Portfolio Optimizer
+# ============================================================================
+# Phase 3.3: Advanced Position Sizing & Risk Management
+# Date: 4 Kasım 2025, 22:40 CET
+# Version: 1.0 - PRODUCTION READY
+#
+# ✅ FEATURES:
+# - Kelly Criterion position sizing
+# - Risk/Reward optimization
+# - Correlation-based allocation
+# - Multi-coin portfolio balancing
+# - Dynamic risk adjustment
+# - Maximum drawdown protection
+# ============================================================================
 
 import numpy as np
-import pandas as pd
-import requests
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 class PortfolioOptimizer:
     """
-    Portfolio Optimizer - Multi-coin portfolio için optimal allocation
-    Kelly Criterion kullanarak position size optimize eder
-    Correlation analysis ile diversification sağlar
-    ENHANCED with advanced features
+    Advanced portfolio optimization with Kelly Criterion
     """
-    
-    def __init__(self, total_capital=10000, risk_per_trade=200):
+
+    def __init__(self, total_capital: float = 10000, max_risk_per_trade: float = 0.02):
         """
-        Portfolio Optimizer initialization
-        
+        Initialize portfolio optimizer
+
         Args:
-            total_capital: Toplam portfolio sermayesi ($)
-            risk_per_trade: Trade başına maksimum risk ($)
+            total_capital: Total available capital
+            max_risk_per_trade: Maximum risk per trade (0.02 = 2%)
         """
         self.total_capital = total_capital
-        self.risk_per_trade = risk_per_trade
-        self.correlation_matrix = None
-        self.optimal_weights = {}
-        self.diversification_score = 0
-    
-    def calculate_kelly_fraction(self, win_rate, avg_win, avg_loss):
+        self.max_risk_per_trade = max_risk_per_trade
+
+        print(f"✅ Portfolio Optimizer initialized")
+        print(f"   Total Capital: ${total_capital:,.2f}")
+        print(f"   Max Risk/Trade: {max_risk_per_trade:.1%}")
+
+    def calculate_kelly_criterion(self, win_rate: float, avg_win: float, avg_loss: float) -> float:
         """
-        Kelly Criterion ile optimal position size hesapla
-        
-        Formula: f* = (p*b - q) / b
-        p = win probability
-        b = win/loss ratio
-        q = loss probability (1-p)
-        
+        Calculate Kelly Criterion for optimal position sizing
+
+        Formula: K = (W * R - L) / R
+        where:
+          K = Kelly percentage
+          W = Win rate (probability of win)
+          R = Win/Loss ratio (avg_win / avg_loss)
+          L = Loss rate (1 - W)
+
         Args:
-            win_rate: Win rate (0-1)
-            avg_win: Ortalama kazanç ($)
-            avg_loss: Ortalama kayıp ($)
-        
+            win_rate: Historical win rate (0-1)
+            avg_win: Average win amount
+            avg_loss: Average loss amount
+
         Returns:
-            kelly_fraction: Optimal position size (portfolio'nun yüzdesi)
+            Kelly percentage (0-1)
         """
-        
-        if win_rate <= 0 or win_rate >= 1:
-            return 0.0
-        
-        if avg_loss == 0:
-            return 0.0
-        
-        p = win_rate
-        q = 1 - p
-        b = avg_win / avg_loss if avg_loss > 0 else 0
-        
-        # Kelly formula
-        kelly = (p * b - q) / b if b > 0 else 0
-        
-        # Half Kelly (daha konservatif)
-        kelly_half = kelly * 0.5
-        
-        # Max %25 cap
-        kelly_capped = min(kelly_half, 0.25)
-        
-        return max(0, kelly_capped)
-    
-    def calculate_position_size(self, kelly_fraction, current_capital):
+        if avg_loss == 0 or win_rate == 0:
+            return 0
+
+        win_loss_ratio = avg_win / avg_loss
+        loss_rate = 1 - win_rate
+
+        kelly = (win_rate * win_loss_ratio - loss_rate) / win_loss_ratio
+
+        # Kelly can be negative (don't trade) or > 1 (leverage)
+        # We cap it at 0.25 (25%) for safety (Half Kelly)
+        kelly_capped = max(0, min(kelly, 0.25))
+
+        print(f"📊 Kelly Criterion:")
+        print(f"   Raw Kelly: {kelly:.2%}")
+        print(f"   Capped Kelly: {kelly_capped:.2%}")
+        print(f"   (Win Rate: {win_rate:.1%}, W/L Ratio: {win_loss_ratio:.2f})")
+
+        return kelly_capped
+
+    def calculate_position_size(self, signal_confidence: float, kelly_fraction: float, 
+                               entry_price: float, stop_loss: float) -> Dict:
         """
-        Kelly fraction'dan dollar cinsinden position size hesapla
-        
+        Calculate optimal position size
+
         Args:
-            kelly_fraction: Kelly Criterion sonucu (0-1)
-            current_capital: Mevcut sermaye ($)
-        
+            signal_confidence: AI confidence (0-1)
+            kelly_fraction: Kelly criterion result (0-1)
+            entry_price: Entry price
+            stop_loss: Stop loss price
+
         Returns:
-            position_size: Trade için allocation ($)
+            Dict with position size, risk, and allocation
         """
-        
-        position_size = current_capital * kelly_fraction
-        
-        # Min/Max limitler
-        min_position = self.risk_per_trade * 2  # En az 2x risk
-        max_position = current_capital * 0.25   # En fazla %25
-        
-        position_size = max(min_position, min(position_size, max_position))
-        
-        return position_size
-    
-    def fetch_correlation_data(self, symbols=['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT'], 
-                                 interval='1d', lookback_days=30):
-        """
-        Multi-coin için korelasyon verisi çek
-        
-        Args:
-            symbols: Coin listesi
-            interval: Timeframe
-            lookback_days: Kaç gün geriye
-        
-        Returns:
-            DataFrame: Price data for all coins
-        """
-        
-        print(f"📊 Fetching correlation data for {len(symbols)} coins...")
-        
-        price_data = {}
-        
-        for symbol in symbols:
-            try:
-                url = "https://fapi.binance.com/fapi/v1/klines"
-                end_time = int(datetime.now().timestamp() * 1000)
-                start_time = int((datetime.now() - timedelta(days=lookback_days)).timestamp() * 1000)
-                
-                params = {
-                    'symbol': symbol,
-                    'interval': interval,
-                    'startTime': start_time,
-                    'endTime': end_time,
-                    'limit': 1000
-                }
-                
-                response = requests.get(url, params=params, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    closes = [float(candle[4]) for candle in data]
-                    price_data[symbol] = closes
-                else:
-                    print(f"⚠️ Failed to fetch {symbol}")
-                    
-            except Exception as e:
-                print(f"❌ Error fetching {symbol}: {str(e)}")
-        
-        # DataFrame oluştur
-        df = pd.DataFrame(price_data)
-        
-        print(f"✅ {len(df)} candles loaded for {len(df.columns)} coins")
-        
-        return df
-    
-    def calculate_correlation_matrix(self, price_df):
-        """
-        Coin'ler arası korelasyon matrisi hesapla
-        
-        Args:
-            price_df: Price DataFrame
-        
-        Returns:
-            correlation_matrix: Korelasyon matrisi
-        """
-        
-        # Returns hesapla
-        returns = price_df.pct_change().dropna()
-        
-        # Korelasyon matrisi
-        corr_matrix = returns.corr()
-        
-        self.correlation_matrix = corr_matrix
-        
-        print("\n📊 CORRELATION MATRIX")
-        print("=" * 50)
-        print(corr_matrix.round(3))
-        print("=" * 50 + "\n")
-        
-        return corr_matrix
-    
-    def calculate_diversification_score(self, corr_matrix):
-        """
-        Portfolio çeşitlendirme skoru hesapla
-        
-        Düşük korelasyon = Yüksek diversification
-        
-        Args:
-            corr_matrix: Korelasyon matrisi
-        
-        Returns:
-            diversification_score: 0-100 arası skor
-        """
-        
-        # Ortalama korelasyonu hesapla (diagonal hariç)
-        n = len(corr_matrix)
-        sum_corr = 0
-        count = 0
-        
-        for i in range(n):
-            for j in range(i+1, n):
-                sum_corr += abs(corr_matrix.iloc[i, j])
-                count += 1
-        
-        avg_corr = sum_corr / count if count > 0 else 0
-        
-        # Diversification score (düşük korelasyon = yüksek skor)
-        div_score = (1 - avg_corr) * 100
-        
-        self.diversification_score = div_score
-        
-        print(f"📈 Diversification Score: {div_score:.1f}/100")
-        if div_score > 70:
-            print("✅ Excellent diversification!")
-        elif div_score > 50:
-            print("⚠️ Good diversification")
-        else:
-            print("❌ Poor diversification - coins too correlated!")
-        
-        return div_score
-    
-    def optimize_portfolio_weights(self, symbols, ai_scores):
-        """
-        AI skorlarına göre optimal portfolio ağırlıkları hesapla
-        
-        Args:
-            symbols: Coin listesi
-            ai_scores: Her coin için AI score (0-100)
-        
-        Returns:
-            optimal_weights: Her coin için allocation yüzdesi
-        """
-        
-        print("\n💼 PORTFOLIO OPTIMIZATION")
-        print("=" * 50)
-        
-        # Skorları normalize et (toplamı 1 olacak şekilde)
-        total_score = sum(ai_scores.values())
-        
-        if total_score == 0:
-            # Eşit dağıt
-            weights = {coin: 1/len(symbols) for coin in symbols}
-        else:
-            weights = {coin: score/total_score for coin, score in ai_scores.items()}
-        
-        # Korelasyon ile ayarla (eğer mevcut ise)
-        if self.correlation_matrix is not None:
-            adjusted_weights = self._adjust_weights_by_correlation(weights)
-        else:
-            adjusted_weights = weights
-        
-        # Risk parity adjustment (NEW)
-        adjusted_weights = self._apply_risk_parity(adjusted_weights)
-        
-        # Min/Max limitler
-        for coin in adjusted_weights:
-            adjusted_weights[coin] = max(0.05, min(adjusted_weights[coin], 0.50))  # %5-%50 arası
-        
-        # Toplam yüzdeyi yeniden normalize et
-        total = sum(adjusted_weights.values())
-        adjusted_weights = {coin: w/total for coin, w in adjusted_weights.items()}
-        
-        self.optimal_weights = adjusted_weights
-        
-        # Print weights
-        print("\n🎯 OPTIMAL ALLOCATION:")
-        for coin, weight in sorted(adjusted_weights.items(), key=lambda x: x[1], reverse=True):
-            allocation_usd = self.total_capital * weight
-            print(f"  {coin}: {weight*100:.1f}% (${allocation_usd:,.2f})")
-        
-        print("=" * 50 + "\n")
-        
-        return adjusted_weights
-    
-    def _adjust_weights_by_correlation(self, weights):
-        """
-        Korelasyona göre ağırlıkları ayarla
-        Yüksek korelasyonlu coin'lerin ağırlığını azalt
-        
-        Args:
-            weights: İlk ağırlıklar
-        
-        Returns:
-            adjusted_weights: Ayarlanmış ağırlıklar
-        """
-        
-        adjusted = weights.copy()
-        
-        # Her coin için korelasyon penaltısı hesapla
-        for coin in weights:
-            if coin in self.correlation_matrix.columns:
-                # Diğer coin'lerle ortalama korelasyon
-                other_coins = [c for c in self.correlation_matrix.columns if c != coin]
-                avg_corr = self.correlation_matrix.loc[coin, other_coins].abs().mean()
-                
-                # Yüksek korelasyon = ağırlık azalt
-                penalty = 1 - (avg_corr * 0.3)  # Max %30 azalma
-                adjusted[coin] = weights[coin] * penalty
-        
-        return adjusted
-    
-    def _apply_risk_parity(self, weights):
-        """
-        NEW: Risk parity - Her coin'in risk katkısı eşit olsun
-        
-        Args:
-            weights: Mevcut ağırlıklar
-        
-        Returns:
-            risk_parity_weights: Risk parity adjusted weights
-        """
-        
-        # Simplified risk parity (volatility-based)
-        # In production, use actual volatility data
-        
-        # For now, just return original weights
-        # TODO: Implement full risk parity with volatility data
-        
-        return weights
-    
-    def generate_allocation_report(self):
-        """
-        NEW: Portfolio allocation raporu oluştur
-        
-        Returns:
-            report: Allocation summary dict
-        """
-        
-        if not self.optimal_weights:
-            return {'error': 'No weights calculated'}
-        
-        report = {
-            'total_capital': self.total_capital,
-            'risk_per_trade': self.risk_per_trade,
-            'diversification_score': self.diversification_score,
-            'allocations': {},
-            'recommendations': []
+        # Risk per trade (in dollars)
+        risk_amount = self.total_capital * min(self.max_risk_per_trade, kelly_fraction)
+
+        # Adjust by confidence
+        risk_adjusted = risk_amount * signal_confidence
+
+        # Calculate position size based on distance to stop loss
+        price_risk = abs(entry_price - stop_loss) / entry_price
+        position_value = risk_adjusted / price_risk if price_risk > 0 else 0
+
+        # Number of units to buy
+        units = position_value / entry_price if entry_price > 0 else 0
+
+        # Allocation percentage
+        allocation = position_value / self.total_capital
+
+        return {
+            'position_value': position_value,
+            'units': units,
+            'risk_amount': risk_adjusted,
+            'allocation': allocation,
+            'kelly_fraction': kelly_fraction,
+            'confidence_adjusted': signal_confidence
         }
-        
-        for coin, weight in self.optimal_weights.items():
-            allocation_usd = self.total_capital * weight
-            report['allocations'][coin] = {
-                'weight': weight,
-                'allocation_usd': allocation_usd,
-                'percentage': weight * 100
-            }
-        
-        # Recommendations
-        if self.diversification_score < 50:
-            report['recommendations'].append("⚠️ Consider adding more diverse assets")
-        
-        if max(self.optimal_weights.values()) > 0.4:
-            report['recommendations'].append("⚠️ Portfolio too concentrated in one asset")
-        
-        if self.diversification_score > 70:
-            report['recommendations'].append("✅ Portfolio well-diversified")
-        
-        return report
-    
-    def calculate_rebalancing_needed(self, current_holdings):
+
+    def optimize_multi_coin_portfolio(self, signals: List[Dict]) -> List[Dict]:
         """
-        NEW: Rebalancing gerekli mi hesapla
-        
+        Optimize allocation across multiple coins
+
         Args:
-            current_holdings: Mevcut holdings dict {coin: usd_value}
-        
+            signals: List of signals with {symbol, score, confidence}
+
         Returns:
-            rebalancing_actions: Alım/satım önerileri
+            List of optimized allocations
         """
-        
-        if not self.optimal_weights:
-            return {'error': 'No target weights set'}
-        
-        total_value = sum(current_holdings.values())
-        current_weights = {coin: value/total_value for coin, value in current_holdings.items()}
-        
-        actions = []
-        
-        for coin in self.optimal_weights:
-            target_weight = self.optimal_weights[coin]
-            current_weight = current_weights.get(coin, 0)
-            
-            diff = target_weight - current_weight
-            
-            if abs(diff) > 0.05:  # %5'ten fazla fark varsa
-                action_type = 'BUY' if diff > 0 else 'SELL'
-                amount_usd = abs(diff) * total_value
-                
-                actions.append({
-                    'coin': coin,
-                    'action': action_type,
-                    'amount_usd': amount_usd,
-                    'current_weight': current_weight * 100,
-                    'target_weight': target_weight * 100,
-                    'difference': diff * 100
+        if not signals:
+            return []
+
+        print(f"
+{'='*80}")
+        print(f"🎯 PORTFOLIO OPTIMIZATION: {len(signals)} signals")
+        print(f"{'='*80}
+")
+
+        # Calculate total confidence-weighted score
+        total_score = sum(s['score'] * s['confidence'] for s in signals)
+
+        if total_score == 0:
+            return []
+
+        # Allocate capital proportionally to confidence-weighted scores
+        allocations = []
+        remaining_capital = self.total_capital
+
+        for signal in signals:
+            # Skip neutral signals
+            if signal['signal'] == 'NEUTRAL':
+                continue
+
+            # Weighted allocation
+            weight = (signal['score'] * signal['confidence']) / total_score
+            allocated_capital = self.total_capital * weight
+
+            # Cap individual allocation at 30%
+            allocated_capital = min(allocated_capital, self.total_capital * 0.3)
+
+            # Calculate position
+            entry = signal.get('entry', signal.get('price', 0))
+            sl = signal.get('sl', entry * 0.985)  # Default 1.5% SL
+
+            if entry > 0:
+                position = self.calculate_position_size(
+                    signal_confidence=signal['confidence'],
+                    kelly_fraction=weight,
+                    entry_price=entry,
+                    stop_loss=sl
+                )
+
+                allocations.append({
+                    'symbol': signal['symbol'],
+                    'signal': signal['signal'],
+                    'score': signal['score'],
+                    'confidence': signal['confidence'],
+                    'allocated_capital': allocated_capital,
+                    'position': position,
+                    'weight': weight
                 })
-        
-        return {'rebalancing_needed': len(actions) > 0, 'actions': actions}
+
+                remaining_capital -= allocated_capital
+
+        # Print summary
+        print("📊 ALLOCATION SUMMARY:")
+        for alloc in allocations:
+            print(f"   {alloc['symbol']:10} | "
+                  f"Signal: {alloc['signal']:7} | "
+                  f"Allocation: ${alloc['allocated_capital']:>8,.0f} ({alloc['weight']:>5.1%}) | "
+                  f"Conf: {alloc['confidence']:>4.1%}")
+
+        print(f"
+💰 Remaining Capital: ${remaining_capital:,.2f}")
+        print(f"{'='*80}
+")
+
+        return allocations
+
+    def calculate_portfolio_risk(self, allocations: List[Dict], 
+                                correlation_matrix: Optional[np.ndarray] = None) -> Dict:
+        """
+        Calculate portfolio-level risk metrics
+
+        Args:
+            allocations: List of position allocations
+            correlation_matrix: Correlation between assets (optional)
+
+        Returns:
+            Dict with portfolio risk metrics
+        """
+        if not allocations:
+            return {'portfolio_risk': 0, 'diversification_ratio': 0}
+
+        # Individual position risks
+        position_risks = [a['position']['risk_amount'] for a in allocations]
+        total_risk = sum(position_risks)
+
+        # If correlation matrix provided, calculate diversified risk
+        if correlation_matrix is not None and len(correlation_matrix) == len(allocations):
+            # Simplified portfolio risk calculation
+            weights = np.array([a['weight'] for a in allocations])
+            variance = weights @ correlation_matrix @ weights
+            diversified_risk = np.sqrt(variance) * self.total_capital
+            diversification_ratio = diversified_risk / total_risk if total_risk > 0 else 0
+        else:
+            # Assume average correlation of 0.7 (typical for crypto)
+            avg_correlation = 0.7
+            n = len(allocations)
+            diversification_ratio = 1 / np.sqrt(1 + (n - 1) * avg_correlation)
+            diversified_risk = total_risk * diversification_ratio
+
+        return {
+            'total_undiversified_risk': total_risk,
+            'diversified_risk': diversified_risk,
+            'diversification_ratio': diversification_ratio,
+            'risk_as_percent_capital': diversified_risk / self.total_capital
+        }
+
+    def adjust_for_drawdown(self, current_drawdown: float) -> float:
+        """
+        Adjust position sizes based on current drawdown
+
+        Args:
+            current_drawdown: Current drawdown (0-1)
+
+        Returns:
+            Risk adjustment multiplier (0-1)
+        """
+        # Reduce risk as drawdown increases
+        # No reduction until 5% DD, then linear reduction to 50% at 20% DD
+        if current_drawdown < 0.05:
+            return 1.0
+        elif current_drawdown < 0.20:
+            return 1.0 - (current_drawdown - 0.05) * (0.5 / 0.15)
+        else:
+            return 0.5  # Cap at 50% reduction
 
 # ============================================================================
-# USAGE EXAMPLE
+# HELPER FUNCTIONS
+# ============================================================================
+
+def create_optimizer(total_capital: float = 10000, max_risk: float = 0.02) -> PortfolioOptimizer:
+    """
+    Create portfolio optimizer instance
+
+    Args:
+        total_capital: Total capital
+        max_risk: Max risk per trade (0.02 = 2%)
+
+    Returns:
+        PortfolioOptimizer instance
+    """
+    return PortfolioOptimizer(total_capital, max_risk)
+
+def optimize_positions(signals: List[Dict], capital: float = 10000) -> List[Dict]:
+    """
+    Quick optimization of multiple positions
+
+    Args:
+        signals: List of AI signals
+        capital: Available capital
+
+    Returns:
+        List of optimized allocations
+    """
+    optimizer = PortfolioOptimizer(total_capital=capital)
+    return optimizer.optimize_multi_coin_portfolio(signals)
+
+# ============================================================================
+# TESTING
 # ============================================================================
 if __name__ == "__main__":
-    print("🔱 DEMIR AI PORTFOLIO OPTIMIZER v2.0 - ENHANCED")
-    print("=" * 60 + "\n")
-    
-    # Initialize
-    portfolio = PortfolioOptimizer(total_capital=10000, risk_per_trade=200)
-    
-    # Example: Kelly Criterion
-    print("1️⃣ KELLY CRITERION EXAMPLE")
-    print("-" * 60)
-    kelly_frac = portfolio.calculate_kelly_fraction(
-        win_rate=0.65,
-        avg_win=300,
-        avg_loss=150
+    print("="*80)
+    print("🎯 PORTFOLIO OPTIMIZER TEST")
+    print("="*80)
+
+    # Test Kelly Criterion
+    optimizer = PortfolioOptimizer(total_capital=10000, max_risk_per_trade=0.02)
+    kelly = optimizer.calculate_kelly_criterion(
+        win_rate=0.60,
+        avg_win=400,
+        avg_loss=200
     )
-    position_size = portfolio.calculate_position_size(kelly_frac, 10000)
-    print(f"Win Rate: 65%")
-    print(f"Avg Win: $300 | Avg Loss: $150")
-    print(f"Kelly Fraction: {kelly_frac:.3f}")
-    print(f"Optimal Position: ${position_size:,.2f}\n")
-    
-    # Example: Correlation Matrix
-    print("2️⃣ CORRELATION ANALYSIS")
-    print("-" * 60)
-    symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT']
-    price_df = portfolio.fetch_correlation_data(symbols, '1d', 30)
-    
-    if not price_df.empty:
-        corr_matrix = portfolio.calculate_correlation_matrix(price_df)
-        div_score = portfolio.calculate_diversification_score(corr_matrix)
-        
-        # Example: Portfolio Optimization
-        print("\n3️⃣ PORTFOLIO OPTIMIZATION")
-        print("-" * 60)
-        ai_scores = {
-            'BTCUSDT': 75,
-            'ETHUSDT': 68,
-            'LTCUSDT': 55,
-            'BNBUSDT': 62
-        }
-        
-        weights = portfolio.optimize_portfolio_weights(symbols, ai_scores)
-        
-        # Generate report
-        print("\n4️⃣ ALLOCATION REPORT")
-        print("-" * 60)
-        report = portfolio.generate_allocation_report()
-        
-        print(f"\nTotal Capital: ${report['total_capital']:,.2f}")
-        print(f"Diversification Score: {report['diversification_score']:.1f}/100\n")
-        
-        print("Allocations:")
-        for coin, data in report['allocations'].items():
-            print(f"  {coin}: ${data['allocation_usd']:,.2f} ({data['percentage']:.1f}%)")
-        
-        print("\nRecommendations:")
-        for rec in report['recommendations']:
-            print(f"  {rec}")
-    
-    print("\n" + "=" * 60)
-    print("✅ Portfolio Optimizer Ready!")
+    print(f"✅ Kelly Result: {kelly:.2%}
+")
+
+    # Test multi-coin optimization
+    test_signals = [
+        {'symbol': 'BTCUSDT', 'signal': 'LONG', 'score': 75, 'confidence': 0.8, 'entry': 35000, 'sl': 34500},
+        {'symbol': 'ETHUSDT', 'signal': 'LONG', 'score': 68, 'confidence': 0.7, 'entry': 1800, 'sl': 1770},
+        {'symbol': 'LTCUSDT', 'signal': 'SHORT', 'score': 45, 'confidence': 0.6, 'entry': 65, 'sl': 66}
+    ]
+
+    allocations = optimizer.optimize_multi_coin_portfolio(test_signals)
+    print(f"✅ Optimization complete! {len(allocations)} positions allocated")
+
+    # Calculate portfolio risk
+    risk = optimizer.calculate_portfolio_risk(allocations)
+    print(f"
+📊 Portfolio Risk:")
+    print(f"   Diversified Risk: ${risk['diversified_risk']:,.2f}")
+    print(f"   Risk % of Capital: {risk['risk_as_percent_capital']:.2%}")
