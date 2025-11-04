@@ -1,31 +1,23 @@
-# ===========================================
-# strategy_layer.py v2.0 - BINANCE REAL DATA + TECHNICAL INDICATORS
+# strategy_layer.py v2.1 - FIXED GITHUB ACTIONS COMPATIBILITY
 # ===========================================
 # ✅ Binance API integration for real price data
 # ✅ 10+ Technical Indicators (RSI, MACD, Bollinger, etc.)
 # ✅ Error handling and fallback
 # ✅ Weighted scoring system
+# ✅ FIXED: DataFrame to dict conversion for tests
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - Strategy Layer v2.0
+🔱 DEMIR AI TRADING BOT - Strategy Layer v2.1
 ====================================================================
-Tarih: 3 Kasım 2025, 22:17 CET
-Versiyon: 2.0 - REAL BINANCE DATA + TECHNICAL ANALYSIS
+Tarih: 4 Kasım 2025, 15:32 CET
+Versiyon: 2.1 - GITHUB ACTIONS COMPATIBILITY FIX
 
-YENİ v2.0:
+YENİ v2.1:
 ----------
-✅ Binance API integration (real OHLCV data)
-✅ RSI (Relative Strength Index)
-✅ MACD (Moving Average Convergence Divergence)
-✅ Bollinger Bands
-✅ Moving Average crossovers (EMA 9/21)
-✅ Stochastic Oscillator
-✅ Volume analysis
-✅ Fibonacci retracement levels
-✅ Support/Resistance detection
-✅ Trend strength analysis
-✅ Weighted ensemble scoring
+✅ Fixed DataFrame column access for GitHub Actions tests
+✅ Added .to_dict('records') return option
+✅ Backward compatible with existing code
 
 TECHNICAL INDICATORS (10+):
 ---------------------------
@@ -52,7 +44,7 @@ import requests
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import hashlib
 import hmac
 
@@ -60,7 +52,12 @@ import hmac
 # BINANCE API FUNCTIONS
 # ============================================================================
 
-def get_binance_klines(symbol: str = 'BTCUSDT', interval: str = '1h', limit: int = 100) -> pd.DataFrame:
+def get_binance_klines(
+    symbol: str = 'BTCUSDT', 
+    interval: str = '1h', 
+    limit: int = 100,
+    return_type: str = 'dataframe'
+) -> Union[pd.DataFrame, List[Dict]]:
     """
     Fetch OHLCV data from Binance API
     
@@ -68,9 +65,10 @@ def get_binance_klines(symbol: str = 'BTCUSDT', interval: str = '1h', limit: int
         symbol: Trading pair (BTCUSDT, ETHUSDT, LTCUSDT)
         interval: Timeframe (1m, 5m, 15m, 1h, 4h, 1d)
         limit: Number of candles (max 1000)
+        return_type: 'dataframe' or 'dict' - return format
     
     Returns:
-        DataFrame with OHLCV data
+        DataFrame or List[Dict] with OHLCV data
     """
     try:
         url = "https://api.binance.com/api/v3/klines"
@@ -99,8 +97,13 @@ def get_binance_klines(symbol: str = 'BTCUSDT', interval: str = '1h', limit: int
         df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
         
         print(f"✅ Binance: {symbol} - {len(df)} candles loaded ({interval})")
-        return df
         
+        # Return as dict list if requested (for GitHub Actions tests)
+        if return_type == 'dict':
+            return df.to_dict('records')
+        else:
+            return df
+            
     except Exception as e:
         print(f"❌ Binance API error ({symbol}): {e}")
         return None
@@ -116,10 +119,8 @@ def calculate_rsi(prices: pd.Series, period: int = 14) -> float:
         delta = prices.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
-        
         return rsi.iloc[-1]
     except:
         return 50.0  # Neutral
@@ -148,11 +149,10 @@ def calculate_bollinger_bands(prices: pd.Series, period: int = 20, std_dev: floa
     try:
         sma = prices.rolling(window=period).mean()
         std = prices.rolling(window=period).std()
-        
         upper = sma + (std * std_dev)
         lower = sma - (std * std_dev)
-        
         current_price = prices.iloc[-1]
+        
         bb_position = (current_price - lower.iloc[-1]) / (upper.iloc[-1] - lower.iloc[-1])
         
         return {
@@ -211,7 +211,6 @@ def calculate_volume_profile(volume: pd.Series) -> float:
         volume_sma = volume.rolling(window=20).mean()
         current_volume = volume.iloc[-1]
         avg_volume = volume_sma.iloc[-1]
-        
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
         return volume_ratio
     except:
@@ -224,10 +223,8 @@ def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int
         tr1 = high - low
         tr2 = abs(high - close.shift())
         tr3 = abs(low - close.shift())
-        
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         atr = tr.rolling(window=period).mean()
-        
         return atr.iloc[-1]
     except:
         return 0.0
@@ -259,7 +256,6 @@ def score_macd(macd_data: Dict[str, float]) -> float:
     Histogram < 0 and decreasing = Bearish → 15-30
     """
     histogram = macd_data['histogram']
-    
     if histogram > 0:
         return 70 + min(histogram * 100, 15)
     elif histogram < 0:
@@ -276,7 +272,6 @@ def score_bollinger(bb_data: Dict[str, float]) -> float:
     Middle = Neutral → 45-55
     """
     position = bb_data['position']
-    
     if position < 0.2:  # Near lower band
         return 70 + (0.2 - position) * 75
     elif position > 0.8:  # Near upper band
@@ -310,7 +305,6 @@ def score_stochastic(stoch_data: Dict[str, float]) -> float:
     K > 80 = Overbought (bearish) → 10-25
     """
     k = stoch_data['k']
-    
     if k < 20:
         return 75 + ((20 - k) / 20) * 15
     elif k > 80:
@@ -345,13 +339,13 @@ def analyze_strategy(symbol: str = 'BTCUSDT', interval: str = '1h') -> Dict[str,
         dict with total_score, signal, and indicator details
     """
     print(f"\n{'='*80}")
-    print(f"📊 STRATEGY LAYER v2.0 - TECHNICAL ANALYSIS")
+    print(f"📊 STRATEGY LAYER v2.1 - TECHNICAL ANALYSIS")
     print(f"   Symbol: {symbol}")
     print(f"   Interval: {interval}")
     print(f"{'='*80}\n")
     
     # Fetch data from Binance
-    df = get_binance_klines(symbol, interval, limit=100)
+    df = get_binance_klines(symbol, interval, limit=100, return_type='dataframe')
     
     if df is None or len(df) < 30:
         print("❌ Strategy: Insufficient data")
@@ -420,7 +414,6 @@ def analyze_strategy(symbol: str = 'BTCUSDT', interval: str = '1h') -> Dict[str,
         print(f"   EMA Crossover: {ema_score:.1f}/100")
         print(f"   Stochastic: {stoch_score:.1f}/100")
         print(f"   Volume: {volume_score:.1f}/100")
-        
         print(f"\n{'='*80}")
         print(f"✅ STRATEGY ANALYSIS COMPLETE!")
         print(f"   Total Score: {total_score:.1f}/100")
@@ -465,6 +458,8 @@ def analyze_strategy(symbol: str = 'BTCUSDT', interval: str = '1h') -> Dict[str,
         
     except Exception as e:
         print(f"❌ Strategy calculation error: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'available': False,
             'score': 50,
@@ -481,7 +476,6 @@ def get_strategy_signal(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
         dict: {'available': bool, 'score': float, 'signal': str}
     """
     result = analyze_strategy(symbol, interval='1h')
-    
     return {
         'available': result['available'],
         'score': result.get('score', 50),
@@ -492,11 +486,50 @@ def get_strategy_signal(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
 
 
 # ============================================================================
+# STRATEGY ENGINE CLASS WRAPPER (v6.1)
+# ============================================================================
+# ✅ FIX v15.0: AI Brain uyumluluğu için class wrapper eklendi
+
+class StrategyEngine:
+    """
+    Strategy Layer için class wrapper
+    AI Brain'in 'from strategy_layer import StrategyEngine' import'unu destekler
+    """
+    
+    def __init__(self):
+        """Initialize Strategy Engine"""
+        self.version = "6.1"
+        print(f"✅ StrategyEngine v{self.version} initialized")
+    
+    def get_strategy_signal(self, symbol, interval='1h', lookback=100):
+        """
+        Wrapper method - calls the module-level get_strategy_signal function
+        
+        Args:
+            symbol (str): Trading pair (e.g., 'BTCUSDT')
+            interval (str): Timeframe ('5m', '15m', '1h', '4h', '1d')
+            lookback (int): Number of candles to analyze
+        
+        Returns:
+            float: Strategy score (0-100)
+        """
+        # Call the module-level function
+        return get_strategy_signal(symbol)
+    
+    def analyze(self, symbol, interval='1h'):
+        """
+        Alternative method name for compatibility
+        """
+        return self.get_strategy_signal(symbol, interval)
+
+
+# ============================================================================
 # STANDALONE TESTING
 # ============================================================================
+
 if __name__ == "__main__":
     print("="*80)
-    print("🔱 STRATEGY LAYER v2.0 TEST")
+    print("🔱 STRATEGY LAYER v2.1 TEST")
     print("   BINANCE REAL DATA + TECHNICAL ANALYSIS")
     print("="*80)
     
@@ -513,44 +546,24 @@ if __name__ == "__main__":
     if 'indicators' in result and result['indicators']:
         print(f"\n   Indicators:")
         for name, data in result['indicators'].items():
-            print(f"   - {name}: {data}")
+            print(f"     - {name}: {data}")
     
     print("="*80)
-
-
-# ============================================================================
-# STRATEGY ENGINE CLASS WRAPPER (v6.0)
-# ============================================================================
-# ✅ FIX v15.0: AI Brain uyumluluğu için class wrapper eklendi
-
-class StrategyEngine:
-    """
-    Strategy Layer için class wrapper
-    AI Brain'in 'from strategy_layer import StrategyEngine' import'unu destekler
-    """
-
-    def __init__(self):
-        """Initialize Strategy Engine"""
-        self.version = "6.0"
-        print(f"✅ StrategyEngine v{self.version} initialized")
-
-    def get_strategy_signal(self, symbol, interval='1h', lookback=100):
-        """
-        Wrapper method - calls the module-level get_strategy_signal function
-
-        Args:
-            symbol (str): Trading pair (e.g., 'BTCUSDT')
-            interval (str): Timeframe ('5m', '15m', '1h', '4h', '1d')
-            lookback (int): Number of candles to analyze
-
-        Returns:
-            float: Strategy score (0-100)
-        """
-        # Call the module-level function
-        return get_strategy_signal(symbol, interval, lookback)
-
-    def analyze(self, symbol, interval='1h'):
-        """
-        Alternative method name for compatibility
-        """
-        return self.get_strategy_signal(symbol, interval)
+    
+    # Test dict return format
+    print("\n" + "="*80)
+    print("🧪 TESTING DICT RETURN FORMAT (for GitHub Actions)")
+    print("="*80)
+    
+    bars = get_binance_klines('BTCUSDT', '1h', 100, return_type='dict')
+    
+    if bars:
+        print(f"✅ Fetched {len(bars)} candles as dict list")
+        print(f"✅ Latest candle: {bars[-1]}")
+        
+        # Test column access (as in GitHub Actions)
+        assert 'close' in bars[0], 'Missing close column!'
+        assert 'timestamp' in bars[0], 'Missing timestamp column!'
+        print(f"✅ Column access tests passed!")
+    
+    print("="*80)
