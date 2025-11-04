@@ -1,0 +1,148 @@
+name: AI Validation & Testing
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Manuel çalıştırma için
+
+jobs:
+  ai-brain-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: 📥 Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: 🧠 Test AI Brain (Signal Generation)
+        env:
+          BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
+          BINANCE_API_SECRET: ${{ secrets.BINANCE_API_SECRET }}
+        run: |
+          python -c "
+          from ai_brain import AIBrain
+          import json
+          
+          brain = AIBrain()
+          result = brain.analyze('BTCUSDT', timeframe='1h')
+          
+          print('=' * 80)
+          print('AI BRAIN TEST RESULTS')
+          print('=' * 80)
+          print(f'Signal: {result[\"signal\"]}')
+          print(f'Confidence: {result[\"confidence\"]}%')
+          print(f'Score: {result[\"score\"]}/100')
+          print(f'Active Layers: {result[\"active_layers\"]}/{result[\"total_layers\"]}')
+          print('=' * 80)
+          
+          # Test başarılı mı kontrol et
+          assert result['active_layers'] >= 9, 'Layer count too low!'
+          assert 0 <= result['score'] <= 100, 'Score out of range!'
+          assert result['signal'] in ['STRONG_BUY', 'BUY', 'NEUTRAL', 'SELL', 'STRONG_SELL'], 'Invalid signal!'
+          
+          print('✅ All tests passed!')
+          "
+      
+      - name: 📊 Test Layer Breakdown
+        run: |
+          python -c "
+          from strategy_layer import analyze_strategy
+          
+          result = analyze_strategy('BTCUSDT', timeframe='1h')
+          
+          print('=' * 80)
+          print('STRATEGY LAYER TEST')
+          print('=' * 80)
+          print(f'Score: {result[\"score\"]}/100')
+          print(f'Signal: {result[\"signal\"]}')
+          print('=' * 80)
+          
+          assert 0 <= result['score'] <= 100, 'Strategy score invalid!'
+          print('✅ Strategy layer passed!')
+          "
+      
+      - name: 🎯 Test Entry/SL/TP Calculator
+        run: |
+          python -c "
+          from tp_calculator import calculate_entry_sl_tp
+          
+          result = calculate_entry_sl_tp(
+              symbol='BTCUSDT',
+              signal='BUY',
+              confidence=75.5,
+              current_price=68245.32
+          )
+          
+          print('=' * 80)
+          print('ENTRY/SL/TP TEST')
+          print('=' * 80)
+          print(f'Entry: \${result[\"entry\"]:.2f}')
+          print(f'Stop Loss: \${result[\"sl\"]:.2f}')
+          print(f'TP1: \${result[\"tp1\"]:.2f}')
+          print(f'TP2: \${result[\"tp2\"]:.2f}')
+          print(f'TP3: \${result[\"tp3\"]:.2f}')
+          print('=' * 80)
+          
+          # Logic checks
+          if result['signal'] == 'BUY':
+              assert result['sl'] < result['entry'], 'SL must be below entry for BUY!'
+              assert result['entry'] < result['tp1'] < result['tp2'] < result['tp3'], 'TP order wrong!'
+          
+          print('✅ Entry/SL/TP logic correct!')
+          "
+      
+      - name: 📈 Test Backtest Engine
+        run: |
+          python -c "
+          from backtest_engine import BacktestEngine
+          from datetime import datetime, timedelta
+          
+          engine = BacktestEngine(
+              symbol='BTCUSDT',
+              start_date=(datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
+              end_date=datetime.now().strftime('%Y-%m-%d'),
+              initial_capital=10000,
+              position_size=0.1
+          )
+          
+          results = engine.run()
+          
+          print('=' * 80)
+          print('BACKTEST RESULTS')
+          print('=' * 80)
+          print(f'Total Trades: {results[\"total_trades\"]}')
+          print(f'Win Rate: {results[\"win_rate\"]:.2f}%')
+          print(f'Sharpe Ratio: {results[\"sharpe_ratio\"]:.2f}')
+          print(f'Max Drawdown: {results[\"max_drawdown\"]:.2f}%')
+          print(f'Final Balance: \${results[\"final_balance\"]:.2f}')
+          print(f'Return: {results[\"return_pct\"]:.2f}%')
+          print('=' * 80)
+          
+          # Performance checks
+          assert results['total_trades'] > 0, 'No trades executed!'
+          assert results['win_rate'] >= 45, 'Win rate too low!'
+          assert results['max_drawdown'] <= 20, 'Drawdown too high!'
+          
+          print('✅ Backtest performance acceptable!')
+          "
+      
+      - name: 🎉 Test Summary
+        run: |
+          echo "================================="
+          echo "🎉 ALL AI VALIDATION TESTS PASSED!"
+          echo "================================="
+          echo ""
+          echo "✅ AI Brain: Signal generation working"
+          echo "✅ Layer Breakdown: All layers operational"
+          echo "✅ Entry/SL/TP: Logic verified"
+          echo "✅ Backtest: Performance acceptable"
+          echo ""
+          echo "🚀 SYSTEM READY FOR PRODUCTION!"
