@@ -140,6 +140,15 @@ st.markdown("""
 # MODULE IMPORTS - DYNAMIC LOADING
 # ============================================================================
 
+# ✅ PHASE 7.5: Feedback System
+try:
+    from feedback_system import FeedbackSystem
+    FEEDBACK_AVAILABLE = True
+    print("✅ Streamlit v16.0: Feedback System loaded")
+except Exception as e:
+    print(f"⚠️ Streamlit v16.0: Feedback System import failed: {e}")
+    FEEDBACK_AVAILABLE = False
+
 # AI Brain - ✅ FIXED: make_trading_decision (not analyze_with_ai)
 AI_BRAIN_AVAILABLE = False
 try:
@@ -217,6 +226,11 @@ if 'health_data' not in st.session_state:
 if 'backtest_results' not in st.session_state:
     st.session_state.backtest_results = None
 
+if 'feedback_system' not in st.session_state:
+    if FEEDBACK_AVAILABLE:
+        st.session_state.feedback_system = FeedbackSystem('demir_ai_feedback.db')
+    else:
+        st.session_state.feedback_system = None
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -534,7 +548,48 @@ def render_ai_trading():
         st.error("❌ AI Brain not available. Cannot generate trading signals.")
         st.info("💡 Make sure ai_brain.py is in the same directory and contains make_trading_decision() function.")
         return
+    def render_ai_trading():
+    """Render AI trading analysis page - COIN SPECIFIC"""
     
+    # ... TÜM MEVCUT KOD AYNI KALACAK ...
+    
+    # 🆕 PHASE 7.5: User Feedback Section (EN SONA EKLE)
+    if FEEDBACK_AVAILABLE and st.session_state.last_analysis:
+        st.markdown("---")
+        st.markdown("### 📊 Rate This Signal")
+        st.markdown("*Your feedback helps improve AI accuracy*")
+        
+        col1, col2, col3 = st.columns([2, 2, 1])
+        
+        with col1:
+            user_feedback = st.selectbox(
+                "Was this signal accurate?",
+                ['Select...', 'CORRECT', 'INCORRECT', 'PARTIAL', 'TOO_EARLY'],
+                key='signal_feedback_select'
+            )
+        
+        with col2:
+            if user_feedback != 'Select...':
+                notes = st.text_input("Additional notes (optional)", key='feedback_notes')
+        
+        with col3:
+            if user_feedback != 'Select...':
+                if st.button("✅ Submit Feedback", use_container_width=True):
+                    result = st.session_state.last_analysis
+                    
+                    fs = st.session_state.feedback_system
+                    fs.submit_signal_feedback(
+                        symbol=result.get('symbol', 'UNKNOWN'),
+                        timeframe=result.get('interval', '1h'),
+                        ai_signal=result.get('signal', 'NEUTRAL'),
+                        ai_score=result.get('final_score', 50),
+                        ai_confidence=result.get('confidence', 0),
+                        user_feedback=user_feedback,
+                        notes=notes if notes else None
+                    )
+                    
+                    st.success("✅ Thank you for your feedback!")
+
     # Analysis controls
     col1, col2 = st.columns([3, 1])
     
