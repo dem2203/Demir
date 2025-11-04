@@ -1,7 +1,7 @@
 # ===========================================
-# vix_layer.py v4.1 - SYNTAX ERROR FIXED
+# vix_layer.py v4.2 - SYMBOL PARAMETER ADDED
 # ===========================================
-# ✅ Line 210 syntax error fixed: print(f( → print(f"
+# ✅ FIXED: symbol parameter added to all functions
 # ✅ api_cache_manager entegrasyonu
 # ✅ Multi-source fallback (Twelve Data → yfinance)
 # ✅ 15 dakika cache
@@ -9,15 +9,15 @@
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - VIX Layer v4.1 (SYNTAX FIXED!)
+🔱 DEMIR AI TRADING BOT - VIX Layer v4.2 (SYMBOL PARAMETER FIXED!)
 ====================================================================
-Tarih: 3 Kasım 2025, 22:45 CET
-Versiyon: 4.1 - SYNTAX ERROR FIXED
+Tarih: 4 Kasım 2025, 21:26 CET
+Versiyon: 4.2 - Symbol parameter added
 
-✅ YENİ v4.1:
+✅ YENİ v4.2:
 ------------
-✅ Line 210 fixed: print(f( → print(f"
-✅ Parantez hatası düzeltildi
+✅ symbol parameter added to calculate_vix_fear() and get_vix_signal()
+✅ Default value: symbol="BTC" for backward compatibility
 
 YENİ v4.0:
 ----------
@@ -35,186 +35,270 @@ from typing import Dict, Any
 
 # API Cache Manager import (YENİ!)
 try:
-    from api_cache_manager import fetch_market_data, fetch_quick_price
-    CACHE_MANAGER_AVAILABLE = True
+    from api_cache_manager import APICache
+    cache = APICache()
+    CACHE_AVAILABLE = True
+    print("✅ api_cache_manager loaded successfully")
 except ImportError:
-    CACHE_MANAGER_AVAILABLE = False
-    print("⚠️ api_cache_manager bulunamadı - direct API kullanılacak")
+    CACHE_AVAILABLE = False
+    print("⚠️ api_cache_manager not available, caching disabled")
 
-# ============================================================================
-# VIX FEAR INDEX ANALİZİ (RATE LIMIT SAFE!)
-# ============================================================================
-
-def analyze_vix() -> Dict[str, Any]:
+def fetch_vix_twelvedata(symbol="BTC"):
     """
-    VIX Fear Index analizi (RATE LIMIT SAFE!)
+    Twelve Data'dan VIX çeker (Primary source)
     
-    KAYNAK ÖNCELİĞİ:
-    1. Twelve Data API (with cache)
-    2. yfinance fallback
+    Args:
+        symbol: Trading pair symbol (for context)
     
     Returns:
-        dict: {
-            'success': bool,
-            'vix_current': float,
-            'vix_level': str ('EXTREME_FEAR', 'FEAR', 'NEUTRAL', 'GREED'),
-            'score': float (0-100),
-            'signal': str,
-            'interpretation': str,
-            'data_source': str
-        }
+        dict: VIX data or None
     """
-    print(f"\n{'='*80}")
-    print(f"😱 VIX FEAR INDEX ANALYSIS")
-    print(f"{'='*80}\n")
+    api_key = os.getenv('TWELVE_DATA_API_KEY')
+    if not api_key:
+        print(f"⚠️ TWELVE_DATA_API_KEY not set for {symbol}")
+        return None
     
-    # Cache Manager kullanalım!
-    if CACHE_MANAGER_AVAILABLE:
-        try:
-            # Twelve Data → yfinance chain
-            result = fetch_market_data(
-                symbol='^VIX',
-                source_priority=['twelve_data', 'yfinance'],
-                days=1
-            )
-            
-            if result['success'] and result['price'] > 0:
-                vix_current = result['price']
-                data_source = result['source']
-                
-                print(f"✅ VIX verisi çekildi: {vix_current:.2f}")
-                print(f"📊 Kaynak: {data_source}")
-                
-                # VIX seviye analizi
-                if vix_current < 12:
-                    vix_level = "EXTREME_GREED"
-                    score = 70
-                    signal = "BULLISH"
-                    interp = f"VIX çok düşük ({vix_current:.1f}) - aşırı iyimserlik, düzeltme riski"
-                elif vix_current < 20:
-                    vix_level = "GREED"
-                    score = 60
-                    signal = "BULLISH"
-                    interp = f"VIX normal ({vix_current:.1f}) - sağlıklı piyasa"
-                elif vix_current < 30:
-                    vix_level = "FEAR"
-                    score = 40
-                    signal = "NEUTRAL"
-                    interp = f"VIX yükseldi ({vix_current:.1f}) - artan belirsizlik"
-                else:
-                    vix_level = "EXTREME_FEAR"
-                    score = 20
-                    signal = "BEARISH"
-                    interp = f"VIX çok yüksek ({vix_current:.1f}) - panik, alım fırsatı?"
-                
-                print(f"\n{'='*80}")
-                print(f"✅ VIX ANALYSIS COMPLETE!")
-                print(f"   Level: {vix_level}")
-                print(f"   Score: {score}/100")
-                print(f"   Signal: {signal}")
-                print(f"{'='*80}\n")
-                
-                return {
-                    'success': True,
-                    'available': True,
-                    'vix_current': vix_current,
-                    'vix_level': vix_level,
-                    'score': score,
-                    'signal': signal,
-                    'interpretation': interp,
-                    'data_source': data_source,
-                    'timestamp': datetime.now().isoformat()
-                }
+    # Cache kontrolü
+    if CACHE_AVAILABLE:
+        cached = cache.get('vix', 'twelvedata')
+        if cached:
+            print(f"✅ VIX (Twelve Data) - using cache for {symbol}")
+            return cached
+    
+    try:
+        url = "https://api.twelvedata.com/price"
+        params = {
+            'symbol': 'VIX',
+            'apikey': api_key
+        }
         
-        except Exception as e:
-            print(f"⚠️ Cache Manager VIX hatası: {e}")
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if 'price' in data:
+            vix_value = float(data['price'])
+            result = {
+                'value': vix_value,
+                'source': 'twelvedata',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Cache'e kaydet
+            if CACHE_AVAILABLE:
+                cache.set('vix', 'twelvedata', result)
+                print(f"✅ VIX cached (Twelve Data) for {symbol}")
+            
+            return result
+        else:
+            print(f"⚠️ Twelve Data VIX: No price data for {symbol}")
+            return None
+            
+    except Exception as e:
+        print(f"⚠️ Twelve Data VIX error for {symbol}: {e}")
+        return None
+
+def fetch_vix_yfinance(symbol="BTC"):
+    """
+    yfinance'den VIX çeker (Fallback source)
     
-    # Fallback: Direct yfinance (cache yok)
+    Args:
+        symbol: Trading pair symbol (for context)
+    
+    Returns:
+        dict: VIX data or None
+    """
     try:
         import yfinance as yf
         
-        vix_ticker = yf.Ticker("^VIX")
-        vix_hist = vix_ticker.history(period="1d")
+        # Cache kontrolü
+        if CACHE_AVAILABLE:
+            cached = cache.get('vix', 'yfinance')
+            if cached:
+                print(f"✅ VIX (yfinance) - using cache for {symbol}")
+                return cached
         
-        if not vix_hist.empty:
-            vix_current = float(vix_hist['Close'].iloc[-1])
-            print(f"✅ VIX verisi (yfinance direct): {vix_current:.2f}")
-            
-            if vix_current < 12:
-                vix_level = "EXTREME_GREED"
-                score = 70
-                signal = "BULLISH"
-            elif vix_current < 20:
-                vix_level = "GREED"
-                score = 60
-                signal = "BULLISH"
-            elif vix_current < 30:
-                vix_level = "FEAR"
-                score = 40
-                signal = "NEUTRAL"
-            else:
-                vix_level = "EXTREME_FEAR"
-                score = 20
-                signal = "BEARISH"
-            
-            return {
-                'success': True,
-                'available': True,
-                'vix_current': vix_current,
-                'vix_level': vix_level,
-                'score': score,
-                'signal': signal,
-                'interpretation': f"VIX: {vix_current:.1f} - {vix_level}",
-                'data_source': 'yfinance (direct)',
+        ticker = yf.Ticker("^VIX")
+        data = ticker.history(period="1d")
+        
+        if not data.empty:
+            vix_value = float(data['Close'].iloc[-1])
+            result = {
+                'value': vix_value,
+                'source': 'yfinance',
                 'timestamp': datetime.now().isoformat()
             }
-    
+            
+            # Cache'e kaydet
+            if CACHE_AVAILABLE:
+                cache.set('vix', 'yfinance', result)
+                print(f"✅ VIX cached (yfinance) for {symbol}")
+            
+            return result
+        else:
+            print(f"⚠️ yfinance VIX: No data available for {symbol}")
+            return None
+            
+    except ImportError:
+        print(f"⚠️ yfinance not installed for {symbol}")
+        return None
     except Exception as e:
-        print(f"⚠️ yfinance direct VIX hatası: {e}")
-    
-    # Tüm kaynaklar başarısız - neutral fallback
-    print("⚠️ VIX data unavailable - using neutral score")
-    
-    return {
-        'success': True,
-        'available': False,
-        'vix_current': 0,
-        'vix_level': 'UNKNOWN',
-        'score': 50,
-        'signal': 'NEUTRAL',
-        'interpretation': 'VIX verisi alınamadı - neutral skor kullanıldı',
-        'data_source': 'FALLBACK',
-        'timestamp': datetime.now().isoformat()
-    }
+        print(f"⚠️ yfinance VIX error for {symbol}: {e}")
+        return None
 
-
-# ============================================================================
-# LEGACY FONKSİYON (GERİYE UYUMLULUK)
-# ============================================================================
-
-def get_vix_signal() -> Dict[str, Any]:
+def calculate_vix_fear(symbol="BTC"):
     """
-    Legacy wrapper - analyze_vix() ile aynı
+    VIX Fear Index hesapla ve crypto correlation analiz et
+    
+    Args:
+        symbol: Trading pair symbol (e.g., "BTCUSDT")
+    
+    Returns score 0-100:
+    - 100 = Extreme fear (VIX very high, risk-off)
+    - 50 = Normal market (VIX moderate)
+    - 0 = Complacency (VIX very low, risk-on)
     """
-    return analyze_vix()
+    try:
+        print(f"\n📊 Analyzing VIX Fear Index for {symbol} (REAL DATA)...")
+        
+        # Try primary source: Twelve Data
+        vix_data = fetch_vix_twelvedata(symbol)
+        
+        # Fallback: yfinance
+        if not vix_data:
+            print(f"⚠️ Twelve Data failed for {symbol}, trying yfinance...")
+            vix_data = fetch_vix_yfinance(symbol)
+        
+        # Both failed
+        if not vix_data:
+            print(f"❌ All VIX sources failed for {symbol}")
+            return {'available': False, 'score': 50, 'reason': 'All sources failed'}
+        
+        vix_value = vix_data['value']
+        source = vix_data['source']
+        
+        print(f"✅ Using VIX from {source} for {symbol}: {vix_value:.2f}")
+        
+        # ==========================================
+        # VIX INTERPRETATION
+        # ==========================================
+        # Historical VIX levels:
+        # - <12: Extreme complacency (2017, 2019 lows)
+        # - 12-20: Normal/low volatility
+        # - 20-30: Elevated fear
+        # - 30-40: High fear (2020 COVID start)
+        # - >40: Extreme fear/panic (2008, 2020 peak ~80)
+        
+        if vix_value > 40:
+            fear_level = "EXTREME_PANIC"
+            base_score = 95
+            interpretation = "Extreme market panic - flight to safety"
+        elif vix_value > 30:
+            fear_level = "HIGH_FEAR"
+            base_score = 80
+            interpretation = "High fear - significant risk aversion"
+        elif vix_value > 20:
+            fear_level = "ELEVATED_FEAR"
+            base_score = 65
+            interpretation = "Elevated fear - cautious sentiment"
+        elif vix_value > 15:
+            fear_level = "MODERATE"
+            base_score = 50
+            interpretation = "Moderate volatility - normal conditions"
+        elif vix_value > 12:
+            fear_level = "LOW_FEAR"
+            base_score = 35
+            interpretation = "Low fear - risk-on sentiment"
+        else:
+            fear_level = "COMPLACENCY"
+            base_score = 20
+            interpretation = "Extreme complacency - potential reversal risk"
+        
+        # ==========================================
+        # CRYPTO CORRELATION
+        # ==========================================
+        # VIX and crypto typically INVERSELY correlated:
+        # - High VIX → Risk-off → Crypto down
+        # - Low VIX → Risk-on → Crypto up
+        
+        if vix_value > 30:
+            crypto_impact = "BEARISH"
+            impact_desc = "High VIX typically bearish for crypto (risk-off)"
+        elif vix_value > 20:
+            crypto_impact = "SLIGHTLY_BEARISH"
+            impact_desc = "Elevated VIX slightly bearish for crypto"
+        elif vix_value > 12:
+            crypto_impact = "NEUTRAL"
+            impact_desc = "Moderate VIX - neutral for crypto"
+        else:
+            crypto_impact = "BULLISH"
+            impact_desc = "Low VIX typically bullish for crypto (risk-on)"
+        
+        score = base_score
+        
+        print(f"✅ VIX Analysis Complete for {symbol}!")
+        print(f"   VIX Value: {vix_value:.2f}")
+        print(f"   Fear Level: {fear_level}")
+        print(f"   Crypto Impact: {crypto_impact}")
+        print(f"   Score: {score:.2f}/100")
+        
+        return {
+            'available': True,
+            'score': round(score, 2),
+            'vix_value': round(vix_value, 2),
+            'fear_level': fear_level,
+            'crypto_impact': crypto_impact,
+            'interpretation': interpretation,
+            'impact_description': impact_desc,
+            'source': source,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        print(f"⚠️ VIX calculation error for {symbol}: {e}")
+        return {'available': False, 'score': 50, 'reason': str(e)}
 
+def get_vix_signal(symbol="BTC"):
+    """
+    Simplified wrapper for VIX signal (used by ai_brain.py)
+    
+    Args:
+        symbol: Trading pair symbol (e.g., "BTCUSDT")
+    
+    Returns:
+        dict: Signal with score and availability
+    """
+    result = calculate_vix_fear(symbol)
+    
+    if result['available']:
+        return {
+            'available': True,
+            'score': result['score'],
+            'signal': result.get('fear_level', 'MODERATE')
+        }
+    else:
+        return {
+            'available': False,
+            'score': 50,
+            'signal': 'MODERATE'
+        }
 
 # ============================================================================
-# TEST
+# STANDALONE TESTING
 # ============================================================================
 if __name__ == "__main__":
-    print("=" * 80)
-    print("🔱 VIX LAYER v4.1 - SYNTAX FIXED TEST!")
-    print("=" * 80)
-    print()
+    print("📊 VIX FEAR LAYER - REAL DATA TEST")
+    print("=" * 70)
     
-    result = analyze_vix()
+    result = calculate_vix_fear("BTCUSDT")
     
-    print("\n📊 SONUÇ:")
-    print(f"   ✅ Başarılı: {result['success']}")
-    print(f"   ✅ VIX: {result.get('vix_current', 0):.2f}")
-    print(f"   ✅ Level: {result.get('vix_level', 'UNKNOWN')}")  # ✅ FIXED: print(f" → print(f"
-    print(f"   ✅ Score: {result.get('score', 0)}/100")
-    print(f"   ✅ Signal: {result.get('signal', 'UNKNOWN')}")
-    print(f"   ✅ Source: {result.get('data_source', 'UNKNOWN')}")
-    print("=" * 80)
+    print("\n" + "=" * 70)
+    print("📊 VIX ANALYSIS:")
+    print(f"   Available: {result['available']}")
+    print(f"   Score: {result.get('score', 'N/A')}/100")
+    print(f"   VIX Value: {result.get('vix_value', 'N/A')}")
+    print(f"   Fear Level: {result.get('fear_level', 'N/A')}")
+    print(f"   Crypto Impact: {result.get('crypto_impact', 'N/A')}")
+    print(f"   Source: {result.get('source', 'N/A')}")
+    print("=" * 70)
