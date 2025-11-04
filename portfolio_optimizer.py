@@ -1,320 +1,325 @@
 # ============================================================================
 # DEMIR AI TRADING BOT - Portfolio Optimizer
 # ============================================================================
-# Phase 3.3: Advanced Position Sizing & Risk Management
-# Date: 4 Kasım 2025, 22:40 CET
+# Phase 3.1: Kelly Criterion Position Sizing
+# Date: 4 Kasım 2025, 22:15 CET
 # Version: 1.0 - PRODUCTION READY
-#
+
 # ✅ FEATURES:
-# - Kelly Criterion position sizing
-# - Risk/Reward optimization
-# - Correlation-based allocation
-# - Multi-coin portfolio balancing
-# - Dynamic risk adjustment
-# - Maximum drawdown protection
+# - Kelly Criterion calculation
+# - Risk management (max 2% per trade)
+# - Confidence-based position sizing
+# - Portfolio allocation
+# - Drawdown protection
 # ============================================================================
 
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 class PortfolioOptimizer:
     """
     Advanced portfolio optimization with Kelly Criterion
     """
-
+    
     def __init__(self, total_capital: float = 10000, max_risk_per_trade: float = 0.02):
         """
         Initialize portfolio optimizer
-
+        
         Args:
-            total_capital: Total available capital
-            max_risk_per_trade: Maximum risk per trade (0.02 = 2%)
+            total_capital: Total trading capital in USD
+            max_risk_per_trade: Maximum risk per trade (default 2%)
         """
         self.total_capital = total_capital
         self.max_risk_per_trade = max_risk_per_trade
-
         print(f"✅ Portfolio Optimizer initialized")
         print(f"   Total Capital: ${total_capital:,.2f}")
         print(f"   Max Risk/Trade: {max_risk_per_trade:.1%}")
-
-    def calculate_kelly_criterion(self, win_rate: float, avg_win: float, avg_loss: float) -> float:
+    
+    def calculate_kelly_fraction(self, win_rate: float, avg_win: float, 
+                                 avg_loss: float, confidence: float = 1.0) -> float:
         """
-        Calculate Kelly Criterion for optimal position sizing
-
-        Formula: K = (W * R - L) / R
+        Calculate optimal position size using Kelly Criterion
+        
+        Formula: f = (p * b - q) / b
         where:
-          K = Kelly percentage
-          W = Win rate (probability of win)
-          R = Win/Loss ratio (avg_win / avg_loss)
-          L = Loss rate (1 - W)
-
+        - f = Kelly fraction (% of capital to risk)
+        - p = win probability
+        - q = loss probability (1 - p)
+        - b = win/loss ratio
+        
         Args:
             win_rate: Historical win rate (0-1)
             avg_win: Average win amount
             avg_loss: Average loss amount
-
+            confidence: AI confidence score (0-1)
+        
         Returns:
-            Kelly percentage (0-1)
+            Kelly fraction adjusted for confidence
         """
-        if avg_loss == 0 or win_rate == 0:
-            return 0
-
-        win_loss_ratio = avg_win / avg_loss
-        loss_rate = 1 - win_rate
-
-        kelly = (win_rate * win_loss_ratio - loss_rate) / win_loss_ratio
-
-        # Kelly can be negative (don't trade) or > 1 (leverage)
-        # We cap it at 0.25 (25%) for safety (Half Kelly)
-        kelly_capped = max(0, min(kelly, 0.25))
-
-        print(f"📊 Kelly Criterion:")
-        print(f"   Raw Kelly: {kelly:.2%}")
-        print(f"   Capped Kelly: {kelly_capped:.2%}")
-        print(f"   (Win Rate: {win_rate:.1%}, W/L Ratio: {win_loss_ratio:.2f})")
-
-        return kelly_capped
-
-    def calculate_position_size(self, signal_confidence: float, kelly_fraction: float, 
+        try:
+            if win_rate <= 0 or win_rate >= 1:
+                return 0.0
+            
+            if avg_loss <= 0:
+                return 0.0
+            
+            # Win/loss ratio
+            b = avg_win / avg_loss
+            
+            # Kelly formula
+            p = win_rate
+            q = 1 - p
+            kelly = (p * b - q) / b
+            
+            # Half-Kelly for safety (common practice)
+            kelly = kelly * 0.5
+            
+            # Adjust for AI confidence
+            kelly = kelly * confidence
+            
+            # Cap at max risk per trade
+            kelly = min(kelly, self.max_risk_per_trade)
+            
+            # Never risk more than max, never less than 0
+            kelly = max(0, min(kelly, self.max_risk_per_trade))
+            
+            return kelly
+            
+        except Exception as e:
+            print(f"❌ Kelly calculation error: {e}")
+            return self.max_risk_per_trade * 0.5  # Default to 1% if error
+    
+    def calculate_position_size(self, signal: str, score: float, confidence: float,
                                entry_price: float, stop_loss: float) -> Dict:
         """
-        Calculate optimal position size
-
+        Calculate optimal position size for a trade
+        
         Args:
-            signal_confidence: AI confidence (0-1)
-            kelly_fraction: Kelly criterion result (0-1)
+            signal: LONG/SHORT/NEUTRAL
+            score: AI score (0-100)
+            confidence: AI confidence (0-1)
             entry_price: Entry price
             stop_loss: Stop loss price
-
+        
         Returns:
-            Dict with position size, risk, and allocation
+            Dict with position details
         """
-        # Risk per trade (in dollars)
-        risk_amount = self.total_capital * min(self.max_risk_per_trade, kelly_fraction)
-
-        # Adjust by confidence
-        risk_adjusted = risk_amount * signal_confidence
-
-        # Calculate position size based on distance to stop loss
-        price_risk = abs(entry_price - stop_loss) / entry_price
-        position_value = risk_adjusted / price_risk if price_risk > 0 else 0
-
-        # Number of units to buy
-        units = position_value / entry_price if entry_price > 0 else 0
-
-        # Allocation percentage
-        allocation = position_value / self.total_capital
-
-        return {
-            'position_value': position_value,
-            'units': units,
-            'risk_amount': risk_adjusted,
-            'allocation': allocation,
-            'kelly_fraction': kelly_fraction,
-            'confidence_adjusted': signal_confidence
-        }
-
-    def optimize_multi_coin_portfolio(self, signals: List[Dict]) -> List[Dict]:
+        try:
+            if signal == "NEUTRAL":
+                return {
+                    'position_size': 0,
+                    'risk_amount': 0,
+                    'kelly_fraction': 0,
+                    'message': 'No position - NEUTRAL signal'
+                }
+            
+            # Estimate win rate from score and confidence
+            # Score 60-100 → bullish, Score 0-40 → bearish
+            if signal == "LONG":
+                estimated_win_rate = min(0.65, 0.45 + (score - 50) / 100)
+            else:  # SHORT
+                estimated_win_rate = min(0.65, 0.45 + (50 - score) / 100)
+            
+            # Adjust win rate by confidence
+            estimated_win_rate = estimated_win_rate * (0.7 + confidence * 0.3)
+            
+            # Assume 2:1 reward:risk ratio
+            avg_win = 2.0  # 2R
+            avg_loss = 1.0  # 1R
+            
+            # Calculate Kelly fraction
+            kelly = self.calculate_kelly_fraction(
+                win_rate=estimated_win_rate,
+                avg_win=avg_win,
+                avg_loss=avg_loss,
+                confidence=confidence
+            )
+            
+            # Calculate risk amount
+            risk_amount = self.total_capital * kelly
+            
+            # Calculate position size based on stop loss distance
+            stop_distance = abs(entry_price - stop_loss)
+            if stop_distance == 0:
+                return {
+                    'position_size': 0,
+                    'risk_amount': 0,
+                    'kelly_fraction': 0,
+                    'message': 'Invalid stop loss distance'
+                }
+            
+            position_size = risk_amount / stop_distance
+            
+            # Calculate position value
+            position_value = position_size * entry_price
+            
+            # Check if position is too large (>50% of capital)
+            if position_value > self.total_capital * 0.5:
+                position_size = (self.total_capital * 0.5) / entry_price
+                risk_amount = position_size * stop_distance
+                kelly = risk_amount / self.total_capital
+            
+            return {
+                'position_size': round(position_size, 4),
+                'position_value': round(position_value, 2),
+                'risk_amount': round(risk_amount, 2),
+                'risk_percent': round(kelly * 100, 2),
+                'kelly_fraction': round(kelly, 4),
+                'estimated_win_rate': round(estimated_win_rate, 3),
+                'reward_risk_ratio': 2.0,
+                'message': f'Position sized with Kelly: {kelly*100:.2f}% risk'
+            }
+            
+        except Exception as e:
+            print(f"❌ Position size calculation error: {e}")
+            return {
+                'position_size': 0,
+                'risk_amount': 0,
+                'kelly_fraction': 0,
+                'message': f'Error: {str(e)}'
+            }
+    
+    def optimize_portfolio(self, signals: list) -> Dict:
         """
-        Optimize allocation across multiple coins
-
+        Optimize portfolio allocation across multiple signals
+        
         Args:
-            signals: List of signals with {symbol, score, confidence}
-
+            signals: List of trading signals
+        
         Returns:
-            List of optimized allocations
+            Portfolio allocation dict
         """
-        if not signals:
-            return []
-
-        print(f"
-{'='*80}")
-        print(f"🎯 PORTFOLIO OPTIMIZATION: {len(signals)} signals")
-        print(f"{'='*80}
-")
-
-        # Calculate total confidence-weighted score
-        total_score = sum(s['score'] * s['confidence'] for s in signals)
-
-        if total_score == 0:
-            return []
-
-        # Allocate capital proportionally to confidence-weighted scores
-        allocations = []
-        remaining_capital = self.total_capital
-
-        for signal in signals:
-            # Skip neutral signals
-            if signal['signal'] == 'NEUTRAL':
-                continue
-
-            # Weighted allocation
-            weight = (signal['score'] * signal['confidence']) / total_score
-            allocated_capital = self.total_capital * weight
-
-            # Cap individual allocation at 30%
-            allocated_capital = min(allocated_capital, self.total_capital * 0.3)
-
-            # Calculate position
-            entry = signal.get('entry', signal.get('price', 0))
-            sl = signal.get('sl', entry * 0.985)  # Default 1.5% SL
-
-            if entry > 0:
+        try:
+            total_kelly = 0
+            positions = []
+            
+            for signal in signals:
+                if signal['signal'] == 'NEUTRAL':
+                    continue
+                
                 position = self.calculate_position_size(
-                    signal_confidence=signal['confidence'],
-                    kelly_fraction=weight,
-                    entry_price=entry,
-                    stop_loss=sl
+                    signal=signal['signal'],
+                    score=signal.get('score', 50),
+                    confidence=signal.get('confidence', 0.5),
+                    entry_price=signal.get('entry', signal.get('price', 0)),
+                    stop_loss=signal.get('sl', signal.get('entry', 0) * 0.98)
                 )
-
-                allocations.append({
-                    'symbol': signal['symbol'],
-                    'signal': signal['signal'],
-                    'score': signal['score'],
-                    'confidence': signal['confidence'],
-                    'allocated_capital': allocated_capital,
-                    'position': position,
-                    'weight': weight
-                })
-
-                remaining_capital -= allocated_capital
-
-        # Print summary
-        print("📊 ALLOCATION SUMMARY:")
-        for alloc in allocations:
-            print(f"   {alloc['symbol']:10} | "
-                  f"Signal: {alloc['signal']:7} | "
-                  f"Allocation: ${alloc['allocated_capital']:>8,.0f} ({alloc['weight']:>5.1%}) | "
-                  f"Conf: {alloc['confidence']:>4.1%}")
-
-        print(f"
-💰 Remaining Capital: ${remaining_capital:,.2f}")
-        print(f"{'='*80}
-")
-
-        return allocations
-
-    def calculate_portfolio_risk(self, allocations: List[Dict], 
-                                correlation_matrix: Optional[np.ndarray] = None) -> Dict:
-        """
-        Calculate portfolio-level risk metrics
-
-        Args:
-            allocations: List of position allocations
-            correlation_matrix: Correlation between assets (optional)
-
-        Returns:
-            Dict with portfolio risk metrics
-        """
-        if not allocations:
-            return {'portfolio_risk': 0, 'diversification_ratio': 0}
-
-        # Individual position risks
-        position_risks = [a['position']['risk_amount'] for a in allocations]
-        total_risk = sum(position_risks)
-
-        # If correlation matrix provided, calculate diversified risk
-        if correlation_matrix is not None and len(correlation_matrix) == len(allocations):
-            # Simplified portfolio risk calculation
-            weights = np.array([a['weight'] for a in allocations])
-            variance = weights @ correlation_matrix @ weights
-            diversified_risk = np.sqrt(variance) * self.total_capital
-            diversification_ratio = diversified_risk / total_risk if total_risk > 0 else 0
-        else:
-            # Assume average correlation of 0.7 (typical for crypto)
-            avg_correlation = 0.7
-            n = len(allocations)
-            diversification_ratio = 1 / np.sqrt(1 + (n - 1) * avg_correlation)
-            diversified_risk = total_risk * diversification_ratio
-
-        return {
-            'total_undiversified_risk': total_risk,
-            'diversified_risk': diversified_risk,
-            'diversification_ratio': diversification_ratio,
-            'risk_as_percent_capital': diversified_risk / self.total_capital
-        }
-
-    def adjust_for_drawdown(self, current_drawdown: float) -> float:
-        """
-        Adjust position sizes based on current drawdown
-
-        Args:
-            current_drawdown: Current drawdown (0-1)
-
-        Returns:
-            Risk adjustment multiplier (0-1)
-        """
-        # Reduce risk as drawdown increases
-        # No reduction until 5% DD, then linear reduction to 50% at 20% DD
-        if current_drawdown < 0.05:
-            return 1.0
-        elif current_drawdown < 0.20:
-            return 1.0 - (current_drawdown - 0.05) * (0.5 / 0.15)
-        else:
-            return 0.5  # Cap at 50% reduction
+                
+                if position['position_size'] > 0:
+                    positions.append({
+                        'symbol': signal.get('symbol', 'UNKNOWN'),
+                        'signal': signal['signal'],
+                        **position
+                    })
+                    total_kelly += position['kelly_fraction']
+            
+            # If total Kelly > max risk, scale down proportionally
+            if total_kelly > self.max_risk_per_trade * 2:  # Max 4% total risk
+                scale = (self.max_risk_per_trade * 2) / total_kelly
+                for pos in positions:
+                    pos['kelly_fraction'] *= scale
+                    pos['risk_amount'] *= scale
+                    pos['position_size'] *= scale
+                    pos['position_value'] *= scale
+            
+            return {
+                'positions': positions,
+                'total_risk': total_kelly * self.total_capital,
+                'total_risk_percent': total_kelly * 100,
+                'num_positions': len(positions),
+                'capital_allocated': sum(p['position_value'] for p in positions),
+                'capital_remaining': self.total_capital - sum(p['position_value'] for p in positions)
+            }
+            
+        except Exception as e:
+            print(f"❌ Portfolio optimization error: {e}")
+            return {
+                'positions': [],
+                'total_risk': 0,
+                'error': str(e)
+            }
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
-def create_optimizer(total_capital: float = 10000, max_risk: float = 0.02) -> PortfolioOptimizer:
+def quick_position_calc(signal: str = "LONG", score: float = 65, 
+                       confidence: float = 0.7, entry: float = 35000,
+                       capital: float = 10000) -> Dict:
     """
-    Create portfolio optimizer instance
-
+    Quick position size calculation (for testing)
+    
     Args:
-        total_capital: Total capital
-        max_risk: Max risk per trade (0.02 = 2%)
-
+        signal: LONG/SHORT
+        score: AI score
+        confidence: AI confidence
+        entry: Entry price
+        capital: Trading capital
+    
     Returns:
-        PortfolioOptimizer instance
-    """
-    return PortfolioOptimizer(total_capital, max_risk)
-
-def optimize_positions(signals: List[Dict], capital: float = 10000) -> List[Dict]:
-    """
-    Quick optimization of multiple positions
-
-    Args:
-        signals: List of AI signals
-        capital: Available capital
-
-    Returns:
-        List of optimized allocations
+        Position details
     """
     optimizer = PortfolioOptimizer(total_capital=capital)
-    return optimizer.optimize_multi_coin_portfolio(signals)
+    
+    # Calculate stop loss (1.5% for LONG, 1.5% for SHORT)
+    if signal == "LONG":
+        stop_loss = entry * 0.985
+    else:
+        stop_loss = entry * 1.015
+    
+    return optimizer.calculate_position_size(
+        signal=signal,
+        score=score,
+        confidence=confidence,
+        entry_price=entry,
+        stop_loss=stop_loss
+    )
 
 # ============================================================================
 # TESTING
 # ============================================================================
+
 if __name__ == "__main__":
     print("="*80)
     print("🎯 PORTFOLIO OPTIMIZER TEST")
     print("="*80)
-
-    # Test Kelly Criterion
-    optimizer = PortfolioOptimizer(total_capital=10000, max_risk_per_trade=0.02)
-    kelly = optimizer.calculate_kelly_criterion(
-        win_rate=0.60,
-        avg_win=400,
-        avg_loss=200
+    
+    # Test 1: Single position
+    print("\n📊 TEST 1: Single Position (LONG)")
+    result = quick_position_calc(
+        signal="LONG",
+        score=68,
+        confidence=0.75,
+        entry=35000,
+        capital=10000
     )
-    print(f"✅ Kelly Result: {kelly:.2%}
-")
-
-    # Test multi-coin optimization
-    test_signals = [
-        {'symbol': 'BTCUSDT', 'signal': 'LONG', 'score': 75, 'confidence': 0.8, 'entry': 35000, 'sl': 34500},
-        {'symbol': 'ETHUSDT', 'signal': 'LONG', 'score': 68, 'confidence': 0.7, 'entry': 1800, 'sl': 1770},
-        {'symbol': 'LTCUSDT', 'signal': 'SHORT', 'score': 45, 'confidence': 0.6, 'entry': 65, 'sl': 66}
+    
+    print(f"   Position Size: {result['position_size']} BTC")
+    print(f"   Position Value: ${result['position_value']:,.2f}")
+    print(f"   Risk Amount: ${result['risk_amount']:,.2f}")
+    print(f"   Risk %: {result['risk_percent']:.2f}%")
+    print(f"   Kelly Fraction: {result['kelly_fraction']:.4f}")
+    print(f"   Message: {result['message']}")
+    
+    # Test 2: Portfolio optimization
+    print("\n📊 TEST 2: Portfolio Optimization (Multiple Signals)")
+    optimizer = PortfolioOptimizer(total_capital=10000)
+    
+    signals = [
+        {'symbol': 'BTCUSDT', 'signal': 'LONG', 'score': 68, 'confidence': 0.75, 'entry': 35000, 'sl': 34475},
+        {'symbol': 'ETHUSDT', 'signal': 'LONG', 'score': 62, 'confidence': 0.65, 'entry': 1850, 'sl': 1822},
+        {'symbol': 'SOLUSDT', 'signal': 'SHORT', 'score': 38, 'confidence': 0.60, 'entry': 95, 'sl': 96.4}
     ]
-
-    allocations = optimizer.optimize_multi_coin_portfolio(test_signals)
-    print(f"✅ Optimization complete! {len(allocations)} positions allocated")
-
-    # Calculate portfolio risk
-    risk = optimizer.calculate_portfolio_risk(allocations)
-    print(f"
-📊 Portfolio Risk:")
-    print(f"   Diversified Risk: ${risk['diversified_risk']:,.2f}")
-    print(f"   Risk % of Capital: {risk['risk_as_percent_capital']:.2%}")
+    
+    portfolio = optimizer.optimize_portfolio(signals)
+    
+    print(f"   Number of Positions: {portfolio['num_positions']}")
+    print(f"   Total Risk: ${portfolio['total_risk']:,.2f} ({portfolio['total_risk_percent']:.2f}%)")
+    print(f"   Capital Allocated: ${portfolio['capital_allocated']:,.2f}")
+    print(f"   Capital Remaining: ${portfolio['capital_remaining']:,.2f}")
+    
+    print("\n   Positions:")
+    for pos in portfolio['positions']:
+        print(f"   • {pos['symbol']}: {pos['signal']} | Size: {pos['position_size']:.4f} | Risk: ${pos['risk_amount']:.2f}")
+    
+    print("\n✅ Portfolio Optimizer Test Complete!")
