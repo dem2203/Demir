@@ -371,15 +371,13 @@ def fetch_quick_price(symbol: str, source_priority: List[str] = None) -> float:
 
 def clear_cache():
     """Tüm cache'i temizle"""
-    global CACHE
-    CACHE = {}
+    global _CACHE  # ← "_CACHE" oldu! (alt tire eklendi)
+    _CACHE = {}
     print("🗑️ Cache temizlendi!")
 
 def clear_old_cache():
     """Eski cache'leri temizle (15dk+)"""
-    global CACHE
-    current_time = time.time()
-    keys_to_delete = []
+    global _CACHE  # ← "_CACHE" oldu! (alt tire eklendi)
     
     for key, entry in _CACHE.items():
         if current_time - entry['timestamp'] > CACHE_DURATION:
