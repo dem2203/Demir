@@ -492,3 +492,69 @@ if __name__ == "__main__":
     print(f"  Confidence: {result['confidence']:.1f}%")
     print(f"  Active Layers: {result['active_layers']}/{result['total_layers']}")
     print("-" * 80)
+# ============================================================================
+# STREAMLIT COMPATIBILITY WRAPPER
+# ============================================================================
+
+def make_trading_decision(symbol='BTCUSDT', interval='1h'):
+    """
+    🎯 Streamlit App Compatibility Wrapper
+    
+    This function wraps analyze_with_ai() to maintain compatibility
+    with streamlit_app.py which expects this function name.
+    
+    Args:
+        symbol (str): Trading pair (BTCUSDT, ETHUSDT, etc.)
+        interval (str): Timeframe (1h, 4h, 1d)
+    
+    Returns:
+        dict: Same format as analyze_with_ai() - {
+            'final_score': 0-100,
+            'signal': 'LONG'/'SHORT'/'NEUTRAL',
+            'confidence': 0-1,
+            'layers': {...},
+            'active_layers': int,
+            'total_layers': int,
+            'version': str,
+            'phase': str
+        }
+    """
+    print(f"📍 make_trading_decision() wrapper called for {symbol}")
+    return analyze_with_ai(symbol, interval)
+
+
+# ============================================================================
+# ALTERNATIVE CLASS-BASED INTERFACE
+# ============================================================================
+
+class AIBrain:
+    """
+    AI Brain class interface for advanced usage
+    
+    Provides object-oriented access to AI analysis
+    """
+    
+    def __init__(self):
+        """Initialize AI Brain"""
+        self.version = "14.0"
+        self.layers = LAYER_WEIGHTS.copy()
+        print(f"✅ AIBrain v{self.version} initialized")
+    
+    def analyze(self, symbol='BTCUSDT', interval='1h'):
+        """
+        Analyze trading pair (class method)
+        
+        Args:
+            symbol (str): Trading pair
+            interval (str): Timeframe
+        
+        Returns:
+            dict: Analysis results
+        """
+        return analyze_with_ai(symbol, interval)
+    
+    def make_decision(self, symbol='BTCUSDT', interval='1h'):
+        """
+        Alias for analyze() - backwards compatibility
+        """
+        return self.analyze(symbol, interval)
