@@ -371,13 +371,13 @@ def fetch_quick_price(symbol: str, source_priority: List[str] = None) -> float:
 
 def clear_cache():
     """Tüm cache'i temizle"""
-    global _CACHE
-    _CACHE = {}
+    global CACHE
+    CACHE = {}
     print("🗑️ Cache temizlendi!")
 
 def clear_old_cache():
     """Eski cache'leri temizle (15dk+)"""
-    global _CACHE
+    global CACHE
     current_time = time.time()
     keys_to_delete = []
     
