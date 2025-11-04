@@ -755,30 +755,30 @@ def analyze_with_ai(symbol, interval='1h'):
     }
 
 # ============================================================================
-# STREAMLIT COMPATIBILITY WRAPPER (Your v14.1 code - PRESERVED)
+# STREAMLIT APP COMPATIBILITY WRAPPER v15.0
 # ============================================================================
 
-def make_trading_decision(symbol='BTCUSDT', interval='1h', timeframe=None, **kwargs):
+def make_trading_decision(symbol="BTCUSDT", interval="1h", timeframe=None, **kwargs):
     """
-    🎯 Streamlit App Compatibility Wrapper (v15.0)
-    This function wraps analyze_with_ai() to maintain compatibility
-    with streamlit_app.py which expects this function name.
-    NOW SUPPORTS BOTH 'interval' AND 'timeframe' PARAMETERS!
+    Streamlit App Compatibility Wrapper v15.0
+    
+    Main entry point for Streamlit app to call AI analysis
+    Backwards compatible with old function signature
     
     Args:
-        symbol (str): Trading pair (BTCUSDT, ETHUSDT, etc.)
-        interval (str): Timeframe (1h, 4h, 1d) - legacy parameter
-        timeframe (str): Timeframe (1h, 4h, 1d) - new Streamlit parameter
-        **kwargs: Additional arguments (ignored for compatibility)
-        
+        symbol: Trading pair (BTCUSDT, ETHUSDT, etc.)
+        interval: Timeframe (1h, 4h, 1d, etc.)
+        timeframe: Alternative parameter for interval (backwards compatibility)
+        **kwargs: Additional parameters
+    
     Returns:
-        dict: Same format as analyze_with_ai()
+        Same as analyze_with_ai()
     """
-    # If timeframe is passed, use it instead of interval
+    # Handle backwards compatibility
     if timeframe is not None:
         interval = timeframe
     
-    print(f"📍 make_trading_decision() wrapper called for {symbol} ({interval})")
+    # Call main analysis function
     return analyze_with_ai(symbol, interval)
 
 # ============================================================================
