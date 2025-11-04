@@ -736,43 +736,34 @@ def render_ai_trading():
                     st.markdown(f"- TP3: ${result.get('tp3', 0):.2f}")
     
     # Chart display
-    if CHART_AVAILABLE:
+      if CHART_AVAILABLE:
         st.markdown("---")
-        st.markdown("### 📈 Interactive Price Chart")
-        
+        st.markdown("### Interactive Price Chart")
         try:
-            chart_gen = ChartGenerator(theme='dark')
-            df = chart_gen.fetch_ohlcv(
-                result['symbol'], 
-                interval=result.get('interval', '1h'), 
-                days=7
-            )
-            
+            chartgen = ChartGenerator(theme='dark')
+            df = chartgen.fetchohlcv(result['symbol'], interval=result.get('interval', '1h'), days=7)
             if not df.empty:
-                fig = chart_gen.create_candlestick_chart(
-                    df,
-                    symbol=result['symbol'],
-                    show_volume=True,
-                    indicators=['RSI', 'MACD', 'Bollinger'],
+                fig = chartgen.create_candlestick_chart(
+                    df, 
+                    symbol=result['symbol'], 
+                    show_volume=True, 
+                    indicators=['RSI', 'MACD', 'Bollinger'], 
                     height=600
                 )
-                
-                # Add trade levels (only if valid trade)
-                if decision != "NEUTRAL" and entry > 0:
-                    chart_gen.add_trade_levels(
-                        fig,
-                        entry_price=result.get('entry_price', 0),
-                        stop_loss=result.get('stop_loss', 0),
-                        take_profits=[tp1, tp2, tp3],
-                        signal=decision
+                # Add trade levels only if valid trade
+                if signal != "NEUTRAL" and entry > 0:
+                    chartgen.add_trade_levels(
+                        fig, 
+                        entry_price=result.get('entry_price', 0), 
+                        stop_loss=result.get('stop_loss', 0), 
+                        take_profits=[tp1, tp2, tp3], 
+                        signal=signal
                     )
-                
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Chart data not available")
-                
+                st.warning("Chart data not available")
         except Exception as e:
-            st.error(f"❌ Chart generation failed: {e}")
+            st.error(f"Chart generation failed: {e}")
         
         except Exception as e:
             st.error(f"❌ Analysis error: {e}")
