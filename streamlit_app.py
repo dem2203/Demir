@@ -1,12 +1,12 @@
-# streamlit_app.py v14.3 - ULTIMATE COIN-BASED SYSTEM
+# streamlit_app.py v16.0 - PHASE 7 QUANTUM MATHEMATICS
 
 """
 🔱 DEMIR AI TRADING BOT - Streamlit UI v14.3 ULTIMATE
 ====================================================================
 Date: 4 Kasım 2025, 00:18 CET
-Version: 14.3 - COIN-SPECIFIC OPERATION + NO MOCK DATA
+Version: 16.0 - PHASE 7 QUANTUM + AGGRESSIVE SIGNALS
 
-✅ v14.3 FEATURES:
+✅ v16.0 PHASE 7 FEATURES:
 ------------------
 ✅ COIN-SPECIFIC: Everything based on selected coin
 ✅ NO MOCK DATA: 100% real AI Brain calculations
@@ -45,7 +45,7 @@ import os
 # PAGE CONFIG - MUST BE FIRST!
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v14.3",
+    page_title="🔱 DEMIR AI Trading Bot v16.0 Phase 7",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -174,7 +174,7 @@ except:
 # SESSION STATE INITIALIZATION
 # ============================================================================
 if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = True  # ✅ FIX v15.0: Always logged in (bypass auth)
+    st.session_state.logged_in = False if AUTH_AVAILABLE else True
 
 if 'username' not in st.session_state:
     st.session_state.username = 'demo_user'
@@ -689,20 +689,28 @@ def display_analysis_results(result):
             st.error(f"❌ Chart generation failed: {e}")
 
 def get_layer_weight(layer_name):
-    """Get weight percentage for layer"""
+    """Get weight percentage for layer - PHASE 7 QUANTUM"""
     weights = {
-        'strategy': 18,
-        'multi_timeframe': 8,
-        'macro': 7,
-        'gold': 5,
-        'dominance': 6,
-        'cross_asset': 9,
+        # Phase 1-6 Layers (70 points)
+        'strategy': 15,
+        'multi_timeframe': 6,
+        'macro': 6,
+        'gold': 4,
+        'dominance': 5,
+        'cross_asset': 8,
         'vix': 5,
         'rates': 5,
-        'trad_markets': 7,
-        'news': 9,
-        'monte_carlo': 11,
-        'kelly': 10
+        'trad_markets': 6,
+        'news': 8,
+        'monte_carlo': 8,
+        'kelly': 8,
+
+        # Phase 7 Quantum Layers (30 points) - NEW!
+        'black_scholes': 8,
+        'kalman': 7,
+        'fractal': 6,
+        'fourier': 5,
+        'copula': 4
     }
     return weights.get(layer_name, 1)
 
