@@ -1,12 +1,12 @@
-# streamlit_app.py v16.0 - PHASE 7 QUANTUM MATHEMATICS
+# streamlit_app.py v16.0 - PHASE 7 QUANTUM (NO LOGIN)
 
 """
 🔱 DEMIR AI TRADING BOT - Streamlit UI v14.3 ULTIMATE
 ====================================================================
 Date: 4 Kasım 2025, 00:18 CET
-Version: 16.0 - PHASE 7 QUANTUM + AGGRESSIVE SIGNALS
+Version: 16.0 - PHASE 7 QUANTUM + NO LOGIN REQUIRED
 
-✅ v16.0 PHASE 7 FEATURES:
+✅ v14.3 FEATURES:
 ------------------
 ✅ COIN-SPECIFIC: Everything based on selected coin
 ✅ NO MOCK DATA: 100% real AI Brain calculations
@@ -26,7 +26,7 @@ RULE #3: REAL-TIME SYNCHRONIZATION
 TABS:
 -----
 1. 🔐 Login/Register (if auth available)
-2. 📊 System Health (12-Layer monitoring - COIN SPECIFIC)
+2. 📊 System Health (17-Layer Phase 7 Quantum - COIN SPECIFIC)
 3. 🧠 AI Trading (Live analysis + charts - COIN SPECIFIC)
 4. 📈 Backtest Results (Performance analysis - COIN SPECIFIC)
 5. ⚙️ Settings
@@ -45,7 +45,7 @@ import os
 # PAGE CONFIG - MUST BE FIRST!
 # ============================================================================
 st.set_page_config(
-    page_title="🔱 DEMIR AI Trading Bot v16.0 Phase 7",
+    page_title="🔱 DEMIR AI Trading Bot v16.0",
     page_icon="🔱",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -174,7 +174,7 @@ except:
 # SESSION STATE INITIALIZATION
 # ============================================================================
 if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False if AUTH_AVAILABLE else True
+    st.session_state.logged_in = True  # ✅ v16.0: Always logged in (no auth required)
 
 if 'username' not in st.session_state:
     st.session_state.username = 'demo_user'
@@ -295,7 +295,7 @@ def render_login_page():
 def render_system_health():
     """Render comprehensive system health monitoring - COIN SPECIFIC"""
     st.markdown("# 🏥 System Health Dashboard")
-    st.markdown("**12-Layer AI System Status & Data Flow Monitoring**")
+    st.markdown("**17-Layer Phase 7 AI System Status & Data Flow Monitoring**")
     
     # CRITICAL: Coin and Timeframe selection for System Health
     st.markdown("---")
@@ -329,7 +329,7 @@ def render_system_health():
         st.metric(
             "AI Brain Status",
             "🟢 ONLINE" if AI_BRAIN_AVAILABLE else "🔴 OFFLINE",
-            delta="12 Layers Active" if AI_BRAIN_AVAILABLE else "Not Loaded"
+            delta="17 Layers (Phase 7)" if AI_BRAIN_AVAILABLE else "Not Loaded"
         )
     
     with col2:
@@ -354,7 +354,7 @@ def render_system_health():
         )
     
     st.markdown("---")
-    st.markdown(f"## 📊 12-Layer Data Status - {health_coin} ({health_interval})")
+    st.markdown(f"## 📊 17-Layer Data Status (Phase 7) - {health_coin} ({health_interval})")
     st.markdown(f"*Real-time veri akışı ve layer sinyalleri - **{health_coin}** için*")
     
     # Run health analysis if needed
@@ -480,7 +480,7 @@ def render_layer_card(layer, layer_scores, symbol, interval):
 def render_ai_trading():
     """Render live AI trading analysis page - COIN SPECIFIC"""
     st.markdown("# 🧠 AI Trading - Live Analysis")
-    st.markdown("**12-Layer Deep Learning AI tarafından üretilen real-time trading sinyalleri**")
+    st.markdown("**17-Layer Phase 7 Quantum AI tarafından üretilen real-time trading sinyalleri**")
     
     # Symbol selector - CRITICAL: Sets selected_symbol
     col1, col2, col3 = st.columns([2, 2, 1])
@@ -622,7 +622,7 @@ def display_analysis_results(result):
     st.markdown("---")
     
     # Layer breakdown
-    st.markdown("### 📊 12-Layer Detailed Breakdown")
+    st.markdown("### 📊 17-Layer Detailed Breakdown (Phase 7)")
     st.markdown(f"*Her layer'ın katkısı ve sinyali - **{result['symbol']}** ({result['interval']}) için*")
     
     layer_scores = result.get('layer_scores', {})
@@ -691,7 +691,7 @@ def display_analysis_results(result):
 def get_layer_weight(layer_name):
     """Get weight percentage for layer - PHASE 7 QUANTUM"""
     weights = {
-        # Phase 1-6 Layers (70 points)
+        # Phase 1-6 Layers (70%)
         'strategy': 15,
         'multi_timeframe': 6,
         'macro': 6,
@@ -705,7 +705,7 @@ def get_layer_weight(layer_name):
         'monte_carlo': 8,
         'kelly': 8,
 
-        # Phase 7 Quantum Layers (30 points) - NEW!
+        # Phase 7 Quantum Layers (30%)
         'black_scholes': 8,
         'kalman': 7,
         'fractal': 6,
@@ -968,7 +968,7 @@ def main():
         
         st.markdown("---")
         st.markdown("*Phase 1-6 Complete*")
-        st.markdown("*12-Layer AI System*")
+        st.markdown("*17-Layer Phase 7 System*")
         st.markdown("*NO MOCK DATA*")
     
     # Main content
