@@ -1,17 +1,16 @@
 """
 📊 BTC DOMINANCE & MONEY FLOW LAYER - REAL DATA
 ===============================================
-Date: 2 Kasım 2025, 21:40 CET
-Version: 2.0 - CoinMarketCap API Integration
-
+Date: 4 Kasım 2025, 21:26 CET
+Version: 2.1 - Symbol Parameter Added
 ✅ REAL DATA SOURCES:
 - BTC Dominance → CoinMarketCap API (CMC_API_KEY)
 - USDT Dominance → CoinMarketCap API
 - Market Cap Data → CoinMarketCap API
 - Altseason Detection → Real dominance trends
-
 ✅ API KEY: CMC_API_KEY from Render environment
 ✅ Fallback: Public CMC endpoint if key fails
+✅ FIXED: symbol parameter added to all functions
 """
 
 import requests
@@ -19,16 +18,20 @@ import numpy as np
 import os
 from datetime import datetime
 
-def calculate_dominance_flow():
+def calculate_dominance_flow(symbol="BTC"):
     """
     Calculate BTC dominance and detect altseason using REAL DATA
+    
+    Args:
+        symbol: Trading pair symbol (e.g., "BTCUSDT") - used for context
+    
     Returns score 0-100:
     - 100 = Strong altseason (dominance falling, bullish for alts)
     - 50 = Neutral (no clear trend)
     - 0 = BTC season (dominance rising, bearish for alts)
     """
     try:
-        print(f"\n📊 Analyzing BTC Dominance & Money Flow (REAL DATA)...")
+        print(f"\n📊 Analyzing BTC Dominance & Money Flow for {symbol} (REAL DATA)...")
         
         # Get CMC API key
         cmc_api_key = os.getenv('CMC_API_KEY')
@@ -63,10 +66,10 @@ def calculate_dominance_flow():
                 
             except Exception as e:
                 print(f"⚠️ CMC PRO API failed: {e}, trying public endpoint")
-                return fetch_dominance_public()
+                return fetch_dominance_public(symbol)
         else:
             print("⚠️ CMC_API_KEY not set, using public endpoint")
-            return fetch_dominance_public()
+            return fetch_dominance_public(symbol)
         
         # ==========================================
         # ANALYZE DOMINANCE TRENDS
@@ -156,19 +159,20 @@ def calculate_dominance_flow():
             'interpretation': interpretation,
             'timestamp': datetime.now().isoformat()
         }
-    
+        
     except Exception as e:
         print(f"⚠️ Dominance calculation error: {e}")
         return {'available': False, 'score': 50, 'reason': str(e)}
 
-
-def fetch_dominance_public():
+def fetch_dominance_public(symbol="BTC"):
     """
     Fallback: Fetch dominance from CoinMarketCap public endpoint (NO KEY REQUIRED!)
+    
+    Args:
+        symbol: Trading pair symbol (for context)
     """
     try:
         url = "https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest"
-        
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         
@@ -222,17 +226,22 @@ def fetch_dominance_public():
             'money_flow': money_flow,
             'timestamp': datetime.now().isoformat()
         }
-    
+        
     except Exception as e:
         print(f"⚠️ Public dominance fetch failed: {e}")
         return {'available': False, 'score': 50, 'reason': str(e)}
 
-
-def get_dominance_signal():
+def get_dominance_signal(symbol="BTC"):
     """
     Simplified wrapper for dominance signal (used by ai_brain.py)
+    
+    Args:
+        symbol: Trading pair symbol (e.g., "BTCUSDT")
+    
+    Returns:
+        dict: Signal with score and availability
     """
-    result = calculate_dominance_flow()
+    result = calculate_dominance_flow(symbol)
     
     if result['available']:
         return {
@@ -247,16 +256,14 @@ def get_dominance_signal():
             'signal': 'NEUTRAL'
         }
 
-
 # ============================================================================
 # STANDALONE TESTING
 # ============================================================================
-
 if __name__ == "__main__":
     print("📊 BTC DOMINANCE LAYER - REAL DATA TEST")
     print("=" * 70)
     
-    result = calculate_dominance_flow()
+    result = calculate_dominance_flow("BTCUSDT")
     
     print("\n" + "=" * 70)
     print("📊 DOMINANCE ANALYSIS:")
