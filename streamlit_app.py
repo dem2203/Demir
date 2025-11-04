@@ -548,8 +548,6 @@ def render_ai_trading():
         st.error("❌ AI Brain not available. Cannot generate trading signals.")
         st.info("💡 Make sure ai_brain.py is in the same directory and contains make_trading_decision() function.")
         return
-    def render_ai_trading():
-    """Render AI trading analysis page - COIN SPECIFIC"""
     
     # ... TÜM MEVCUT KOD AYNI KALACAK ...
     
