@@ -174,8 +174,7 @@ except:
 # SESSION STATE INITIALIZATION
 # ============================================================================
 if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = True  # ✅ FIX v15.0: Bypass authentication
- if AUTH_AVAILABLE else True
+    st.session_state.logged_in = True  # ✅ FIX v15.0: Always logged in (bypass auth)
 
 if 'username' not in st.session_state:
     st.session_state.username = 'demo_user'
@@ -209,20 +208,7 @@ def get_signal_emoji(score):
         return "⚪"
 
 def get_signal_text(score):
-    """
-    Convert score to text signal
-    ✅ FIX v15.0: Handle None values to prevent TypeError
-    """
-    # ✅ Check for None or invalid values FIRST
-    if score is None or score == 0:
-        return "NO DATA"
-    
-    try:
-        score = float(score)
-    except (ValueError, TypeError):
-        return "INVALID"
-    
-    # Now safe to compare
+    """Convert score to text signal"""
     if score >= 65:
         return "LONG"
     elif score <= 35:
@@ -903,8 +889,7 @@ def render_settings():
         st.info(f"**Logged in as:** {st.session_state.username}")
         
         if st.button("🚪 Logout"):
-            st.session_state.logged_in = True  # ✅ FIX v15.0: Bypass authentication
-
+            st.session_state.logged_in = False
             st.session_state.username = 'guest'
             st.rerun()
     
