@@ -1,10 +1,17 @@
 """
-DEMIR AI Trading Bot - News Sentiment Layer (REAL DATA)
+DEMIR AI Trading Bot - News Sentiment Layer v2.0 (REAL DATA + FIXED)
+========================================
 Alternative.me Fear & Greed Index + Binance volume analizi
-CryptoPanic yerine BEDAVA API!
-Tarih: 31 Ekim 2025
+Tarih: 4 Kasım 2025, 21:26 CET
+
+✅ YENİ v2.0:
+-----------
+✅ get_news_sentiment() wrapper function added
+✅ Returns standardized format: {'available': bool, 'score': float (0-100), 'signal': str}
+✅ ai_brain v12.0 compatible
 
 ÖZELLİKLER:
+-----------
 ✅ Alternative.me Fear & Greed Index (BEDAVA)
 ✅ Binance volume trend analizi
 ✅ Market sentiment scoring
@@ -31,7 +38,6 @@ def get_fear_greed_index():
         
         if response.status_code == 200:
             data = response.json()
-            
             if data.get('data'):
                 fng_data = data['data'][0]
                 value = int(fng_data['value'])
@@ -51,7 +57,6 @@ def get_fear_greed_index():
         print(f"⚠️ Fear & Greed Index error: {e}")
         return {'available': False}
 
-
 def get_binance_volume_trend(symbol, interval='1h', lookback=50):
     """
     Binance'den hacim trendi analiz eder
@@ -60,6 +65,7 @@ def get_binance_volume_trend(symbol, interval='1h', lookback=50):
     try:
         url = f"https://fapi.binance.com/fapi/v1/klines"
         params = {'symbol': symbol, 'interval': interval, 'limit': lookback}
+        
         response = requests.get(url, params=params, timeout=10)
         
         if response.status_code == 200:
@@ -104,13 +110,11 @@ def get_binance_volume_trend(symbol, interval='1h', lookback=50):
     except:
         return {'available': False}
 
-
 def calculate_sentiment_score(fng_data, vol_data, symbol):
     """
     Fear & Greed + Volume trend'den sentiment score hesaplar
     0.0 - 1.0 arası (0 = Extreme Bearish, 1 = Extreme Bullish)
     """
-    
     # Fear & Greed Index score (0-100 → 0.0-1.0)
     if fng_data.get('available'):
         fng_value = fng_data['value']
@@ -146,7 +150,6 @@ def calculate_sentiment_score(fng_data, vol_data, symbol):
     
     return final_score, sentiment, impact
 
-
 def get_news_signal(symbol):
     """
     News Sentiment sinyali üretir (GERÇEK VERİ - BEDAVA API)
@@ -160,7 +163,6 @@ def get_news_signal(symbol):
             'available': bool
         }
     """
-    
     print(f"\n🔍 News Sentiment: {symbol} (Fear & Greed + Volume)")
     
     # Fear & Greed Index çek
@@ -208,11 +210,41 @@ def get_news_signal(symbol):
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     }
 
+def get_news_sentiment(symbol='BTCUSDT'):
+    """
+    Wrapper function for ai_brain v12.0 compatibility
+    
+    Args:
+        symbol: Trading pair (e.g., "BTCUSDT")
+    
+    Returns:
+        dict: {'available': bool, 'score': float (0-100), 'signal': str}
+    """
+    result = get_news_signal(symbol)
+    
+    if result['available']:
+        # Convert 0-1 score to 0-100 scale
+        score_100 = result['score'] * 100
+        
+        return {
+            'available': True,
+            'score': round(score_100, 2),
+            'signal': result['sentiment'],
+            'impact': result.get('impact', 'MODERATE'),
+            'fear_greed': result['details'].get('fear_greed_value')
+        }
+    else:
+        return {
+            'available': False,
+            'score': 50.0,
+            'signal': 'NEUTRAL'
+        }
 
 # Test
 if __name__ == "__main__":
     print("=" * 80)
-    print("🔱 News Sentiment Layer (Fear & Greed + Volume) Test")
+    print("🔱 News Sentiment Layer v2.0 Test")
+    print("   (Fear & Greed + Volume + ai_brain compatible)")
     print("=" * 80)
     
     # Fear & Greed Index test
@@ -226,12 +258,12 @@ if __name__ == "__main__":
     
     # Symbol tests
     symbols = ['BTCUSDT', 'ETHUSDT']
-    
     for symbol in symbols:
+        # Test original function
         result = get_news_signal(symbol)
         
         if result['available']:
-            print(f"\n✅ {symbol} News Sentiment:")
+            print(f"\n✅ {symbol} News Sentiment (Original):")
             print(f"   Score: {result['score']:.2f}/1.00")
             print(f"   Sentiment: {result['sentiment']}")
             print(f"   Impact: {result['impact']}")
@@ -239,5 +271,12 @@ if __name__ == "__main__":
             print(f"   Volume Change: {result['details']['volume_change']*100:+.1f}%")
         else:
             print(f"\n❌ {symbol}: Data unavailable")
+        
+        # Test new wrapper
+        result_v2 = get_news_sentiment(symbol)
+        print(f"\n✅ {symbol} News Sentiment (v2.0 - ai_brain compatible):")
+        print(f"   Available: {result_v2['available']}")
+        print(f"   Score: {result_v2['score']:.2f}/100")
+        print(f"   Signal: {result_v2['signal']}")
     
     print("\n" + "=" * 80)
