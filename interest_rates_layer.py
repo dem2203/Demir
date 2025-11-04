@@ -1,18 +1,23 @@
 # ===========================================
-# interest_rates_layer.py v3.0 - RATE LIMIT SAFE
+# interest_rates_layer.py v3.1 - FIXED get_rates_signal()
 # ===========================================
-# ✅ api_cache_manager entegrasyonu  
+# ✅ FIXED: get_rates_signal() wrapper added (ai_brain compatible)
+# ✅ api_cache_manager entegrasyonu
 # ✅ Multi-source fallback (FRED API → yfinance)
 # ✅ 15 dakika cache
 # ✅ Graceful degradation
-# ✅ TÜM ÖNCEKİ ÖZELLİKLER KORUNDU!
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - Interest Rates Layer v3.0
+🔱 DEMIR AI TRADING BOT - Interest Rates Layer v3.1
 ====================================================================
-Tarih: 3 Kasım 2025, 22:06 CET
-Versiyon: 3.0 - RATE LIMIT SAFE + MULTI-SOURCE
+Tarih: 4 Kasım 2025, 21:26 CET
+Versiyon: 3.1 - get_rates_signal() wrapper added
+
+✅ YENİ v3.1:
+------------
+✅ get_rates_signal() added as alias for get_interest_signal()
+✅ Both functions now available for compatibility
 
 YENİ v3.0:
 ----------
@@ -59,7 +64,6 @@ except ImportError:
     CACHE_MANAGER_AVAILABLE = False
     print("⚠️ api_cache_manager not found, using direct API calls")
 
-
 def get_interest_rates_fred_cached() -> Dict[str, Any]:
     """
     Fetch interest rates with caching support
@@ -71,10 +75,10 @@ def get_interest_rates_fred_cached() -> Dict[str, Any]:
     fred_api_key = os.getenv('FRED_API_KEY')
     
     print(f"\n{'='*80}")
-    print(f"💰 INTEREST RATES LAYER v3.0 - FETCHING DATA")
+    print(f"💰 INTEREST RATES LAYER v3.1 - FETCHING DATA")
     print(f"{'='*80}")
-    print(f" FRED API Key: {'✅ Loaded' if fred_api_key else '❌ Missing'}")
-    print(f" Cache Manager: {'✅ Active' if CACHE_MANAGER_AVAILABLE else '⚠️  Disabled'}")
+    print(f"   FRED API Key: {'✅ Loaded' if fred_api_key else '❌ Missing'}")
+    print(f"   Cache Manager: {'✅ Active' if CACHE_MANAGER_AVAILABLE else '⚠️ Disabled'}")
     print(f"{'='*80}\n")
     
     if not fred_api_key:
@@ -166,7 +170,6 @@ def get_interest_rates_fred_cached() -> Dict[str, Any]:
         print(f"❌ FRED API error: {e}, trying yfinance fallback")
         return get_interest_rates_yfinance()
 
-
 def get_interest_rates_yfinance() -> Dict[str, Any]:
     """
     Fallback: Fetch Treasury yields from yfinance
@@ -216,7 +219,6 @@ def get_interest_rates_yfinance() -> Dict[str, Any]:
             'available': False,
             'reason': str(e)
         }
-
 
 def calculate_rates_score(rates_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -273,7 +275,7 @@ def calculate_rates_score(rates_data: Dict[str, Any]) -> Dict[str, Any]:
             fed_score = 80
             fed_level = "VERY_LOW"
         
-        print(f" Fed Rate: {fed_rate:.2f}% → Level: {fed_level} → Score: {fed_score}/100")
+        print(f"   Fed Rate: {fed_rate:.2f}% → Level: {fed_level} → Score: {fed_score}/100")
         
         # 10-Year Treasury impact
         if treasury_10y > 4.5:
@@ -285,12 +287,11 @@ def calculate_rates_score(rates_data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             treasury_score = 70
         
-        print(f" Treasury: {treasury_10y:.2f}% → Score: {treasury_score}/100")
+        print(f"   Treasury: {treasury_10y:.2f}% → Score: {treasury_score}/100")
         
         # Weighted average (Fed 60%, Treasury 40%)
         base_score = (fed_score * 0.6) + (treasury_score * 0.4)
-        
-        print(f" Base Score: {base_score:.1f}/100")
+        print(f"   Base Score: {base_score:.1f}/100")
         
         # ==========================================
         # ADJUST FOR RATE DIRECTION (TREND)
@@ -314,7 +315,7 @@ def calculate_rates_score(rates_data: Dict[str, Any]) -> Dict[str, Any]:
             trend_adjustment = +15
             rate_direction = "FALLING"
         
-        print(f" Rate Direction: {rate_direction} → Adjustment: {trend_adjustment:+}")
+        print(f"   Rate Direction: {rate_direction} → Adjustment: {trend_adjustment:+}")
         
         # ==========================================
         # FINAL SCORE
@@ -334,8 +335,8 @@ def calculate_rates_score(rates_data: Dict[str, Any]) -> Dict[str, Any]:
             signal = "BEARISH"
             interpretation = "High/rising rates - Unfavorable for risk assets"
         
-        print(f" Final Score: {final_score:.1f}/100")
-        print(f" Signal: {signal}")
+        print(f"   Final Score: {final_score:.1f}/100")
+        print(f"   Signal: {signal}")
         print(f"{'='*80}\n")
         
         return {
@@ -362,7 +363,6 @@ def calculate_rates_score(rates_data: Dict[str, Any]) -> Dict[str, Any]:
             'reason': str(e)
         }
 
-
 def get_interest_signal() -> Dict[str, Any]:
     """
     Main function: Get interest rates signal (used by ai_brain.py)
@@ -383,17 +383,25 @@ def get_interest_signal() -> Dict[str, Any]:
         'rate_direction': result.get('rate_direction')
     }
 
+def get_rates_signal() -> Dict[str, Any]:
+    """
+    Alias for get_interest_signal() - for ai_brain compatibility
+    
+    Returns:
+        dict: {'available': bool, 'score': float, 'signal': str}
+    """
+    return get_interest_signal()
 
 # ============================================================================
 # STANDALONE TESTING
 # ============================================================================
 if __name__ == "__main__":
     print("="*80)
-    print("🔱 INTEREST RATES LAYER v3.0 TEST")
+    print("🔱 INTEREST RATES LAYER v3.1 TEST")
     print("   RATE LIMIT SAFE + API CACHE MANAGER")
     print("="*80)
     
-    result = get_interest_signal()
+    result = get_rates_signal()
     
     print("\n" + "="*80)
     print("📊 INTEREST RATES ANALYSIS:")
