@@ -382,7 +382,6 @@ def clear_cache():
 
 def clear_old_cache():
     """Eski cache'leri temizle (15dk+)"""
-    global _CACHE
     current_time = time.time()
     keys_to_delete = []
 
