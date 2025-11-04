@@ -180,22 +180,21 @@ except Exception as e:
 
 def get_signal_text(score):
     """
-    Convert score to text signal
-    ✅ FIX v15.0: Handle None values to prevent TypeError
+    Convert score to text signal - AGGRESSIVE v14.1
+    ✅ Daha keskin sinyaller için threshold daraltıldı
     """
-    # ✅ Check for None or invalid values FIRST
     if score is None or score == 0:
         return "NO DATA"
-
+    
     try:
         score = float(score)
     except (ValueError, TypeError):
         return "INVALID"
-
-    # Now safe to compare
-    if score >= 65:
+    
+    # ✅ YENİ AGGRESSIVE THRESHOLDS
+    if score >= 60:        # ESKİ: 65
         return "LONG"
-    elif score <= 35:
+    elif score <= 40:      # ESKİ: 35
         return "SHORT"
     else:
         return "NEUTRAL"
