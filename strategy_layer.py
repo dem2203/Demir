@@ -516,3 +516,41 @@ if __name__ == "__main__":
             print(f"   - {name}: {data}")
     
     print("="*80)
+
+
+# ============================================================================
+# STRATEGY ENGINE CLASS WRAPPER (v6.0)
+# ============================================================================
+# ✅ FIX v15.0: AI Brain uyumluluğu için class wrapper eklendi
+
+class StrategyEngine:
+    """
+    Strategy Layer için class wrapper
+    AI Brain'in 'from strategy_layer import StrategyEngine' import'unu destekler
+    """
+
+    def __init__(self):
+        """Initialize Strategy Engine"""
+        self.version = "6.0"
+        print(f"✅ StrategyEngine v{self.version} initialized")
+
+    def get_strategy_signal(self, symbol, interval='1h', lookback=100):
+        """
+        Wrapper method - calls the module-level get_strategy_signal function
+
+        Args:
+            symbol (str): Trading pair (e.g., 'BTCUSDT')
+            interval (str): Timeframe ('5m', '15m', '1h', '4h', '1d')
+            lookback (int): Number of candles to analyze
+
+        Returns:
+            float: Strategy score (0-100)
+        """
+        # Call the module-level function
+        return get_strategy_signal(symbol, interval, lookback)
+
+    def analyze(self, symbol, interval='1h'):
+        """
+        Alternative method name for compatibility
+        """
+        return self.get_strategy_signal(symbol, interval)
