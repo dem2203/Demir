@@ -1,16 +1,23 @@
 # ===========================================
-# kelly_enhanced_layer.py v2.0 - SIMPLIFIED POSITION SIZING
+# kelly_enhanced_layer.py v2.1 - FIXED calculate_dynamic_kelly
 # ===========================================
+# ✅ FIXED: calculate_dynamic_kelly function added
 # ✅ Simplified Kelly Criterion (no trade history needed)
 # ✅ Based on market conditions + volatility
 # ✅ Conservative risk management
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - Kelly Enhanced Layer v2.0
+🔱 DEMIR AI TRADING BOT - Kelly Enhanced Layer v2.1
 ====================================================================
-Tarih: 3 Kasım 2025, 22:28 CET
-Versiyon: 2.0 - SIMPLIFIED KELLY WITHOUT TRADE HISTORY
+Tarih: 4 Kasım 2025, 21:26 CET
+Versiyon: 2.1 - calculate_dynamic_kelly FIXED
+
+YENİ v2.1:
+----------
+✅ calculate_dynamic_kelly() function added
+✅ Returns float score directly (0-100)
+✅ Compatible with ai_brain v12.0
 
 YENİ v2.0:
 ----------
@@ -27,41 +34,27 @@ Kelly% = (Win Rate × Avg Win - Avg Loss) / Avg Win
 WITHOUT TRADE HISTORY:
 ---------------------
 We use market-based estimates:
-- Win Rate = 55% (crypto trend following baseline)
-- Avg Win/Loss Ratio = 1.5:1 (standard risk-reward)
-- Adjusted by: Volatility, Trend Strength, Market Regime
+- Win Rate = 55% (conservative estimate for trend-following)
+- Avg Win/Loss Ratio = 1.5:1 (typical for good risk/reward)
 
-POSITION SIZING:
-----------------
-Low volatility + Strong trend → 70-85 (larger position)
-High volatility + Weak trend → 20-35 (smaller position)
-Medium conditions → 45-55 (neutral position)
-
-SCORING LOGIC:
---------------
-Score represents recommended position size as % of ideal Kelly
-100 = Full Kelly (1.0x)
-75 = 3/4 Kelly (0.75x)
-50 = Half Kelly (0.5x)
-25 = Quarter Kelly (0.25x)
+KELLY SCORE INTERPRETATION:
+---------------------------
+- 80-100: High confidence (strong trend + low volatility)
+- 60-80: Moderate confidence (normal conditions)
+- 40-60: Low confidence (choppy/uncertain)
+- 0-40: Very low confidence (high risk)
 """
 
 import requests
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, Any
+from datetime import datetime
+from typing import Dict, Any, List
 
-# ============================================================================
-# BINANCE API FUNCTIONS
-# ============================================================================
-
-def get_binance_klines(symbol: str = 'BTCUSDT', interval: str = '1h', limit: int = 100) -> pd.DataFrame:
-    """
-    Fetch OHLCV data from Binance API
-    """
+def get_binance_klines(symbol='BTCUSDT', interval='1h', limit=100):
+    """Fetch real-time price data from Binance"""
     try:
-        url = "https://api.binance.com/api/v3/klines"
+        url = 'https://api.binance.com/api/v3/klines'
         params = {
             'symbol': symbol,
             'interval': interval,
@@ -70,37 +63,33 @@ def get_binance_klines(symbol: str = 'BTCUSDT', interval: str = '1h', limit: int
         
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
-        data = response.json()
         
-        # Parse response
-        df = pd.DataFrame(data, columns=[
-            'timestamp', 'open', 'high', 'low', 'close', 'volume',
+        klines = response.json()
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(klines, columns=[
+            'open_time', 'open', 'high', 'low', 'close', 'volume',
             'close_time', 'quote_volume', 'trades', 'taker_buy_base',
             'taker_buy_quote', 'ignore'
         ])
         
-        # Convert to proper types
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        # Convert to float
         for col in ['open', 'high', 'low', 'close', 'volume']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = df[col].astype(float)
         
-        df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
-        
-        print(f"✅ Binance: {symbol} - {len(df)} candles loaded")
         return df
         
     except Exception as e:
-        print(f"❌ Binance error ({symbol}): {e}")
+        print(f"⚠️ Binance API error: {e}")
         return None
 
-
-# ============================================================================
-# MARKET ANALYSIS FUNCTIONS
-# ============================================================================
-
-def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> float:
+def calculate_atr(df, period=14):
     """Calculate Average True Range (volatility measure)"""
     try:
+        high = df['high']
+        low = df['low']
+        close = df['close']
+        
         tr1 = high - low
         tr2 = abs(high - close.shift())
         tr3 = abs(low - close.shift())
@@ -109,280 +98,221 @@ def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int
         atr = tr.rolling(window=period).mean()
         
         return atr.iloc[-1]
-    except:
-        return 0.0
-
-
-def detect_trend_strength(prices: pd.Series, period: int = 20) -> Dict[str, Any]:
-    """
-    Detect trend strength using ADX-like logic
-    
-    Returns:
-        dict: trend_strength (0-100), trend_direction
-    """
-    try:
-        # Simple trend detection: EMA slope
-        ema = prices.ewm(span=period, adjust=False).mean()
-        
-        # Calculate slope
-        slope = (ema.iloc[-1] - ema.iloc[-period]) / ema.iloc[-period] * 100
-        
-        # Trend strength (0-100)
-        trend_strength = min(abs(slope) * 10, 100)
-        
-        # Direction
-        if slope > 1:
-            trend_direction = 'uptrend'
-        elif slope < -1:
-            trend_direction = 'downtrend'
-        else:
-            trend_direction = 'ranging'
-        
-        return {
-            'strength': trend_strength,
-            'direction': trend_direction,
-            'slope': slope
-        }
         
     except Exception as e:
-        print(f"❌ Trend detection error: {e}")
-        return {'strength': 50, 'direction': 'ranging', 'slope': 0}
+        print(f"⚠️ ATR calculation error: {e}")
+        return None
 
-
-def calculate_volatility_regime(atr: float, current_price: float) -> str:
-    """
-    Classify volatility regime
-    
-    Returns:
-        'low', 'medium', or 'high'
-    """
+def detect_market_regime(df):
+    """Detect if market is trending or ranging"""
     try:
-        atr_percent = (atr / current_price) * 100
-        
-        if atr_percent < 1.5:
-            return 'low'
-        elif atr_percent < 3.0:
-            return 'medium'
-        else:
-            return 'high'
-        
-    except:
-        return 'medium'
-
-
-# ============================================================================
-# KELLY CALCULATION
-# ============================================================================
-
-def calculate_simplified_kelly(
-    trend_strength: float,
-    volatility_regime: str,
-    trend_direction: str
-) -> Dict[str, Any]:
-    """
-    Calculate simplified Kelly position sizing
-    
-    Args:
-        trend_strength: 0-100 (trend conviction)
-        volatility_regime: 'low', 'medium', 'high'
-        trend_direction: 'uptrend', 'downtrend', 'ranging'
-    
-    Returns:
-        dict: Kelly score, recommended position size
-    """
-    # Base Kelly estimates (without trade history)
-    base_win_rate = 0.55  # 55% baseline for crypto trend following
-    base_risk_reward = 1.5  # 1.5:1 reward-to-risk ratio
-    
-    # Adjust win rate based on trend strength
-    if trend_strength > 70:
-        adjusted_win_rate = 0.60  # Strong trend = higher edge
-    elif trend_strength > 40:
-        adjusted_win_rate = 0.55  # Medium trend
-    else:
-        adjusted_win_rate = 0.50  # Weak trend = lower edge
-    
-    # Adjust for trend direction
-    if trend_direction == 'ranging':
-        adjusted_win_rate -= 0.05  # Harder in ranging markets
-    
-    # Kelly formula: (Win_Rate × Reward - Loss_Probability) / Reward
-    loss_probability = 1 - adjusted_win_rate
-    kelly_percent = (adjusted_win_rate * base_risk_reward - loss_probability) / base_risk_reward
-    
-    # Fractional Kelly (25% of full Kelly = safer)
-    fractional_kelly = kelly_percent * 0.25
-    
-    # Adjust for volatility
-    if volatility_regime == 'high':
-        volatility_multiplier = 0.6
-    elif volatility_regime == 'medium':
-        volatility_multiplier = 0.8
-    else:
-        volatility_multiplier = 1.0
-    
-    final_kelly = fractional_kelly * volatility_multiplier
-    
-    # Convert to score (0-100)
-    # 1.0 = 100 (full fractional Kelly)
-    # 0.5 = 50 (half)
-    # 0.0 = 0 (no position)
-    kelly_score = final_kelly * 100
-    kelly_score = max(15, min(85, kelly_score))  # Clamp to 15-85
-    
-    return {
-        'kelly_percent': round(final_kelly, 4),
-        'kelly_score': round(kelly_score, 2),
-        'win_rate': round(adjusted_win_rate, 3),
-        'risk_reward': base_risk_reward,
-        'volatility_adjustment': volatility_multiplier
-    }
-
-
-# ============================================================================
-# MAIN ANALYSIS
-# ============================================================================
-
-def analyze_kelly_position(symbol: str = 'BTCUSDT', interval: str = '1h') -> Dict[str, Any]:
-    """
-    Complete Kelly position sizing analysis
-    
-    Args:
-        symbol: Trading pair (BTCUSDT, ETHUSDT, LTCUSDT)
-        interval: Timeframe (1h, 4h, 1d)
-    
-    Returns:
-        dict with score, signal, and Kelly details
-    """
-    print(f"\n{'='*80}")
-    print(f"💰 KELLY ENHANCED LAYER v2.0 - POSITION SIZING")
-    print(f"   Symbol: {symbol}")
-    print(f"   Interval: {interval}")
-    print(f"{'='*80}\n")
-    
-    # Fetch data from Binance
-    df = get_binance_klines(symbol, interval, limit=100)
-    
-    if df is None or len(df) < 30:
-        print("❌ Kelly: Insufficient data")
-        return {
-            'available': False,
-            'score': 50,
-            'signal': 'NEUTRAL',
-            'reason': 'Insufficient data from Binance'
-        }
-    
-    try:
-        prices = df['close']
+        # Calculate ADX (trend strength indicator)
         high = df['high']
         low = df['low']
-        current_price = prices.iloc[-1]
+        close = df['close']
         
-        # Calculate volatility
-        atr = calculate_atr(high, low, prices)
-        volatility_regime = calculate_volatility_regime(atr, current_price)
+        # True Range
+        tr = pd.concat([
+            high - low,
+            abs(high - close.shift()),
+            abs(low - close.shift())
+        ], axis=1).max(axis=1)
         
-        # Detect trend
-        trend_data = detect_trend_strength(prices)
+        # Directional Movement
+        up_move = high - high.shift()
+        down_move = low.shift() - low
         
-        # Calculate Kelly
-        kelly_result = calculate_simplified_kelly(
-            trend_data['strength'],
-            volatility_regime,
-            trend_data['direction']
+        plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
+        minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
+        
+        # Smooth
+        atr = tr.rolling(14).mean()
+        plus_di = 100 * pd.Series(plus_dm).rolling(14).mean() / atr
+        minus_di = 100 * pd.Series(minus_dm).rolling(14).mean() / atr
+        
+        # ADX
+        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
+        adx = dx.rolling(14).mean().iloc[-1]
+        
+        # Interpretation
+        if adx > 25:
+            return "TRENDING", adx
+        elif adx > 20:
+            return "WEAK_TREND", adx
+        else:
+            return "RANGING", adx
+            
+    except Exception as e:
+        print(f"⚠️ Market regime detection error: {e}")
+        return "UNKNOWN", 0
+
+def calculate_kelly_enhanced(symbol='BTCUSDT'):
+    """
+    Calculate Kelly Criterion-based position sizing score
+    
+    Returns:
+        dict: Kelly analysis with score 0-100
+    """
+    try:
+        print(f"\n📊 Calculating Kelly-Enhanced Position Sizing for {symbol}...")
+        
+        # Get price data
+        df = get_binance_klines(symbol, interval='1h', limit=100)
+        if df is None or df.empty:
+            return {
+                'available': False,
+                'score': 50,
+                'reason': 'Failed to fetch price data'
+            }
+        
+        # ==========================================
+        # 1. VOLATILITY ANALYSIS (ATR)
+        # ==========================================
+        current_price = df['close'].iloc[-1]
+        atr = calculate_atr(df, period=14)
+        
+        if atr is None:
+            return {'available': False, 'score': 50, 'reason': 'ATR calculation failed'}
+        
+        # ATR as percentage of price
+        atr_pct = (atr / current_price) * 100
+        
+        # Volatility scoring (inverse - lower volatility = higher score)
+        if atr_pct < 1:
+            volatility_score = 90
+            volatility_level = "VERY_LOW"
+        elif atr_pct < 2:
+            volatility_score = 75
+            volatility_level = "LOW"
+        elif atr_pct < 3:
+            volatility_score = 60
+            volatility_level = "MODERATE"
+        elif atr_pct < 5:
+            volatility_score = 40
+            volatility_level = "HIGH"
+        else:
+            volatility_score = 20
+            volatility_level = "VERY_HIGH"
+        
+        # ==========================================
+        # 2. MARKET REGIME DETECTION
+        # ==========================================
+        regime, adx_value = detect_market_regime(df)
+        
+        if regime == "TRENDING":
+            regime_score = 85
+            regime_multiplier = 1.2
+        elif regime == "WEAK_TREND":
+            regime_score = 60
+            regime_multiplier = 1.0
+        else:  # RANGING or UNKNOWN
+            regime_score = 40
+            regime_multiplier = 0.8
+        
+        # ==========================================
+        # 3. SIMPLIFIED KELLY CALCULATION
+        # ==========================================
+        # Conservative estimates (no trade history)
+        win_rate = 0.55  # 55% win rate (conservative for trend-following)
+        avg_win_loss_ratio = 1.5  # 1.5:1 reward/risk
+        
+        # Kelly formula: (Win Rate × RR - Loss Rate) / RR
+        loss_rate = 1 - win_rate
+        kelly_pct = (win_rate * avg_win_loss_ratio - loss_rate) / avg_win_loss_ratio
+        
+        # Apply fractional Kelly (0.25x for safety)
+        fractional_kelly = kelly_pct * 0.25
+        
+        # Convert to score (0-100)
+        kelly_base_score = fractional_kelly * 100 * 4  # Scale up
+        
+        # ==========================================
+        # 4. COMBINE SCORES
+        # ==========================================
+        # Weighted average
+        final_score = (
+            volatility_score * 0.4 +   # 40% weight on volatility
+            regime_score * 0.35 +       # 35% weight on trend strength
+            kelly_base_score * 0.25     # 25% weight on Kelly base
         )
         
-        score = kelly_result['kelly_score']
+        # Apply regime multiplier
+        final_score = final_score * regime_multiplier
         
-        # Determine signal
-        if score >= 65:
-            signal = 'BULLISH'  # Larger position recommended
-        elif score <= 35:
-            signal = 'BEARISH'  # Smaller position recommended
+        # Cap at 0-100
+        final_score = max(0, min(100, final_score))
+        
+        # ==========================================
+        # 5. POSITION SIZE RECOMMENDATION
+        # ==========================================
+        if final_score >= 80:
+            position_size = "LARGE"
+            recommendation = "High confidence - consider larger position"
+        elif final_score >= 60:
+            position_size = "MODERATE"
+            recommendation = "Moderate confidence - standard position"
+        elif final_score >= 40:
+            position_size = "SMALL"
+            recommendation = "Low confidence - reduce position size"
         else:
-            signal = 'NEUTRAL'  # Medium position
+            position_size = "MINIMAL"
+            recommendation = "Very low confidence - minimal/no position"
         
-        # Print results
-        print(f"📊 MARKET CONDITIONS:")
-        print(f"   Trend Strength: {trend_data['strength']:.1f}/100")
-        print(f"   Trend Direction: {trend_data['direction'].upper()}")
-        print(f"   Volatility: {volatility_regime.upper()}")
-        print(f"   ATR: ${atr:.2f}")
-        
-        print(f"\n📊 KELLY CALCULATION:")
-        print(f"   Estimated Win Rate: {kelly_result['win_rate']:.1%}")
-        print(f"   Risk/Reward Ratio: 1:{kelly_result['risk_reward']}")
-        print(f"   Volatility Adjustment: {kelly_result['volatility_adjustment']:.2f}x")
-        print(f"   Kelly Percent: {kelly_result['kelly_percent']:.2%}")
-        
-        print(f"\n{'='*80}")
-        print(f"✅ KELLY ANALYSIS COMPLETE!")
-        print(f"   Score: {score:.1f}/100")
-        print(f"   Signal: {signal}")
-        print(f"{'='*80}\n")
+        print(f"✅ Kelly Analysis Complete!")
+        print(f"   Volatility: {volatility_level} (ATR: {atr_pct:.2f}%)")
+        print(f"   Market Regime: {regime} (ADX: {adx_value:.1f})")
+        print(f"   Kelly Score: {final_score:.2f}/100")
+        print(f"   Position Size: {position_size}")
         
         return {
             'available': True,
-            'score': score,
-            'signal': signal,
-            'kelly_percent': kelly_result['kelly_percent'],
-            'win_rate': kelly_result['win_rate'],
-            'risk_reward': kelly_result['risk_reward'],
-            'trend_strength': round(trend_data['strength'], 2),
-            'trend_direction': trend_data['direction'],
-            'volatility': volatility_regime,
-            'atr': round(atr, 2),
-            'current_price': round(current_price, 2),
+            'score': round(final_score, 2),
+            'volatility_level': volatility_level,
+            'atr_percent': round(atr_pct, 2),
+            'market_regime': regime,
+            'adx': round(adx_value, 1),
+            'position_size': position_size,
+            'recommendation': recommendation,
+            'kelly_percentage': round(fractional_kelly * 100, 2),
             'timestamp': datetime.now().isoformat()
         }
         
     except Exception as e:
-        print(f"❌ Kelly analysis error: {e}")
-        return {
-            'available': False,
-            'score': 50,
-            'signal': 'NEUTRAL',
-            'reason': str(e)
-        }
+        print(f"⚠️ Kelly calculation error: {e}")
+        return {'available': False, 'score': 50, 'reason': str(e)}
 
-
-def get_kelly_signal(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
+def calculate_dynamic_kelly(symbol='BTCUSDT'):
     """
-    Main function called by ai_brain.py
+    Simplified wrapper for Kelly signal (used by ai_brain.py)
+    
+    Args:
+        symbol: Trading pair symbol (e.g., "BTCUSDT")
     
     Returns:
-        dict: {'available': bool, 'score': float, 'signal': str}
+        float: Kelly score (0-100)
     """
-    result = analyze_kelly_position(symbol, interval='1h')
+    result = calculate_kelly_enhanced(symbol)
     
-    return {
-        'available': result['available'],
-        'score': result.get('score', 50),
-        'signal': result.get('signal', 'NEUTRAL'),
-        'kelly_percent': result.get('kelly_percent', 0),
-        'trend_strength': result.get('trend_strength', 0),
-        'volatility': result.get('volatility', 'medium')
-    }
-
+    if result['available']:
+        return result['score']
+    else:
+        return 50.0  # Neutral score if unavailable
 
 # ============================================================================
 # STANDALONE TESTING
 # ============================================================================
 if __name__ == "__main__":
-    print("="*80)
-    print("🔱 KELLY ENHANCED LAYER v2.0 TEST")
-    print("   SIMPLIFIED POSITION SIZING")
-    print("="*80)
+    print("📊 KELLY ENHANCED LAYER - REAL DATA TEST")
+    print("=" * 70)
     
-    # Test with BTCUSDT
-    result = get_kelly_signal('BTCUSDT')
+    result = calculate_kelly_enhanced("BTCUSDT")
     
-    print("\n" + "="*80)
-    print("📊 KELLY TEST RESULTS:")
+    print("\n" + "=" * 70)
+    print("📊 KELLY ANALYSIS:")
     print(f"   Available: {result['available']}")
     print(f"   Score: {result.get('score', 'N/A')}/100")
-    print(f"   Signal: {result.get('signal', 'N/A')}")
-    print(f"   Kelly%: {result.get('kelly_percent', 'N/A'):.2%}")
-    print(f"   Trend Strength: {result.get('trend_strength', 'N/A')}")
-    print(f"   Volatility: {result.get('volatility', 'N/A')}")
-    print("="*80)
+    print(f"   Volatility: {result.get('volatility_level', 'N/A')} ({result.get('atr_percent', 'N/A')}%)")
+    print(f"   Market Regime: {result.get('market_regime', 'N/A')} (ADX: {result.get('adx', 'N/A')})")
+    print(f"   Position Size: {result.get('position_size', 'N/A')}")
+    print(f"   Kelly%: {result.get('kelly_percentage', 'N/A')}%")
+    print("=" * 70)
