@@ -716,6 +716,7 @@ def render_ai_trading():
                 st.warning("⚠️ Layer scores not available in result")
             
             # Trading recommendations
+                     # Trading recommendations
             if signal != "NEUTRAL":
                 st.markdown("---")
                 st.markdown("### 💡 Trading Recommendations")
@@ -734,42 +735,32 @@ def render_ai_trading():
                     st.markdown(f"- TP1: ${result.get('tp1', 0):.2f}")
                     st.markdown(f"- TP2: ${result.get('tp2', 0):.2f}")
                     st.markdown(f"- TP3: ${result.get('tp3', 0):.2f}")
-    
-    # Chart display
-      if CHART_AVAILABLE:
-        st.markdown("---")
-        st.markdown("### Interactive Price Chart")
-        try:
-            chartgen = ChartGenerator(theme='dark')
-            df = chartgen.fetchohlcv(result['symbol'], interval=result.get('interval', '1h'), days=7)
-            if not df.empty:
-                fig = chartgen.create_candlestick_chart(
-                    df, 
-                    symbol=result['symbol'], 
-                    show_volume=True, 
-                    indicators=['RSI', 'MACD', 'Bollinger'], 
-                    height=600
-                )
-                # Add trade levels only if valid trade
-                if signal != "NEUTRAL" and entry > 0:
-                    chartgen.add_trade_levels(
-                        fig, 
-                        entry_price=result.get('entry_price', 0), 
-                        stop_loss=result.get('stop_loss', 0), 
-                        take_profits=[tp1, tp2, tp3], 
-                        signal=signal
-                    )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("Chart data not available")
+            
+            # ✅ CHART SECTION - ADDED EXCEPTION HANDLING
+            if CHART_AVAILABLE:
+                st.markdown("---")
+                st.markdown("### 📈 Interactive Price Chart")
+                try:
+                    from chart_generator import ChartGenerator
+                    chartgen = ChartGenerator(theme='dark')
+                    df = chartgen.fetchohlcv(result['symbol'], interval=result.get('interval', '1h'), days=7)
+                    if not df.empty:
+                        fig = chartgen.create_candlestick_chart(
+                            df, 
+                            symbol=result['symbol'], 
+                            show_volume=True, 
+                            indicators=['RSI', 'MACD', 'Bollinger'], 
+                            height=600
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.warning("📊 Chart data not available")
+                except Exception as e:
+                    st.error(f"❌ Chart generation failed: {e}")
+            
         except Exception as e:
-            st.error(f"Chart generation failed: {e}")
-        
-        except Exception as e:
-            st.error(f"❌ Analysis error: {e}")
-            import traceback
-            with st.expander("🔍 See error details"):
-                st.code(traceback.format_exc())
+            st.error(f"❌ Analysis error: {str(e)}")
+            st.info("💡 Check if all required modules are available")
 
 def render_backtest():
     """Render backtest results page - COIN SPECIFIC"""
