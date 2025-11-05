@@ -252,11 +252,9 @@ class BacktestEngine:
 
     def print_results(self, results: Dict):
         """Print backtest results"""
-        print(f"
-{'='*80}")
+                print(f"\n{'='*80}")
         print(f"📊 BACKTEST RESULTS")
-        print(f"{'='*80}
-")
+        print(f"{'='*80}\n")
 
         print(f"💰 CAPITAL:")
         print(f"   Initial: ${results['initial_capital']:,.2f}")
