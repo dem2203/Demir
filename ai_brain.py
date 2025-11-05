@@ -834,8 +834,3 @@ if __name__ == "__main__":
         print(f"   Confidence: {result['confidence']:.1%}")
         print(f"   Active Layers: {result['active_layers']}/{result['total_layers']}")
         print("-"*80)
-
-# ============================================================================
-# END OF AI_BRAIN.PY V15.0
-# ============================================================================
-
