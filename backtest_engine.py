@@ -130,11 +130,9 @@ class BacktestEngine:
         Returns:
             Backtest results dict
         """
-        print(f"
-{'='*80}")
+                print(f"\n{'='*80}")
         print(f"🔙 BACKTEST STARTING: {symbol}")
-        print(f"{'='*80}
-")
+        print(f"{'='*80}\n")
 
         # Fetch historical data
         df = self.get_historical_data(symbol, days)
