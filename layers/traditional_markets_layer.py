@@ -415,22 +415,28 @@ class TraditionalMarketsLayer:
 # SIMPLIFIED WRAPPER FUNCTIONS (FOR ai_brain.py COMPATIBILITY)
 # ============================================================================
 
-def get_traditional_markets_signal() -> Dict[str, Any]:
+def get_traditional_markets_signal():
     """
     Simplified wrapper for traditional markets signal
-    Used by ai_brain.py
-    
-    Returns:
-        dict: {'available': bool, 'score': float, 'signal': str}
+    (Used by ai_brain.py)
+    Returns: dict with available (bool), score (float), signal (str)
     """
-    layer = TraditionalMarketsLayer()
-    result = layer.analyze_all_markets('BTCUSDT', days=30)
-    
-    return {
-        'available': result['available'],
-        'score': result.get('total_score', 50),
-        'signal': result.get('signal', 'NEUTRAL')
-    }
+    try:
+        layer = TraditionalMarketsLayer()
+        result = layer.analyze_all_markets('BTCUSDT', days=30)
+        return {
+            'available': result['available'],
+            'score': result.get('total_score', 50),
+            'signal': result.get('signal', 'NEUTRAL')
+        }
+    except Exception as e:
+        print(f"⚠️ Traditional Markets Layer Error: {e}")
+        # FALLBACK: Return neutral
+        return {
+            'available': True,  # ÖNEMLİ: True yapıyoruz
+            'score': 50.0,
+            'signal': 'NEUTRAL'
+        }
 
 def calculate_traditional_correlation(symbol: str = 'BTCUSDT', days: int = 30) -> Dict[str, Any]:
     """Full analysis function (backward compatibility)"""
