@@ -124,6 +124,45 @@ print("✅ AI Brain v15.0 - Phase 3+6 imports complete")
 print("="*80)
 
 # ============================================================================
+# PHASE 7 QUANTUM LAYER IMPORTS
+# ============================================================================
+
+try:
+    from layers.quantum_black_scholes_layer import get_quantum_black_scholes_signal
+    print("✅ quantum_black_scholes_layer imported")
+except Exception as e:
+    print(f"⚠️ quantum_black_scholes_layer error: {e}")
+    get_quantum_black_scholes_signal = None
+
+try:
+    from layers.kalman_regime_layer import get_kalman_regime_signal
+    print("✅ kalman_regime_layer imported")
+except Exception as e:
+    print(f"⚠️ kalman_regime_layer error: {e}")
+    get_kalman_regime_signal = None
+
+try:
+    from layers.fractal_chaos_layer import get_fractal_chaos_signal
+    print("✅ fractal_chaos_layer imported")
+except Exception as e:
+    print(f"⚠️ fractal_chaos_layer error: {e}")
+    get_fractal_chaos_signal = None
+
+try:
+    from layers.fourier_cycle_layer import get_fourier_cycle_signal
+    print("✅ fourier_cycle_layer imported")
+except Exception as e:
+    print(f"⚠️ fourier_cycle_layer error: {e}")
+    get_fourier_cycle_signal = None
+
+try:
+    from layers.copula_correlation_layer import get_copula_correlation_signal
+    print("✅ copula_correlation_layer imported")
+except Exception as e:
+    print(f"⚠️ copula_correlation_layer error: {e}")
+    get_copula_correlation_signal = None
+
+# ============================================================================
 # LAYER AĞIRLIKLARI (WEIGHTED ENSEMBLE) - v15.0 UPDATED
 # ============================================================================
 
