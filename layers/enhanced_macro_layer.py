@@ -161,14 +161,14 @@ class EnhancedMacroLayer:
             print(f"⚠️ DXY data error: {e}")
             return None
 
-    def analyze_risk_sentiment(self, spx_data: Dict, nasdaq_data: Dict, dxy_data: Dict) -> str:
+    def analyze_risk_sentiment(self, spx_ Dict, nasdaq_ Dict, dxy_ Dict) -> str:
         """
         Analyze overall market risk sentiment
 
         Args:
-            spx_data: SPX data
-            nasdaq_data: NASDAQ data
-            dxy_data: DXY data
+            spx_ SPX data
+            nasdaq_ NASDAQ data
+            dxy_ DXY data
 
         Returns:
             RISK_ON / RISK_OFF / MIXED
@@ -197,11 +197,9 @@ class EnhancedMacroLayer:
         Returns:
             Dict with score, sentiment, and details
         """
-        print(f"
-{'='*80}")
+        print(f"\n{'='*80}")
         print(f"🌍 ENHANCED MACRO ANALYSIS")
-        print(f"{'='*80}
-")
+        print(f"{'='*80}\n")
 
         # Fetch data
         spx = self.get_spx_data()
@@ -236,12 +234,10 @@ class EnhancedMacroLayer:
         if dxy:
             print(f"💵 DXY:      ${dxy['price']:.2f} ({dxy['change_1d']:+.2%}) - {dxy['sentiment']} for crypto")
 
-        print(f"
-🎯 Risk Sentiment: {risk_sentiment}")
+        print(f"\n🎯 Risk Sentiment: {risk_sentiment}")
         print(f"📈 Macro Score: {final_score:.1f}/100")
         print(f"✅ Confidence: {confidence:.1%}")
-        print(f"{'='*80}
-")
+        print(f"{'='*80}\n")
 
         return {
             'score': final_score,
@@ -303,11 +299,9 @@ if __name__ == "__main__":
     result = get_macro_signal()
 
     if result['confidence'] > 0:
-        print(f"
-✅ Analysis complete!")
+        print(f"\n✅ Analysis complete!")
         print(f"   Signal: {result['signal']}")
         print(f"   Score: {result['score']:.1f}/100")
         print(f"   Risk: {result['risk_sentiment']}")
     else:
-        print(f"
-❌ Analysis failed (no data)")
+        print(f"\n❌ No data available")
