@@ -131,7 +131,7 @@ class EnhancedMacroLayer:
             print(f"DXY data error: {e}")
             return None
 
-    def analyze_risk_sentiment(self, spx_ Dict, nasdaq_ Dict, dxy_ Dict) -> str:
+    def analyze_risk_sentiment(self, spx_data: Dict, nasdaq_data: Dict, dxy_data: Dict) -> str:
         """Analyze overall market risk sentiment"""
         if not all([spx_data, nasdaq_data, dxy_data]):
             return 'UNKNOWN'
