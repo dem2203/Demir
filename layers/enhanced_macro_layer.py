@@ -305,3 +305,4 @@ if __name__ == "__main__":
         print(f"   Risk: {result['risk_sentiment']}")
     else:
         print(f"\n❌ No data available")
+
