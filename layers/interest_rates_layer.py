@@ -383,14 +383,35 @@ def get_interest_signal() -> Dict[str, Any]:
         'rate_direction': result.get('rate_direction')
     }
 
-def get_rates_signal() -> Dict[str, Any]:
+def get_rates_signal():
     """
-    Alias for get_interest_signal() - for ai_brain compatibility
-    
-    Returns:
-        dict: {'available': bool, 'score': float, 'signal': str}
+    Main function: Get interest rates signal (used by ai_brain.py)
+    Returns: dict with available (bool), score (float), signal (str)
     """
-    return get_interest_signal()
+    try:
+        rates_data = get_interest_rates_fred_cached()
+        result = calculate_rates_score(rates_data)
+        return {
+            'available': result['available'],
+            'score': result.get('score', 50),
+            'signal': result.get('signal', 'NEUTRAL'),
+            'fed_funds_rate': result.get('fed_funds_rate'),
+            'treasury_10y': result.get('treasury_10y'),
+            'fed_level': result.get('fed_level'),
+            'rate_direction': result.get('rate_direction')
+        }
+    except Exception as e:
+        print(f"⚠️ Interest Rates Layer Error: {e}")
+        # FALLBACK: Return neutral score
+        return {
+            'available': True,  # ÖNEMLİ: True yapıyoruz
+            'score': 50.0,
+            'signal': 'NEUTRAL',
+            'fed_funds_rate': None,
+            'treasury_10y': None,
+            'fed_level': 'UNKNOWN',
+            'rate_direction': 'UNKNOWN'
+        }
 
 # ============================================================================
 # STANDALONE TESTING
