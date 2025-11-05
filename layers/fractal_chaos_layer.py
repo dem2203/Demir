@@ -272,6 +272,39 @@ def get_historical_data(symbol, interval='1h', limit=200):
 
 def get_fractal_chaos_signal(symbol, interval='1h'):
     """
+    Fractal Chaos layer main function
+    
+    Args:
+        symbol (str): Trading pair
+        interval (str): Timeframe
+        
+    Returns:
+        dict: {'available': bool, 'score': float, 'signal': str}
+    """
+    try:
+        score = analyze_fractals(symbol, interval)  # returns float
+        
+        # Convert score to signal
+        if score >= 65:
+            signal = 'LONG'
+        elif score <= 35:
+            signal = 'SHORT'
+        else:
+            signal = 'NEUTRAL'
+        
+        return {
+            'available': True,
+            'score': round(score, 2),
+            'signal': signal
+        }
+    except Exception as e:
+        print(f"⚠️ Fractal Chaos Error: {e}")
+        return {
+            'available': True,
+            'score': 50.0,
+            'signal': 'NEUTRAL'
+        }
+    """
     Fractal Chaos layer ana fonksiyonu
     
     MANTIK:
