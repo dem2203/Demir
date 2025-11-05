@@ -190,13 +190,19 @@ st.markdown("""
 # MODULE IMPORTS - DYNAMIC LOADING
 # ============================================================================
 
-# AI Brain v15.0
+# ============================================================================
+# AI_BRAIN_AVAILABLE
+# ============================================================================
 AI_BRAIN_AVAILABLE = False
 try:
     from ai_brain import make_trading_decision
     AI_BRAIN_AVAILABLE = True
     print("✅ Streamlit v17.0: AI Brain v15.0 loaded")
-except:
+except Exception as e:
+    import streamlit as st
+    st.error(f"🔴 AI BRAIN IMPORT ERROR: {e}")
+    import traceback
+    st.code(traceback.format_exc())
     make_trading_decision = None
 
 # Phase 3 Modules
