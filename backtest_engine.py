@@ -79,7 +79,7 @@ class BacktestEngine:
             return df
 
         except Exception as e:
-            print(f"❌ Error fetching data: {e}")
+            print(f"❌ Error fetching  {e}")
             return pd.DataFrame()
 
     def simulate_trade(self, entry_price: float, signal: str, tp_percent: float = 0.03, 
@@ -130,7 +130,7 @@ class BacktestEngine:
         Returns:
             Backtest results dict
         """
-                print(f"\n{'='*80}")
+        print(f"\n{'='*80}")
         print(f"🔙 BACKTEST STARTING: {symbol}")
         print(f"{'='*80}\n")
 
@@ -252,7 +252,7 @@ class BacktestEngine:
 
     def print_results(self, results: Dict):
         """Print backtest results"""
-                print(f"\n{'='*80}")
+        print(f"\n{'='*80}")
         print(f"📊 BACKTEST RESULTS")
         print(f"{'='*80}\n")
 
@@ -261,24 +261,20 @@ class BacktestEngine:
         print(f"   Final:   ${results['final_capital']:,.2f}")
         print(f"   Profit:  ${results['net_profit']:,.2f} ({results['roi']:.2%} ROI)")
 
-        print(f"
-📈 TRADES:")
+        print(f"\n📈 TRADES:")
         print(f"   Total:     {results['total_trades']}")
         print(f"   Wins:      🟢 {results['wins']}")
         print(f"   Losses:    🔴 {results['losses']}")
         print(f"   Win Rate:  {results['win_rate']:.1%}")
 
-        print(f"
-📊 METRICS:")
+        print(f"\n📊 METRICS:")
         print(f"   Profit Factor:  {results['profit_factor']:.2f}")
         print(f"   Sharpe Ratio:   {results['sharpe_ratio']:.2f}")
         print(f"   Max Drawdown:   {results['max_drawdown']:.1%}")
         print(f"   Avg Win:        ${results['avg_win']:,.2f}")
         print(f"   Avg Loss:       ${results['avg_loss']:,.2f}")
 
-        print(f"
-{'='*80}
-")
+        print(f"\n{'='*80}\n")
 
     def get_equity_curve_data(self) -> List[Dict]:
         """
@@ -336,10 +332,8 @@ if __name__ == "__main__":
     results = quick_backtest('BTCUSDT', days=30)
 
     if 'error' not in results:
-        print(f"
-✅ Backtest completed!")
+        print(f"\n✅ Backtest completed!")
         print(f"   Final ROI: {results['roi']:.2%}")
         print(f"   Win Rate: {results['win_rate']:.1%}")
     else:
-        print(f"
-❌ Backtest failed: {results['error']}")
+        print(f"\n❌ Error: {results['error']}")
