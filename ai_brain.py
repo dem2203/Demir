@@ -319,7 +319,7 @@ def calculate_confidence(scores_dict):
     confidence = max(0, min(1, 1 - (std / 50)))
     return confidence
 
-========
+#========
 # AI BRAIN MASTER FUNCTION v15.0
 # ============================================================================
 
