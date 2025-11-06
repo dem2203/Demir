@@ -350,8 +350,8 @@ def analyze_with_ai(symbol, interval='1h'):
     score_try('dominance', calculate_dominance_flow, LAYER_WEIGHTS['dominance'], [symbol])
     score_try('cross_asset', get_multi_coin_data, LAYER_WEIGHTS['cross_asset'], [symbol])
     score_try('vix', get_vix_signal, LAYER_WEIGHTS['vix'], [symbol])
-    score_try('rates', get_rates_signal, LAYER_WEIGHTS['rates'])
-    score_try('trad_markets', get_traditional_markets_signal, LAYER_WEIGHTS['trad_markets'])
+    score_try('rates', get_rates_signal, LAYER_WEIGHTS['rates'], [])
+    score_try('trad_markets', get_traditional_markets_signal, LAYER_WEIGHTS['trad_markets'], [])
     score_try('news', get_news_sentiment, LAYER_WEIGHTS['news'], [symbol])
     # Quantum layer'lar
     score_try('black_scholes', get_quantum_black_scholes_signal, LAYER_WEIGHTS['black_scholes'], [symbol, interval])
