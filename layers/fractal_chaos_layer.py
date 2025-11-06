@@ -1,10 +1,29 @@
-# fractal_chaos_layer.py - v1.1 - Full Real Data & Zero Error Safe
-
 import numpy as np
 import pandas as pd
-from datetime import datetime
 import requests
-from scipy import stats
+from datetime import datetime
+
+def get_historical_data(symbol, interval='1h', limit=200):
+    debug = {}
+    try:
+        url = "https://api.binance.com/api/v3/klines"
+        params = {'symbol': symbol, 'interval': interval, 'limit': limit}
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code != 200:
+            debug['http_error'] = f"HTTP status {response.status_code}"
+            return None, debug
+        data = response.json()
+        df = pd.DataFrame(data, columns=[
+            'open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time',
+            'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume',
+            'taker_buy_quote_asset_volume', 'ignore'
+        ])
+        df['close'] = df['close'].astype(float)
+        debug['info'] = f"Fetched {len(df)} data points"
+        return df, debug
+    except Exception as e:
+        debug['exception'] = str(e)
+        return None, debug
 
 def calculate_hurst_exponent(prices, max_lag=20):
     try:
@@ -25,8 +44,7 @@ def calculate_hurst_exponent(prices, max_lag=20):
         lags_used = list(lags)[:len(tau)]
         poly = np.polyfit(np.log(lags_used), np.log(tau), 1)
         hurst = poly[0]
-        hurst = np.clip(hurst, 0.0, 1.0)
-        return hurst
+        return max(0, min(1, hurst))
     except Exception as e:
         print(f"⚠️ Hurst calculation error: {e}")
         return 0.5
@@ -72,37 +90,23 @@ def detect_self_similarity(prices, scales=[5, 10, 20, 40]):
         if len(correlations) == 0:
             return 0.5
         similarity_score = np.mean(correlations)
-        return np.clip(similarity_score, 0, 1)
+        return max(0, min(1, similarity_score))
     except Exception as e:
-        print(f"⚠️ Self-similarity error: {e}")
+        print(f"⚠️ Self-similarity calculation error: {e}")
         return 0.5
 
-def get_historical_data(symbol, interval='1h', limit=200):
-    try:
-        url = "https://api.binance.com/api/v3/klines"
-        params = {'symbol': symbol, 'interval': interval, 'limit': limit}
-        response = requests.get(url, params=params, timeout=10)
-        data = response.json()
-        df = pd.DataFrame(data, columns=[
-            'timestamp', 'open', 'high', 'low', 'close', 'volume',
-            'close_time', 'quote_volume', 'trades', 'taker_buy_base',
-            'taker_buy_quote', 'ignore'])
-        df['close'] = df['close'].astype(float)
-        return df
-    except Exception as e:
-        print(f"⚠️ Data fetch failed: {e}")
-        return None
-
 def get_fractal_chaos_signal(symbol, interval='1h'):
+    debug = {}
     try:
-        print(f"🔮 Fractal Chaos analyzing {symbol}...")
-        df = get_historical_data(symbol, interval, limit=200)
+        df, debug_fetch = get_historical_data(symbol, interval, limit=200)
+        debug.update(debug_fetch)
         if df is None or len(df) < 100:
-            print("⚠️ Insufficient data")
+            debug['error_message'] = "Insufficient data for fractal chaos analysis"
             return {
-                'available': True,
+                'available': False,
                 'score': 50.0,
-                'signal': 'NEUTRAL'
+                'signal': 'NEUTRAL',
+                'data_debug': debug
             }
         prices = df['close'].values
         hurst = calculate_hurst_exponent(prices, max_lag=min(30, len(prices)//5))
@@ -129,7 +133,7 @@ def get_fractal_chaos_signal(symbol, interval='1h'):
             score += (score - 50) * 0.1
         elif fractal_dim > 1.6:
             score = score * 0.9 + 50 * 0.1
-        score = np.clip(score, 0, 100)
+        score = max(0, min(100, score))
         signal = 'NEUTRAL'
         if score >= 65:
             signal = 'LONG'
@@ -138,28 +142,24 @@ def get_fractal_chaos_signal(symbol, interval='1h'):
         return {
             'available': True,
             'score': round(score, 2),
-            'signal': signal
+            'signal': signal,
+            'data_debug': debug
         }
     except Exception as e:
-        print(f"⚠️ Fractal Chaos error: {e}")
+        print(f"❌ Fractal Chaos error: {e}")
         return {
-            'available': True,
+            'available': False,
             'score': 50.0,
-            'signal': 'NEUTRAL'
+            'signal': 'NEUTRAL',
+            'error_message': str(e),
+            'data_debug': debug
         }
-
-def analyze_fractals(symbol, interval='1h'):
-    return get_fractal_chaos_signal(symbol, interval)
 
 if __name__ == "__main__":
     print("Testing fractal_chaos_layer.py")
     test_symbols = ['BTCUSDT', 'ETHUSDT']
-    for symbol in test_symbols:
-        score = get_fractal_chaos_signal(symbol)
-        sig = 'NEUTRAL'
-        if score['score'] >= 65:
-            sig = 'LONG'
-        elif score['score'] <= 35:
-            sig = 'SHORT'
-        print(f"{symbol}: Score={score['score']}, Signal={sig}")
-
+    for sym in test_symbols:
+        result = get_fractal_chaos_signal(sym)
+        print(f"{sym} fractal chaos: Score={result['score']}, Signal={result['signal']}")
+        if 'data_debug' in result:
+            print("Debug info:", result['data_debug'])
