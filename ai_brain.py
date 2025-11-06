@@ -246,7 +246,7 @@ except Exception as e:
     get_quantum_black_scholes_signal = None
 
 try:
-    from layers.kalman_regime_layer import get_kalman_regime_signal
+    from layers.kalman_regime_layer import analyze_kalman_regime
     print("AI Brain v15.1: kalman_regime_layer imported")
 except Exception as e:
     print(f"AI Brain v15.1: kalman_regime_layer error: {e}")
@@ -355,7 +355,7 @@ def analyze_with_ai(symbol, interval='1h'):
     score_try('news', get_news_sentiment, LAYER_WEIGHTS['news'], [symbol])
     # Quantum layer'lar
     score_try('black_scholes', get_quantum_black_scholes_signal, LAYER_WEIGHTS['black_scholes'], [symbol, interval])
-    score_try('kalman', get_kalman_regime_signal, LAYER_WEIGHTS['kalman'], [symbol, interval])
+    score_try('kalman', analyze_kalman_regime, LAYER_WEIGHTS['kalman'], [symbol, interval])
     score_try('fractal', get_fractal_chaos_signal, LAYER_WEIGHTS['fractal'], [symbol, interval])
     score_try('fourier', get_fourier_cycle_signal, LAYER_WEIGHTS['fourier'], [symbol, interval])
     score_try('copula', get_copula_correlation_signal, LAYER_WEIGHTS['copula'], [symbol, interval])
