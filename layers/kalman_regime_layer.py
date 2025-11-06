@@ -1,424 +1,144 @@
-"""
-🔮 KALMAN REGIME LAYER v1.0
-===========================
-Date: 4 Kasım 2025, 09:05 CET
-Phase: 7.2 - Quantum Mathematics
-
-AMAÇ:
------
-Kalman Filter ve Hidden Markov Model kullanarak
-market regime'lerini (TREND/RANGE/VOLATILE) tespit etmek.
-Noise reduction ve state estimation yaparak trend
-
- yönü belirlemek.
-
-MATEMATİK:
-----------
-1. Kalman Filter:
-   - State equation: x_t = Ax_{t-1} + w_t
-   - Measurement: y_t = Hx_t + v_t
-   - Prediction: x̂_t|t-1 = Ax̂_{t-1|t-1}
-   - Update: x̂_t|t = x̂_t|t-1 + K_t(y_t - Hx̂_t|t-1)
-
-2. Hidden Markov Model (3 states):
-   - TREND: Yüksek momentum, düşük noise
-   - RANGE: Düşük momentum, orta noise
-   - VOLATILE: Yüksek noise, belirsiz yön
-
-3. Regime Detection:
-   - ATR/Price ratio → Volatility
-   - Trend strength (ADX benzeri)
-   - Price deviation from Kalman estimate
-
-SINYAL LOJİĞİ:
---------------
-- TREND regime + pozitif slope → LONG (70-90)
-- TREND regime + negatif slope → SHORT (10-30)
-- RANGE regime → NEUTRAL (40-60)
-- VOLATILE regime → Düşük confidence (45-55)
-
-SKOR: 0-100
-"""
-
+import requests
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-import requests
 
-# ============================================================================
-# KALMAN FILTER IMPLEMENTATION
-# ============================================================================
-
-class KalmanFilter:
-    """
-    1D Kalman Filter for price estimation
-    
-    State: [price, velocity]
-    Measurement: observed price
-    """
-    
-    def __init__(self, process_variance=1e-5, measurement_variance=1e-1):
-        """
-        Initialize Kalman Filter
-        
-        Args:
-            process_variance (float): Process noise (w)
-            measurement_variance (float): Measurement noise (v)
-        """
-        # State vector: [price, velocity]
-        self.x = np.array([0.0, 0.0])  # Initial state
-        
-        # State covariance
-        self.P = np.eye(2) * 1000
-        
-        # State transition matrix
-        self.A = np.array([[1, 1],    # price_t = price_{t-1} + velocity
-                           [0, 1]])    # velocity_t = velocity_{t-1}
-        
-        # Measurement matrix
-        self.H = np.array([[1, 0]])   # We observe price only
-        
-        # Process noise covariance
-        self.Q = np.eye(2) * process_variance
-        
-        # Measurement noise covariance
-        self.R = np.array([[measurement_variance]])
-        
-        self.initialized = False
-    
-    def predict(self):
-        """
-        Prediction step: x̂_t|t-1 = Ax̂_{t-1|t-1}
-        """
-        self.x = self.A @ self.x
-        self.P = self.A @ self.P @ self.A.T + self.Q
-    
-    def update(self, measurement):
-        """
-        Update step: x̂_t|t = x̂_t|t-1 + K_t(y_t - Hx̂_t|t-1)
-        
-        Args:
-            measurement (float): Observed price
-        """
-        if not self.initialized:
-            self.x[0] = measurement
-            self.initialized = True
-            return
-        
-        # Innovation (measurement residual)
-        y = measurement - (self.H @ self.x)[0]
-        
-        # Innovation covariance
-        S = self.H @ self.P @ self.H.T + self.R
-        
-        # Kalman gain
-        K = self.P @ self.H.T / S[0, 0]
-        
-        # State update
-        self.x = self.x + K * y
-        
-        # Covariance update
-        self.P = (np.eye(2) - K @ self.H) @ self.P
-    
-    def filter(self, measurement):
-        """
-        Full Kalman filter cycle: predict + update
-        
-        Args:
-            measurement (float): New price observation
-            
-        Returns:
-            tuple: (filtered_price, velocity)
-        """
-        self.predict()
-        self.update(measurement)
-        return self.x[0], self.x[1]
-
-
-# ============================================================================
-# MARKET REGIME DETECTION
-# ============================================================================
-
-def detect_market_regime(prices, atr_values):
-    """
-    Market regime detection using Kalman + statistics
-    
-    Args:
-        prices (list): Recent prices
-        atr_values (list): ATR values
-        
-    Returns:
-        str: Regime ('TREND', 'RANGE', 'VOLATILE')
-    """
-    if len(prices) < 20:
-        return 'UNKNOWN'
-    
-    # 1. Volatility ratio
-    current_atr = atr_values[-1]
-    avg_atr = np.mean(atr_values)
-    volatility_ratio = current_atr / avg_atr if avg_atr > 0 else 1.0
-    
-    # 2. Trend strength (linear regression slope)
-    x = np.arange(len(prices))
-    coeffs = np.polyfit(x, prices, 1)
-    slope = coeffs[0]
-    slope_normalized = abs(slope) / np.mean(prices)  # Normalize by price
-    
-    # 3. R-squared (trend quality)
-    y_fit = np.polyval(coeffs, x)
-    ss_res = np.sum((prices - y_fit)**2)
-    ss_tot = np.sum((prices - np.mean(prices))**2)
-    r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
-    
-    # Regime decision
-    if volatility_ratio > 1.5:
-        return 'VOLATILE'  # Yüksek volatility
-    elif r_squared > 0.7 and slope_normalized > 0.001:
-        return 'TREND'  # Güçlü trend
-    else:
-        return 'RANGE'  # Range-bound
-
-
-# ============================================================================
-# DATA FETCHING
-# ============================================================================
-
-def get_historical_data(symbol, interval='1h', limit=100):
-    """
-    Binance'den historical OHLCV data çek
-    
-    Args:
-        symbol (str): Trading pair
-        interval (str): Timeframe
-        limit (int): Number of candles
-        
-    Returns:
-        pd.DataFrame: OHLCV data
-    """
+def fetch_ohlcv(symbol, interval='1h', limit=200):
+    debug = {}
     try:
         url = "https://api.binance.com/api/v3/klines"
-        params = {
-            'symbol': symbol,
-            'interval': interval,
-            'limit': limit
-        }
+        params = {'symbol': symbol, 'interval': interval, 'limit': limit}
         response = requests.get(url, params=params, timeout=10)
+        if response.status_code != 200:
+            debug['http_error'] = f"HTTP status {response.status_code}"
+            return None, debug
         data = response.json()
-        
         df = pd.DataFrame(data, columns=[
-            'timestamp', 'open', 'high', 'low', 'close', 'volume',
-            'close_time', 'quote_volume', 'trades', 'taker_buy_base',
-            'taker_buy_quote', 'ignore'
+            'timestamp', 'open', 'high', 'low', 'close', 'volume', 
+            'close_time', 'quote_asset_volume', 'number_of_trades',
+            'taker_buy_base', 'taker_buy_quote', 'ignore'
         ])
-        
         df['close'] = df['close'].astype(float)
-        df['high'] = df['high'].astype(float)
         df['low'] = df['low'].astype(float)
-        
-        return df
+        debug['info'] = f"Fetched {len(df)} candles"
+        return df, debug
     except Exception as e:
-        print(f"⚠️ Data fetch failed: {e}")
+        debug['exception'] = str(e)
+        return None, debug
+
+def calculate_atr(df, length=14):
+    try:
+        high = df['high'].astype(float)
+        low = df['low'].astype(float)
+        close = df['close'].astype(float)
+        tr1 = high - low
+        tr2 = abs(high - close.shift())
+        tr3 = abs(low - close.shift())
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr = tr.rolling(window=length).mean()
+        return atr.iloc[-1]
+    except Exception as e:
+        print(f"⚠️ ATR calculation error: {e}")
         return None
 
-
-def calculate_atr(df, period=14):
-    """
-    Average True Range hesapla
-    
-    Args:
-        df (pd.DataFrame): OHLC data
-        period (int): ATR period
-        
-    Returns:
-        list: ATR values
-    """
-    high = df['high'].values
-    low = df['low'].values
-    close = df['close'].values
-    
-    tr = []
-    for i in range(1, len(df)):
-        tr_val = max(
-            high[i] - low[i],
-            abs(high[i] - close[i-1]),
-            abs(low[i] - close[i-1])
-        )
-        tr.append(tr_val)
-    
-    # ATR = EMA of TR
-    atr = []
-    atr_val = np.mean(tr[:period])
-    atr.append(atr_val)
-    
-    for i in range(period, len(tr)):
-        atr_val = (atr_val * (period - 1) + tr[i]) / period
-        atr.append(atr_val)
-    
-    return atr
-
-
-# ============================================================================
-# KALMAN REGIME SIGNAL GENERATOR
-# ============================================================================
-
-def get_kalman_regime_signal(symbol, interval='1h'):
-    """
-    Kalman Regime layer main function
-    
-    Args:
-        symbol (str): Trading pair
-        interval (str): Timeframe
-        
-    Returns:
-        dict: {'available': bool, 'score': float, 'signal': str}
-    """
+def kalman_filter(prices):
     try:
-        score = analyze_regime(symbol, interval)  # returns float
-        
-        # Convert score to signal
-        if score >= 65:
-            signal = 'LONG'
-        elif score <= 35:
-            signal = 'SHORT'
-        else:
-            signal = 'NEUTRAL'
-        
-        return {
-            'available': True,
-            'score': round(score, 2),
-            'signal': signal
-        }
+        n = len(prices)
+        sz = (n,) # size of array
+
+        Q = 1e-5 # process variance
+        R = 0.01 # estimate of measurement variance
+
+        xhat = np.zeros(sz)
+        P = np.zeros(sz)
+        xhatminus = np.zeros(sz)
+        Pminus = np.zeros(sz)
+        K = np.zeros(sz)
+
+        xhat[0] = prices[0]
+        P[0] = 1.0
+
+        for k in range(1, n):
+            # Time update
+            xhatminus[k] = xhat[k-1]
+            Pminus[k] = P[k-1] + Q
+
+            # Measurement update
+            K[k] = Pminus[k] / (Pminus[k] + R)
+            xhat[k] = xhatminus[k] + K[k]*(prices[k] - xhatminus[k])
+            P[k] = (1 - K[k]) * Pminus[k]
+
+        return xhat[-1]
     except Exception as e:
-        print(f"⚠️ Kalman Regime Error: {e}")
-        return {
-            'available': True,
-            'score': 50.0,
-            'signal': 'NEUTRAL'
-        }
-    """
-    Kalman Regime layer ana fonksiyonu
-    
-    MANTIK:
-    -------
-    1. Historical data çek (100 candle)
-    2. Kalman Filter uygula (noise reduction)
-    3. ATR hesapla
-    4. Regime tespit et (TREND/RANGE/VOLATILE)
-    5. Kalman velocity + regime'e göre skor
-    
-    Args:
-        symbol (str): Trading pair
-        interval (str): Timeframe
-        
-    Returns:
-        float: Score (0-100)
-    """
+        print(f"⚠️ Kalman filter error: {e}")
+        return None
+
+def analyze_kalman_regime(symbol='BTCUSDT', interval='1h', length=14):
+    crypto_price_debug = {}
     try:
-        print(f"🔮 Kalman Regime analyzing {symbol}...")
-        
-        # 1. Data çek
-        df = get_historical_data(symbol, interval, limit=100)
-        if df is None or len(df) < 50:
-            print("⚠️ Insufficient data")
-            return 50.0
-        
+        df, crypto_price_debug = fetch_ohlcv(symbol, interval, 200)
+        if df is None or df.empty:
+            return {
+                'available': False,
+                'score': 50,
+                'signal': 'NEUTRAL',
+                'error_message': 'OHLCV data fetch failed or empty',
+                'data_debug': crypto_price_debug
+            }
+
+        atr = calculate_atr(df, length)
+        if atr is None:
+            return {
+                'available': False,
+                'score': 50,
+                'signal': 'NEUTRAL',
+                'error_message': 'ATR calculation failed',
+                'data_debug': crypto_price_debug
+            }
+
         prices = df['close'].values
-        
-        # 2. Kalman Filter uygula
-        kf = KalmanFilter(process_variance=1e-5, measurement_variance=0.1)
-        
-        filtered_prices = []
-        velocities = []
-        
-        for price in prices:
-            f_price, velocity = kf.filter(price)
-            filtered_prices.append(f_price)
-            velocities.append(velocity)
-        
-        current_velocity = velocities[-1]
-        avg_velocity = np.mean(velocities[-20:])
-        
-        print(f"   Current Velocity: {current_velocity:.4f}")
-        print(f"   Avg Velocity (20): {avg_velocity:.4f}")
-        
-        # 3. ATR hesapla
-        atr_values = calculate_atr(df)
-        
-        # 4. Regime tespit et
-        regime = detect_market_regime(prices[-50:], atr_values[-50:])
-        print(f"   Market Regime: {regime}")
-        
-        # 5. Skor hesapla
-        score = 50.0  # Baseline
-        
-        # Velocity component (trend direction)
-        velocity_normalized = np.tanh(current_velocity / np.std(prices) * 100)  # -1 to +1
-        score += velocity_normalized * 30  # ±30 points
-        
-        # Regime component
-        if regime == 'TREND':
-            # Trend regime: amplify velocity signal
-            score += velocity_normalized * 20  # Extra ±20 points
-            print("   🎯 TREND regime detected - high confidence")
-        elif regime == 'VOLATILE':
-            # Volatile: reduce confidence, pull toward neutral
-            score = score * 0.7 + 50 * 0.3
-            print("   ⚠️ VOLATILE regime - low confidence")
-        else:  # RANGE
-            # Range: mean reversion bias
-            score = 50 + (score - 50) * 0.5  # Dampen signal
-            print("   📊 RANGE regime - mean reversion")
-        
-        # Kalman prediction error (confidence)
-        prediction_error = abs(prices[-1] - filtered_prices[-1]) / prices[-1]
-        if prediction_error > 0.02:  # >2% error
-            score = score * 0.8 + 50 * 0.2  # Pull toward neutral
-        
-        # Skor 0-100 aralığına sınırla
-        score = np.clip(score, 0, 100)
-        
-        print(f"✅ Kalman Regime Score: {score:.1f}/100")
-        
-        return score
-        
+        kalman_value = kalman_filter(prices)
+        if kalman_value is None:
+            return {
+                'available': False,
+                'score': 50,
+                'signal': 'NEUTRAL',
+                'error_message': 'Kalman filter failed',
+                'data_debug': crypto_price_debug
+            }
+
+        latest_price = prices[-1]
+        score = 50
+        if latest_price > kalman_value + atr:
+            score = 80
+            signal = "BULLISH"
+        elif latest_price < kalman_value - atr:
+            score = 20
+            signal = "BEARISH"
+        else:
+            score = 50
+            signal = "NEUTRAL"
+
+        return {
+            'available': True,
+            'score': score,
+            'signal': signal,
+            'atr': atr,
+            'kalman_value': kalman_value,
+            'latest_price': latest_price,
+            'timestamp': datetime.now().isoformat(),
+            'data_debug': crypto_price_debug
+        }
     except Exception as e:
-        print(f"❌ Kalman Regime error: {e}")
-        return 50.0
-
-
-# ============================================================================
-# BACKWARD COMPATIBILITY
-# ============================================================================
-
-def analyze_regime(symbol, interval='1h'):
-    """
-    Alias for backward compatibility
-    """
-    return get_kalman_regime_signal(symbol, interval)
-
-
-# ============================================================================
-# TESTING
-# ============================================================================
+        return {
+            'available': False,
+            'score': 50,
+            'signal': 'NEUTRAL',
+            'error_message': str(e),
+            'data_debug': crypto_price_debug
+        }
 
 if __name__ == "__main__":
-    print("="*80)
-    print("🔮 KALMAN REGIME LAYER TEST")
-    print("="*80)
-    
-    test_symbols = ['BTCUSDT', 'ETHUSDT']
-    
-    for symbol in test_symbols:
-        print(f"\n📊 Testing {symbol}:")
-        score = get_kalman_regime_signal(symbol)
-        
-        if score >= 65:
-            signal = "🟢 LONG"
-        elif score <= 35:
-            signal = "🔴 SHORT"
-        else:
-            signal = "⚪ NEUTRAL"
-        
-        print(f"   Signal: {signal}")
-        print(f"   Score: {score:.1f}/100")
-        print("-"*80)
+    print("Testing kalman_regime_layer.py")
+    result = analyze_kalman_regime()
+    print(result)
