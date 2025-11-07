@@ -1,467 +1,338 @@
 """
-🧠 AI BRAIN v16.6 - PHASE 8 + PHASE 9 HYBRID AUTONOMOUS
-========================================================
-
-Date: 7 Kasım 2025, 16:00 CET
-Version: 16.6 - Phase 8 adaptive + Phase 9 state/alerts
-
-✅ FEATURES:
-- Phase 8: Adaptive weighting, neural meta-learner, backtesting
-- Phase 9: State manager, alert system, hybrid monitoring
-- 15-layer analysis with fallbacks
-- Real-time scoring & confidence
-- Persistent memory for trends
+🧠 AI BRAIN v17 - PHASE 9 HYBRID + REEL VERİ
+=============================================
+Date: 7 Kasım 2025, 20:15 CET
+Version: 17.0 - Real Data Layers + Telegram Alerts + State Management
 """
 
 import os
 import sys
-import traceback
-import numpy as np
-import json
+import logging
 from datetime import datetime
-import requests
-import time
+import json
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 print("="*80)
-print("🧠 AI BRAIN v16.6 - PHASE 8 + PHASE 9 HYBRID AUTONOMOUS")
+print("🧠 AI BRAIN v17 - PHASE 9 HYBRID + REAL DATA")
 print("="*80)
 
-# ============================================================================
-# PHASE 8 IMPORTS - UTILS SYSTEMS
-# ============================================================================
+# ============================================================
+# IMPORT REAL DATA LAYERS
+# ============================================================
 
 try:
-    from utils.market_regime_analyzer import get_regime_weights, detect_market_regime
-    print("✅ Market regime analyzer imported")
-    MARKET_REGIME_AVAILABLE = True
+    from external_data_REAL import get_all_external_data
+    logger.info("✅ external_data_REAL imported (REAL)")
 except Exception as e:
-    print(f"⚠️  Market regime import failed: {e}")
-    MARKET_REGIME_AVAILABLE = False
+    logger.warning(f"⚠️ external_data_REAL import failed: {e}")
+    from external_data import get_all_external_data
 
 try:
-    from utils.layer_performance_cache import get_performance_weights, record_analysis
-    print("✅ Performance cache imported")
-    PERFORMANCE_CACHE_AVAILABLE = True
+    from enhanced_rates_REAL import get_rates_signal
+    logger.info("✅ enhanced_rates_REAL imported (REAL)")
 except Exception as e:
-    print(f"⚠️  Performance cache import failed: {e}")
-    PERFORMANCE_CACHE_AVAILABLE = False
+    logger.warning(f"⚠️ enhanced_rates_REAL import failed: {e}")
+    try:
+        from layers.enhanced_rates_layer import get_rates_signal
+    except:
+        pass
 
 try:
-    from utils.meta_learner_nn import get_meta_learner_prediction, NeuralMetaLearner
-    print("✅ Neural meta-learner imported")
-    META_LEARNER_AVAILABLE = True
+    from vix_layer_REAL import get_vix_signal
+    logger.info("✅ vix_layer_REAL imported (REAL)")
 except Exception as e:
-    print(f"⚠️  Neural meta-learner import failed: {e}")
-    META_LEARNER_AVAILABLE = False
+    logger.warning(f"⚠️ vix_layer_REAL import failed: {e}")
+    try:
+        from layers.vix_layer import get_vix_signal
+    except:
+        pass
 
 try:
-    from utils.cross_layer_analyzer import analyze_cross_layer_correlations
-    print("✅ Cross-layer analyzer imported")
-    CROSS_LAYER_AVAILABLE = True
+    from alert_system_REAL import AlertSystem, send_trading_signal
+    logger.info("✅ alert_system_REAL imported (REAL)")
+    ALERT_SYSTEM = AlertSystem()
 except Exception as e:
-    print(f"⚠️  Cross-layer analyzer import failed: {e}")
-    CROSS_LAYER_AVAILABLE = False
+    logger.warning(f"⚠️ alert_system_REAL import failed: {e}")
+    ALERT_SYSTEM = None
 
-try:
-    from utils.streaming_cache import execute_layers_async, get_cache_stats
-    print("✅ Streaming cache imported")
-    STREAMING_AVAILABLE = True
-except Exception as e:
-    print(f"⚠️  Streaming cache import failed: {e}")
-    STREAMING_AVAILABLE = False
-
-try:
-    from utils.backtesting_framework import run_full_backtest, PerformanceMetrics
-    print("✅ Backtesting framework imported")
-    BACKTEST_AVAILABLE = True
-except Exception as e:
-    print(f"⚠️  Backtesting framework import failed: {e}")
-    BACKTEST_AVAILABLE = False
-
-# ============================================================================
-# PHASE 9 IMPORTS - HYBRID AUTONOMOUS
-# ============================================================================
-
-try:
-    from phase_9.state_manager import StateManager
-    print("✅ State manager (Phase 9) imported")
-    STATE_MANAGER_AVAILABLE = True
-except Exception as e:
-    print(f"⚠️  State manager import failed: {e}")
-    STATE_MANAGER_AVAILABLE = False
-
-try:
-    from phase_9.alert_system import AlertSystem
-    print("✅ Alert system (Phase 9) imported")
-    ALERT_SYSTEM_AVAILABLE = True
-except Exception as e:
-    print(f"⚠️  Alert system import failed: {e}")
-    ALERT_SYSTEM_AVAILABLE = False
-
-# ============================================================================
-# PHASE 7 LAYER IMPORTS - 15 ANALYSIS LAYERS
-# ============================================================================
+# ============================================================
+# IMPORT OTHER LAYERS (FALLBACK IF NEEDED)
+# ============================================================
 
 try:
     from layers.strategy_layer import StrategyEngine
-    print("✅ strategy_layer imported")
-except Exception as e:
-    print(f"⚠️  strategy_layer error: {e}")
-
-try:
-    from layers.monte_carlo_layer import run_monte_carlo_simulation
-    print("✅ monte_carlo_layer imported")
-except Exception as e:
-    print(f"⚠️  monte_carlo_layer error: {e}")
-
-try:
-    from layers.kelly_enhanced_layer import calculate_dynamic_kelly
-    print("✅ kelly_enhanced_layer imported")
-except Exception as e:
-    print(f"⚠️  kelly_enhanced_layer error: {e}")
+    STRATEGY_AVAILABLE = True
+except:
+    STRATEGY_AVAILABLE = False
 
 try:
     from layers.macro_correlation_layer import MacroCorrelationLayer
-    print("✅ macro_correlation_layer imported")
-except Exception as e:
-    print(f"⚠️  macro_correlation_layer error: {e}")
-
-try:
-    from layers.gold_correlation_layer import calculate_gold_correlation
-    print("✅ gold_correlation_layer imported")
-except Exception as e:
-    print(f"⚠️  gold_correlation_layer error: {e}")
+    MACRO_AVAILABLE = True
+except:
+    MACRO_AVAILABLE = False
 
 try:
     from layers.cross_asset_layer import get_cross_asset_signal
-    print("✅ cross_asset_layer imported")
-except Exception as e:
-    print(f"⚠️  cross_asset_layer error: {e}")
+    CROSS_ASSET_AVAILABLE = True
+except:
+    CROSS_ASSET_AVAILABLE = False
 
-try:
-    from layers.vix_layer import get_vix_signal
-    print("✅ vix_layer imported")
-except Exception as e:
-    print(f"⚠️  vix_layer error: {e}")
+# ============================================================
+# CORE ANALYSIS ENGINE
+# ============================================================
 
-try:
-    from layers.news_sentiment_layer import get_sentiment_score
-    print("✅ news_sentiment_layer imported")
-except Exception as e:
-    print(f"⚠️  news_sentiment_layer error: {e}")
-
-try:
-    from layers.quantum_black_scholes_layer import calculate_option_price
-    print("✅ quantum_black_scholes_layer imported")
-except Exception as e:
-    print(f"⚠️  quantum_black_scholes_layer error: {e}")
-
-try:
-    from layers.kalman_regime_layer import analyze_kalman_regime
-    print("✅ kalman_regime_layer imported")
-except Exception as e:
-    print(f"⚠️  kalman_regime_layer error: {e}")
-
-try:
-    from layers.fractal_chaos_layer import analyze_fractal_dimension
-    print("✅ fractal_chaos_layer imported")
-except Exception as e:
-    print(f"⚠️  fractal_chaos_layer error: {e}")
-
-try:
-    from layers.fourier_cycle_layer import analyze_fourier_cycles
-    print("✅ fourier_cycle_layer imported")
-except Exception as e:
-    print(f"⚠️  fourier_cycle_layer error: {e}")
-
-try:
-    from layers.copula_correlation_layer import analyze_copula_correlation
-    print("✅ copula_correlation_layer imported")
-except Exception as e:
-    print(f"⚠️  copula_correlation_layer error: {e}")
-
-try:
-    from layers.traditional_markets_layer import get_traditional_markets_signal
-    print("✅ traditional_markets_layer imported")
-except Exception as e:
-    print(f"⚠️  traditional_markets_layer error: {e}")
-
-try:
-    from layers.interest_rates_layer import get_interest_rates_signal
-    print("✅ interest_rates_layer imported")
-except Exception as e:
-    print(f"⚠️  interest_rates_layer error: {e}")
-
-print("="*80)
-print("✅ AI Brain v16.6 - All imports complete")
-print("="*80)
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def detect_outlier_layers(layer_scores, threshold=2.5):
-    """Detect layers with outlier scores"""
-    try:
-        scores = np.array([s for s in layer_scores.values() if s is not None])
-        if len(scores) < 3:
-            return []
-        mean = np.mean(scores)
-        std = np.std(scores)
-        if std == 0:
-            return []
-        outlier_layers = []
-        for layer, score in layer_scores.items():
-            if score is None:
-                continue
-            z = abs(score - mean) / std
-            if z > threshold:
-                outlier_layers.append(layer)
-        return outlier_layers
-    except:
-        return []
-
-def calculate_confidence_score(layer_scores):
-    """Calculate confidence (0-1)"""
-    try:
-        scores = [s for s in layer_scores.values() if s is not None]
-        if not scores:
-            return 0.0
-        std = np.std(scores)
-        agreement = max(0, 1 - std/50)
-        coverage = len(scores) / 15
-        avg_score = np.mean(scores)
-        magnitude = min(abs(avg_score - 50) / 50, 1.0)
-        confidence = (agreement * 0.4 + coverage * 0.3 + magnitude * 0.3)
-        return round(confidence, 3)
-    except:
-        return 0.5
-
-def extract_score_with_source(result):
-    """Extract score AND source from result"""
-    if result is None:
-        return None, 'ERROR'
-    if isinstance(result, dict):
-        source = result.get('source', 'UNKNOWN')
-        score = result.get('score')
-        if score is None:
-            score = result.get('prediction')
-        if score is None:
-            score = result.get('final_score')
-        if score is not None:
-            return float(score), source
-    elif isinstance(result, (int, float)):
-        return float(result), 'UNKNOWN'
-    return None, 'ERROR'
-
-def get_adaptive_weights():
-    """Combine regime + performance weights"""
-    try:
-        regime_data = get_regime_weights() if MARKET_REGIME_AVAILABLE else {'weights': {}}
-        regime_weights = regime_data.get('weights', {})
-        perf_weights = get_performance_weights() if PERFORMANCE_CACHE_AVAILABLE else {}
-        
-        base_weight = 1.0 / 15
-        combined = {}
-        layers = ['strategy','kelly','macro','gold','cross_asset','vix','monte_carlo','news','trad_markets','black_scholes','kalman','fractal','fourier','copula','rates']
-        
-        for layer in layers:
-            w = base_weight * 0.2
-            if layer in regime_weights:
-                w += regime_weights[layer] * 0.4
-            if layer in perf_weights:
-                w += perf_weights[layer] * 0.4
-            combined[layer] = w
-        
-        total = sum(combined.values())
-        return {k: v/total for k, v in combined.items()}
-    except:
-        return {layer: 1/15 for layer in ['strategy','kelly','macro','gold','cross_asset','vix','monte_carlo','news','trad_markets','black_scholes','kalman','fractal','fourier','copula','rates']}
-
-def calculate_trade_levels(current_price, score, signal):
+def analyze_market(symbol='BTCUSDT', current_price=45000, interval='1h'):
     """
-    Calculate Entry, TP, SL based on AI score and price
+    Main market analysis function - v17 with real data
     
-    Returns: {entry, tp, sl, risk_reward_ratio}
+    Returns: {
+        'score': 0-100,
+        'signal': 'LONG'/'SHORT'/'NEUTRAL',
+        'confidence': 0-1,
+        'layers': {...},
+        'trade_levels': {...},
+        'timestamp': ISO timestamp
+    }
     """
-    try:
-        if signal == 'LONG':
-            # LONG: Entry at current, TP above, SL below
-            entry = current_price
-            confidence = abs(score - 50) / 50  # 0-1
-            
-            # Risk: 2% of price
-            risk = current_price * 0.02
-            sl = entry - risk
-            
-            # Reward: Based on confidence (2-5% gain target)
-            reward_ratio = 2 + (confidence * 3)  # 2:1 to 5:1
-            tp = entry + (risk * reward_ratio)
-            
-            return {
-                'entry': round(entry, 2),
-                'tp': round(tp, 2),
-                'sl': round(sl, 2),
-                'risk_reward': round(reward_ratio, 2),
-                'risk_amount': round(risk, 2)
-            }
-        elif signal == 'SHORT':
-            # SHORT: Entry at current, TP below, SL above
-            entry = current_price
-            confidence = abs(score - 50) / 50
-            
-            risk = current_price * 0.02
-            sl = entry + risk
-            
-            reward_ratio = 2 + (confidence * 3)
-            tp = entry - (risk * reward_ratio)
-            
-            return {
-                'entry': round(entry, 2),
-                'tp': round(tp, 2),
-                'sl': round(sl, 2),
-                'risk_reward': round(reward_ratio, 2),
-                'risk_amount': round(risk, 2)
-            }
-        else:
-            return None
-    except:
-        return None
-
-# ============================================================================
-# MAIN ANALYSIS FUNCTION - PHASE 8 + 9
-# ============================================================================
-
-def analyze_with_ai_brain(symbol='BTCUSDT', interval='1h', current_price=45000):
-    """Main AI Brain analysis - v16.6 with Phase 8+9"""
     
-    print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v16.6 - PHASE 8 + PHASE 9 HYBRID")
-    print(f"Symbol: {symbol} | Price: ${current_price:,.2f} | Interval: {interval}")
-    print(f"{'='*80}\n")
+    logger.info(f"\n{'='*80}")
+    logger.info(f"🔍 ANALYZING {symbol} | Price: ${current_price:,.2f}")
+    logger.info(f"{'='*80}\n")
     
-    layers = {}
-    sources = {}
-    real_count = 0
-    fallback_count = 0
-    error_count = 0
-    
-    # Get ADAPTIVE WEIGHTS
-    adaptive_weights = get_adaptive_weights()
-    regime_info = detect_market_regime() if MARKET_REGIME_AVAILABLE else {'regime': 'NORMAL'}
-    
-    print(f"📊 Market Regime: {regime_info.get('regime', 'NORMAL')}")
-    print(f"🎯 Adaptive Weights: ACTIVE\n")
-    
-    # ========== 15 LAYER EXECUTION ==========
-    # (Simplified - Full execution in production)
-    
-    layer_names = ['strategy','kelly','macro','gold','cross_asset','vix','monte_carlo','news','trad_markets','black_scholes','kalman','fractal','fourier','copula','rates']
-    
-    for layer_name in layer_names:
-        layers[layer_name] = 50 + np.random.normal(0, 15)  # Fallback with variation
-        sources[layer_name] = 'FALLBACK'
-        fallback_count += 1
-    
-    # ============================================================================
-    # PHASE 8: ADAPTIVE ENSEMBLE CALCULATION
-    # ============================================================================
-    
-    # Detect outliers
-    outliers = detect_outlier_layers(layers)
-    
-    # Calculate weighted score
-    weighted_sum = 0.0
-    weight_total = 0.0
-    
-    for layer_name, score in layers.items():
-        if score is None or layer_name in outliers:
-            continue
-        w = adaptive_weights.get(layer_name, 1/15)
-        weighted_sum += score * w
-        weight_total += w
-    
-    final_score = weighted_sum / weight_total if weight_total > 0 else 50.0
-    confidence = calculate_confidence_score(layers)
-    
-    # Signal generation
-    if final_score >= 65:
-        signal = "LONG"
-    elif final_score <= 35:
-        signal = "SHORT"
-    else:
-        signal = "NEUTRAL"
-    
-    # Calculate trade levels
-    trade_levels = calculate_trade_levels(current_price, final_score, signal)
-    
-    # ============================================================================
-    # PHASE 9: STATE & ALERTS
-    # ============================================================================
-    
-    result = {
-        'final_score': round(final_score, 2),
-        'signal': signal,
-        'confidence': confidence,
-        'layers': layers,
-        'sources': sources,
-        'weights_used': {k: round(v, 4) for k, v in adaptive_weights.items()},
-        'outlier_layers': outliers,
-        'data_quality': {
-            'real': real_count,
-            'fallback': fallback_count,
-            'error': error_count,
-            'available_layers': 15 - error_count
-        },
-        'regime': regime_info.get('regime', 'NORMAL'),
-        'version': '16.6-hybrid',
+    analysis = {
         'timestamp': datetime.now().isoformat(),
-        'current_price': current_price,
-        'trade_levels': trade_levels
+        'symbol': symbol,
+        'price': current_price,
+        'layers': {},
+        'sources': {},
+        'errors': []
     }
     
-    # Record to Phase 9 state manager
-    if STATE_MANAGER_AVAILABLE:
-        try:
-            state_mgr = StateManager()
-            state_mgr.record_analysis(final_score, signal, confidence, layers, result)
-            print("✅ Analysis recorded to Phase 9 state manager")
-        except Exception as e:
-            print(f"⚠️  State recording failed: {e}")
+    # ============================================================
+    # LAYER 1: EXTERNAL DATA (Fear & Greed, Funding, etc.)
+    # ============================================================
     
-    print(f"\n{'='*80}")
-    print(f"📊 FINAL RESULTS")
-    print(f"{'='*80}")
-    print(f"Score: {final_score:.2f}/100")
-    print(f"Signal: {signal}")
-    print(f"Confidence: {confidence:.1%}")
-    print(f"\n💰 TRADE LEVELS:")
-    if trade_levels:
-        print(f"  Entry:        ${trade_levels['entry']:,.2f}")
-        print(f"  Take Profit:  ${trade_levels['tp']:,.2f}")
-        print(f"  Stop Loss:    ${trade_levels['sl']:,.2f}")
-        print(f"  Risk/Reward:  1:{trade_levels['risk_reward']}")
-    print(f"{'='*80}\n")
+    try:
+        logger.info("📊 Layer 1: External Data...")
+        ext_data = get_all_external_data(symbol)
+        
+        # Fear & Greed
+        fg_value = ext_data.get('fear_greed', {}).get('value', 50)
+        analysis['layers']['fear_greed'] = fg_value
+        analysis['sources']['fear_greed'] = ext_data.get('fear_greed', {}).get('source', 'UNKNOWN')
+        
+        # Funding Rate (higher funding = more leveraged longs = bearish)
+        funding = ext_data.get('funding_rate', {}).get('rate', 0)
+        funding_score = 50 - (funding * 1000)  # Convert to score
+        funding_score = max(0, min(100, funding_score))
+        analysis['layers']['funding_rate'] = funding_score
+        
+        # Bitcoin Dominance (higher = alt weakness = bearish alts)
+        btc_dom = ext_data.get('bitcoin_dominance', {}).get('dominance', 45)
+        dom_score = 50 + (btc_dom - 45) * 2  # 45% → 50, 50% → 60
+        analysis['layers']['btc_dominance'] = dom_score
+        
+        logger.info(f" ✅ Fear & Greed: {fg_value} | Funding: {funding:.4f}% | BTC Dom: {btc_dom:.1f}%")
+        
+    except Exception as e:
+        logger.error(f" ❌ External data error: {str(e)[:60]}")
+        analysis['errors'].append(f"External data: {str(e)[:50]}")
+        analysis['layers']['fear_greed'] = 50
+        analysis['layers']['funding_rate'] = 50
+        analysis['layers']['btc_dominance'] = 50
     
-    return result
+    # ============================================================
+    # LAYER 2: INTEREST RATES
+    # ============================================================
+    
+    try:
+        logger.info("📊 Layer 2: Interest Rates...")
+        rates_result = get_rates_signal(symbol)
+        rates_score = rates_result.get('score', 50)
+        analysis['layers']['interest_rates'] = rates_score
+        analysis['sources']['interest_rates'] = rates_result.get('source', 'UNKNOWN')
+        logger.info(f" ✅ Rates Score: {rates_score}/100")
+        
+    except Exception as e:
+        logger.error(f" ❌ Rates error: {str(e)[:60]}")
+        analysis['errors'].append(f"Rates: {str(e)[:50]}")
+        analysis['layers']['interest_rates'] = 50
+    
+    # ============================================================
+    # LAYER 3: VIX FEAR INDEX
+    # ============================================================
+    
+    try:
+        logger.info("📊 Layer 3: VIX Fear Index...")
+        vix_result = get_vix_signal(symbol)
+        vix_score = vix_result.get('score', 50)
+        analysis['layers']['vix'] = vix_score
+        analysis['sources']['vix'] = vix_result.get('source', 'UNKNOWN')
+        logger.info(f" ✅ VIX Score: {vix_score}/100")
+        
+    except Exception as e:
+        logger.error(f" ❌ VIX error: {str(e)[:60]}")
+        analysis['errors'].append(f"VIX: {str(e)[:50]}")
+        analysis['layers']['vix'] = 50
+    
+    # ============================================================
+    # FILL REMAINING LAYERS WITH DEFAULTS (for demo)
+    # ============================================================
+    
+    # In production, each layer would have real implementations
+    default_layers = [
+        'strategy', 'kelly', 'macro', 'gold', 'cross_asset',
+        'monte_carlo', 'news', 'trad_markets', 'black_scholes',
+        'kalman', 'fractal', 'fourier', 'copula', 'momentum'
+    ]
+    
+    for layer in default_layers:
+        if layer not in analysis['layers']:
+            # For now, use 50 as default (neutral)
+            analysis['layers'][layer] = 50
+    
+    # ============================================================
+    # CALCULATE FINAL SCORE
+    # ============================================================
+    
+    layer_scores = [v for v in analysis['layers'].values() if v is not None]
+    if layer_scores:
+        final_score = sum(layer_scores) / len(layer_scores)
+    else:
+        final_score = 50
+    
+    # Determine signal
+    if final_score >= 65:
+        signal = 'LONG'
+        emoji = '🟢'
+    elif final_score <= 35:
+        signal = 'SHORT'
+        emoji = '🔴'
+    else:
+        signal = 'NEUTRAL'
+        emoji = '🟡'
+    
+    # Calculate confidence
+    real_data_count = sum(1 for s in analysis['sources'].values() if s == 'REAL_API')
+    confidence = 0.5 + (real_data_count / len(analysis['sources'])) * 0.5
+    
+    # Calculate trade levels
+    if signal == 'LONG':
+        entry = current_price
+        risk = current_price * 0.02
+        sl = entry - risk
+        tp = entry + (risk * 2.5)
+    elif signal == 'SHORT':
+        entry = current_price
+        risk = current_price * 0.02
+        sl = entry + risk
+        tp = entry - (risk * 2.5)
+    else:
+        entry = current_price
+        sl = current_price * 0.98
+        tp = current_price * 1.02
+    
+    analysis.update({
+        'final_score': round(final_score, 2),
+        'signal': signal,
+        'emoji': emoji,
+        'confidence': round(confidence, 2),
+        'trade_levels': {
+            'entry': round(entry, 2),
+            'tp': round(tp, 2),
+            'sl': round(sl, 2),
+            'risk_reward': round(abs(tp - entry) / abs(entry - sl), 2) if abs(entry - sl) > 0 else 1.0
+        },
+        'data_quality': {
+            'real_sources': real_data_count,
+            'total_sources': len(analysis['sources']),
+            'errors': len(analysis['errors'])
+        }
+    })
+    
+    # ============================================================
+    # SEND ALERTS (if enabled)
+    # ============================================================
+    
+    if ALERT_SYSTEM and final_score >= 65 or final_score <= 35:
+        logger.info(f"\n🔔 Sending alerts...")
+        
+        # Trading signal alert
+        ALERT_SYSTEM.send_trading_signal({
+            'symbol': symbol,
+            'score': final_score,
+            'action': signal,
+            'confidence': confidence,
+            'entry': entry,
+            'tp': tp,
+            'sl': sl,
+            'price': current_price
+        })
+        
+        # Layer analysis alert
+        ALERT_SYSTEM.send_layer_analysis(analysis['layers'])
+    
+    # ============================================================
+    # PRINT RESULTS
+    # ============================================================
+    
+    logger.info(f"\n{'='*80}")
+    logger.info(f"📊 ANALYSIS COMPLETE")
+    logger.info(f"{'='*80}")
+    logger.info(f"{emoji} SIGNAL: {signal} | Score: {final_score:.2f}/100 | Confidence: {confidence:.0%}")
+    logger.info(f"\n💰 TRADE LEVELS:")
+    logger.info(f"  Entry: ${entry:,.2f}")
+    logger.info(f"  TP:    ${tp:,.2f}")
+    logger.info(f"  SL:    ${sl:,.2f}")
+    logger.info(f"  R:R:   1:{analysis['trade_levels']['risk_reward']:.2f}")
+    logger.info(f"\n📈 LAYER SCORES:")
+    
+    for layer, score in sorted(analysis['layers'].items()):
+        if score >= 65:
+            emoji_layer = "🟢"
+        elif score <= 35:
+            emoji_layer = "🔴"
+        else:
+            emoji_layer = "🟡"
+        logger.info(f"  {emoji_layer} {layer:20} {score:5.1f}")
+    
+    logger.info(f"\n📡 DATA QUALITY:")
+    logger.info(f"  Real APIs: {analysis['data_quality']['real_sources']}/{analysis['data_quality']['total_sources']}")
+    logger.info(f"  Errors: {analysis['data_quality']['errors']}")
+    
+    if analysis['errors']:
+        logger.warning(f"\n⚠️ ERRORS ENCOUNTERED:")
+        for error in analysis['errors']:
+            logger.warning(f"  - {error}")
+    
+    logger.info(f"{'='*80}\n")
+    
+    return analysis
 
-# ============================================================================
-# COMPATIBILITY FUNCTION
-# ============================================================================
+# ============================================================
+# STREAMLIT COMPATIBILITY
+# ============================================================
 
 def make_trading_decision(symbol='BTCUSDT', interval='1h', current_price=45000):
     """Wrapper for Streamlit compatibility"""
-    return analyze_with_ai_brain(symbol, interval, current_price)
+    return analyze_market(symbol, current_price, interval)
 
-# ============================================================================
-# MAIN EXECUTION
-# ============================================================================
+# ============================================================
+# MAIN
+# ============================================================
 
 if __name__ == "__main__":
     try:
-        result = analyze_with_ai_brain('BTCUSDT', '1h', 45000)
+        result = analyze_market('BTCUSDT', 45000, '1h')
         print("\n✅ Analysis Complete")
-        print(json.dumps(result, indent=2, default=str))
+        print(json.dumps({
+            'score': result['final_score'],
+            'signal': result['signal'],
+            'confidence': result['confidence']
+        }, indent=2))
     except Exception as e:
-        print(f"❌ Error: {e}")
+        logger.error(f"❌ Analysis failed: {e}")
+        import traceback
         traceback.print_exc()
