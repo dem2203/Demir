@@ -1,22 +1,20 @@
-# ai_brain.py v16.1 - PHASE 3+6+8 FULL INTEGRATION (BUGFIXED)
+# ai_brain.py v16.2 - PHASE 3+6+8 + SOURCE TRACKING
 # ===========================================
 # ✅ QUANTUM MATHEMATICS INTEGRATION (Phase 7) - PRESERVED
-# ✅ 17-Layer Weighted Ensemble Analysis - PRESERVED
 # ✅ PHASE 3+6 INTEGRATION - PRESERVED + BUGFIXED
-# ✅ PHASE 8 QUANTUM AI (NEW) - Quantum Predictive AI
-# ✅ ALL IMPORT PATHS & FUNCTION NAMES FIXED
+# ✅ PHASE 8 QUANTUM AI (NEW)
+# ✅ SOURCE TRACKING - Her layer'ın veri kaynağı gösterilir
 # ===========================================
 """
-DEMIR AI TRADING BOT - AI Brain v16.1
+DEMIR AI TRADING BOT - AI Brain v16.2
 ====================================================================
-Versiyon: 16.1 - PHASE 3+6+8 FULL INTEGRATION (BUGFIXED)
-Tarih: 7 Kasim 2025, 11:47 CET
+Versiyon: 16.2 - PHASE 3+6+8 + SOURCE TRACKING
+Tarih: 7 Kasim 2025, 12:25 CET
 
-FIXLER:
-- ✅ Import name mismatches düzeltildi
-- ✅ Missing file references kaldırıldı
-- ✅ Fallback mechanisms eklendi
-- ✅ Enhanced Rates v2.5 entegre edildi
+YENILIK:
+- ✅ Her layer'ın data source'u trackleniyor (REAL / FALLBACK / ERROR)
+- ✅ Console output'da kaynak gösterilir
+- ✅ JSON response'ta 'source' field ekli
 """
 
 import os
@@ -26,79 +24,88 @@ from datetime import datetime
 import requests
 
 # ============================================================================
-# PHASE 3+6 IMPORTS - v16.1 BUGFIXED
+# DATA SOURCE CONSTANTS
 # ============================================================================
 
-# Phase 3 Modules - Dynamic Loading
+SOURCE_TYPES = {
+    'REAL': '✅ Real Data',
+    'FALLBACK': '⚠️ Fallback (Default)',
+    'ERROR': '❌ Error (NULL)'
+}
+
+# ============================================================================
+# PHASE 3+6 IMPORTS - v16.2 WITH SOURCE TRACKING
+# ============================================================================
+
 TELEGRAM_AVAILABLE = False
 try:
     from telegram_alert_system import TelegramAlertSystem
     TELEGRAM_AVAILABLE = True
-    print("AI Brain v16.1: Telegram imported")
+    print("AI Brain v16.2: Telegram imported")
 except ImportError:
-    print("AI Brain v16.1: Telegram not available")
+    print("AI Brain v16.2: Telegram not available")
     TelegramAlertSystem = None
 
 BACKTEST_AVAILABLE = False
 try:
     from backtest_engine import BacktestEngine
     BACKTEST_AVAILABLE = True
-    print("AI Brain v16.1: Backtest imported")
+    print("AI Brain v16.2: Backtest imported")
 except ImportError:
-    print("AI Brain v16.1: Backtest not available")
+    print("AI Brain v16.2: Backtest not available")
     BacktestEngine = None
 
 PORTFOLIO_AVAILABLE = False
 try:
     from portfolio_optimizer import PortfolioOptimizer
     PORTFOLIO_AVAILABLE = True
-    print("AI Brain v16.1: Portfolio Optimizer imported")
+    print("AI Brain v16.2: Portfolio Optimizer imported")
 except ImportError:
-    print("AI Brain v16.1: Portfolio Optimizer not available")
+    print("AI Brain v16.2: Portfolio Optimizer not available")
     PortfolioOptimizer = None
 
-# Phase 6 Enhanced Layers - Dynamic Loading
+# Phase 6 Enhanced Layers
 MACRO_ENHANCED = False
 try:
     from layers.enhanced_macro_layer import EnhancedMacroLayer
     MACRO_ENHANCED = True
-    print("AI Brain v16.1: Enhanced Macro imported")
+    print("AI Brain v16.2: Enhanced Macro imported")
 except ImportError:
-    print("AI Brain v16.1: Enhanced Macro not available")
+    print("AI Brain v16.2: Enhanced Macro not available")
     EnhancedMacroLayer = None
 
 GOLD_ENHANCED = False
 try:
     from layers.enhanced_gold_layer import EnhancedGoldLayer
     GOLD_ENHANCED = True
-    print("AI Brain v16.1: Enhanced Gold imported")
+    print("AI Brain v16.2: Enhanced Gold imported")
 except ImportError:
-    print("AI Brain v16.1: Enhanced Gold not available")
+    print("AI Brain v16.2: Enhanced Gold not available")
     EnhancedGoldLayer = None
 
 DOMINANCE_ENHANCED = False
 try:
     from layers.enhanced_dominance_layer import EnhancedDominanceLayer
     DOMINANCE_ENHANCED = True
-    print("AI Brain v16.1: Enhanced Dominance imported")
+    print("AI Brain v16.2: Enhanced Dominance imported")
 except ImportError:
-    print("AI Brain v16.1: Enhanced Dominance not available")
+    print("AI Brain v16.2: Enhanced Dominance not available")
     EnhancedDominanceLayer = None
 
 VIX_ENHANCED = False
 try:
     from layers.enhanced_vix_layer import EnhancedVixLayer
     VIX_ENHANCED = True
-    print("AI Brain v16.1: Enhanced VIX imported")
+    print("AI Brain v16.2: Enhanced VIX imported")
 except ImportError:
-    print("AI Brain v16.1: Enhanced VIX not available")
+    print("AI Brain v16.2: Enhanced VIX not available")
     EnhancedVixLayer = None
 
 RATES_ENHANCED = False
 try:
     from layers.enhanced_rates_layer import EnhancedRatesLayer, get_interest_rates_signal
     RATES_ENHANCED = True
-    print("AI Brain v16.1: Enhanced Rates imported (with bugfixes v2.5)")
+    print("AI Brain v16.2: Enhanced Rates imported (with bugfixes v2.5)")
 except ImportError:
     try:
         from layers.enhanced_rates_layer import EnhancedRatesLayer
@@ -106,57 +113,53 @@ except ImportError:
         def get_interest_rates_signal(symbol='BTCUSDT'):
             layer = EnhancedRatesLayer()
             return layer.calculate_rates_score(symbol)
-        print("AI Brain v16.1: Enhanced Rates imported (wrapper created)")
+        print("AI Brain v16.2: Enhanced Rates imported (wrapper created)")
     except ImportError:
-        print("AI Brain v16.1: Enhanced Rates not available")
+        print("AI Brain v16.2: Enhanced Rates not available")
         EnhancedRatesLayer = None
         def get_interest_rates_signal(symbol='BTCUSDT'):
-            return {'score': 50, 'signal': 'NEUTRAL', 'confidence': 0.5}
+            return {'score': 50, 'signal': 'NEUTRAL', 'confidence': 0.5, 'source': 'FALLBACK'}
 
-# ============================================================================
-# PHASE 8 QUANTUM IMPORTS - v16.1 NEW (With fallbacks)
-# ============================================================================
-
+# Phase 8 Quantum
 QUANTUM_FOREST_AVAILABLE = False
 try:
     from layers.quantum_forest_layer import get_quantum_forest_signal
     QUANTUM_FOREST_AVAILABLE = True
-    print("AI Brain v16.1: Quantum Random Forest (Phase 8.1) imported")
+    print("AI Brain v16.2: Quantum Random Forest (Phase 8.1) imported")
 except ImportError:
-    print("AI Brain v16.1: Quantum Random Forest not available")
+    print("AI Brain v16.2: Quantum Random Forest not available")
     def get_quantum_forest_signal(data_features):
-        return {'prediction': 0.5, 'confidence': 0.0, 'signal': 'NEUTRAL'}
+        return {'prediction': 0.5, 'confidence': 0.0, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
 QUANTUM_NN_AVAILABLE = False
 try:
     from layers.quantum_nn_layer import get_quantum_nn_signal
     QUANTUM_NN_AVAILABLE = True
-    print("AI Brain v16.1: Quantum Neural Networks (Phase 8.2) imported")
+    print("AI Brain v16.2: Quantum Neural Networks (Phase 8.2) imported")
 except ImportError:
-    print("AI Brain v16.1: Quantum Neural Networks not available")
+    print("AI Brain v16.2: Quantum Neural Networks not available")
     def get_quantum_nn_signal(data_features):
-        return {'prediction': 0.5, 'confidence': 0.0, 'signal': 'NEUTRAL'}
+        return {'prediction': 0.5, 'confidence': 0.0, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
 QUANTUM_ANNEALING_AVAILABLE = False
 try:
     from layers.quantum_annealing_layer import get_quantum_annealing_allocation
     QUANTUM_ANNEALING_AVAILABLE = True
-    print("AI Brain v16.1: Quantum Annealing (Phase 8.3) imported")
+    print("AI Brain v16.2: Quantum Annealing (Phase 8.3) imported")
 except ImportError:
-    print("AI Brain v16.1: Quantum Annealing not available")
+    print("AI Brain v16.2: Quantum Annealing not available")
     def get_quantum_annealing_allocation(assets_data):
-        return {'expected_return': 0.05, 'allocation': {}}
+        return {'expected_return': 0.05, 'allocation': {}, 'source': 'FALLBACK'}
 
 print("="*80)
-print("AI Brain v16.1 - Phase 3+6+8 imports complete")
+print("AI Brain v16.2 - Phase 3+6+8 imports complete + SOURCE TRACKING")
 print("="*80)
 
 # ============================================================================
-# LAYER WEIGHTS (WEIGHTED ENSEMBLE) - v16.1
+# LAYER WEIGHTS
 # ============================================================================
 
 LAYER_WEIGHTS = {
-    # Phase 1-6 Layers (70 points)
     'strategy': 15,
     'news': 8,
     'macro': 6,
@@ -169,7 +172,6 @@ LAYER_WEIGHTS = {
     'monte_carlo': 8,
     'kelly': 8,
     
-    # Phase 7 Quantum Layers (30 points)
     'black_scholes': 8,
     'kalman': 7,
     'fractal': 6,
@@ -185,157 +187,152 @@ QUANTUM_WEIGHTS = {
 
 TOTAL_WEIGHT = sum(LAYER_WEIGHTS.values())
 QUANTUM_TOTAL_WEIGHT = sum(QUANTUM_WEIGHTS.values())
-print(f"AI Brain v16.1: Base Layer Weight = {TOTAL_WEIGHT}")
-print(f"AI Brain v16.1: Quantum Layer Weight = {QUANTUM_TOTAL_WEIGHT}")
+print(f"AI Brain v16.2: Base Layer Weight = {TOTAL_WEIGHT}")
+print(f"AI Brain v16.2: Quantum Layer Weight = {QUANTUM_TOTAL_WEIGHT}")
 
 # ============================================================================
-# PHASE 1-6 LAYER IMPORTS - v16.1 BUGFIXED
+# PHASE 1-6 LAYER IMPORTS - v16.2
 # ============================================================================
 
 try:
     from layers.strategy_layer import StrategyEngine
-    print("AI Brain v16.1: strategy_layer imported")
+    print("AI Brain v16.2: strategy_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: strategy_layer error: {e}")
+    print(f"AI Brain v16.2: strategy_layer error: {e}")
     StrategyEngine = None
 
 try:
     from layers.monte_carlo_layer import run_monte_carlo_simulation
-    print("AI Brain v16.1: monte_carlo_layer imported")
+    print("AI Brain v16.2: monte_carlo_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: monte_carlo_layer error: {e}")
+    print(f"AI Brain v16.2: monte_carlo_layer error: {e}")
     run_monte_carlo_simulation = None
 
 try:
     from layers.kelly_enhanced_layer import calculate_dynamic_kelly
-    print("AI Brain v16.1: kelly_enhanced_layer imported")
+    print("AI Brain v16.2: kelly_enhanced_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: kelly_enhanced_layer error: {e}")
+    print(f"AI Brain v16.2: kelly_enhanced_layer error: {e}")
     calculate_dynamic_kelly = None
 
 try:
     from layers.macro_correlation_layer import MacroCorrelationLayer
-    print("AI Brain v16.1: macro_correlation_layer imported")
+    print("AI Brain v16.2: macro_correlation_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: macro_correlation_layer error: {e}")
+    print(f"AI Brain v16.2: macro_correlation_layer error: {e}")
     MacroCorrelationLayer = None
 
 try:
     from layers.gold_correlation_layer import calculate_gold_correlation
-    print("AI Brain v16.1: gold_correlation_layer imported")
+    print("AI Brain v16.2: gold_correlation_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: gold_correlation_layer error: {e}")
+    print(f"AI Brain v16.2: gold_correlation_layer error: {e}")
     calculate_gold_correlation = None
 
 try:
     from layers.cross_asset_layer import get_cross_asset_signal
-    print("AI Brain v16.1: cross_asset_layer imported")
+    print("AI Brain v16.2: cross_asset_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: cross_asset_layer error: {e}")
+    print(f"AI Brain v16.2: cross_asset_layer error: {e}")
     get_cross_asset_signal = None
 
-# VIX Layer - BUGFIXED (correct import name)
+# VIX Layer
 try:
     from layers.vix_layer import get_vix_signal
-    print("AI Brain v16.1: vix_layer imported (get_vix_signal)")
+    print("AI Brain v16.2: vix_layer imported (get_vix_signal)")
 except Exception as e:
     try:
-        # Fallback: Try alternative function names
         from layers.vix_layer import calculate_vix_score
         get_vix_signal = calculate_vix_score
-        print("AI Brain v16.1: vix_layer imported (calculate_vix_score)")
+        print("AI Brain v16.2: vix_layer imported (calculate_vix_score)")
     except Exception as e2:
-        print(f"AI Brain v16.1: vix_layer error: {e}")
+        print(f"AI Brain v16.2: vix_layer error: {e}")
         def get_vix_signal(symbol='BTCUSDT'):
-            return {'score': 50, 'signal': 'NEUTRAL'}
+            return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
-# News Sentiment Layer - BUGFIXED (correct import name)
+# News Sentiment
 try:
     from layers.news_sentiment_layer import get_sentiment_score
-    print("AI Brain v16.1: news_sentiment_layer imported (get_sentiment_score)")
+    print("AI Brain v16.2: news_sentiment_layer imported (get_sentiment_score)")
 except Exception as e:
     try:
-        # Fallback: Try alternative function
         from layers.news_sentiment_layer import analyze_sentiment
         get_sentiment_score = analyze_sentiment
-        print("AI Brain v16.1: news_sentiment_layer imported (analyze_sentiment)")
+        print("AI Brain v16.2: news_sentiment_layer imported (analyze_sentiment)")
     except Exception as e2:
-        print(f"AI Brain v16.1: news_sentiment_layer error: {e}")
+        print(f"AI Brain v16.2: news_sentiment_layer error: {e}")
         def get_sentiment_score(symbol='BTCUSDT'):
-            return {'score': 50, 'signal': 'NEUTRAL'}
+            return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
-# Black-Scholes Layer - BUGFIXED (alternative: quantum_black_scholes)
+# Black-Scholes
 try:
     from layers.quantum_black_scholes_layer import calculate_option_price
-    print("AI Brain v16.1: quantum_black_scholes_layer imported")
+    print("AI Brain v16.2: quantum_black_scholes_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: black_scholes error (expected - using fallback): {e}")
+    print(f"AI Brain v16.2: black_scholes error: {e}")
     def calculate_option_price(symbol='BTCUSDT'):
-        return {'score': 50, 'signal': 'NEUTRAL'}
+        return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
-# Kalman Regime Filter - BUGFIXED (correct import name)
+# Kalman
 try:
     from layers.kalman_regime_layer import kalman_filter_analysis
-    print("AI Brain v16.1: kalman_regime_layer imported (kalman_filter_analysis)")
+    print("AI Brain v16.2: kalman_regime_layer imported (kalman_filter_analysis)")
 except Exception as e:
     try:
-        # Fallback: Try alternative function
         from layers.kalman_regime_layer import get_kalman_signal
         kalman_filter_analysis = get_kalman_signal
-        print("AI Brain v16.1: kalman_regime_layer imported (get_kalman_signal)")
+        print("AI Brain v16.2: kalman_regime_layer imported (get_kalman_signal)")
     except Exception as e2:
-        print(f"AI Brain v16.1: kalman_regime error: {e}")
+        print(f"AI Brain v16.2: kalman_regime error: {e}")
         def kalman_filter_analysis(symbol='BTCUSDT'):
-            return {'score': 50, 'signal': 'NEUTRAL'}
+            return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
 try:
     from layers.fractal_chaos_layer import analyze_fractal_dimension
-    print("AI Brain v16.1: fractal_chaos_layer imported")
+    print("AI Brain v16.2: fractal_chaos_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: fractal_chaos_layer error: {e}")
+    print(f"AI Brain v16.2: fractal_chaos_layer error: {e}")
     def analyze_fractal_dimension(symbol='BTCUSDT'):
-        return {'score': 50, 'signal': 'NEUTRAL'}
+        return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
-# Fourier Cycle - BUGFIXED (correct import name)
+# Fourier
 try:
     from layers.fourier_cycle_layer import analyze_fourier_cycles
-    print("AI Brain v16.1: fourier_cycle_layer imported (analyze_fourier_cycles)")
+    print("AI Brain v16.2: fourier_cycle_layer imported (analyze_fourier_cycles)")
 except Exception as e:
     try:
-        # Fallback: Try alternative
         from layers.fourier_cycle_layer import get_cycle_signal
         analyze_fourier_cycles = get_cycle_signal
-        print("AI Brain v16.1: fourier_cycle_layer imported (get_cycle_signal)")
+        print("AI Brain v16.2: fourier_cycle_layer imported (get_cycle_signal)")
     except Exception as e2:
-        print(f"AI Brain v16.1: fourier_cycle error: {e}")
+        print(f"AI Brain v16.2: fourier_cycle error: {e}")
         def analyze_fourier_cycles(symbol='BTCUSDT'):
-            return {'score': 50, 'signal': 'NEUTRAL'}
+            return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
-# Copula Correlation - BUGFIXED (correct import name)
+# Copula
 try:
     from layers.copula_correlation_layer import analyze_copula_correlation
-    print("AI Brain v16.1: copula_correlation_layer imported (analyze_copula_correlation)")
+    print("AI Brain v16.2: copula_correlation_layer imported (analyze_copula_correlation)")
 except Exception as e:
     try:
-        # Fallback: Try alternative
         from layers.copula_correlation_layer import get_copula_score
         analyze_copula_correlation = get_copula_score
-        print("AI Brain v16.1: copula_correlation_layer imported (get_copula_score)")
+        print("AI Brain v16.2: copula_correlation_layer imported (get_copula_score)")
     except Exception as e2:
-        print(f"AI Brain v16.1: copula_correlation error: {e}")
+        print(f"AI Brain v16.2: copula_correlation error: {e}")
         def analyze_copula_correlation(symbol='BTCUSDT'):
-            return {'score': 50, 'signal': 'NEUTRAL'}
+            return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
 try:
     from layers.traditional_markets_layer import get_traditional_markets_signal
-    print("AI Brain v16.1: traditional_markets_layer imported")
+    print("AI Brain v16.2: traditional_markets_layer imported")
 except Exception as e:
-    print(f"AI Brain v16.1: traditional_markets_layer error: {e}")
+    print(f"AI Brain v16.2: traditional_markets_layer error: {e}")
     def get_traditional_markets_signal(symbol='BTCUSDT'):
-        return {'score': 50, 'signal': 'NEUTRAL'}
+        return {'score': 50, 'signal': 'NEUTRAL', 'source': 'FALLBACK'}
 
 print("="*80)
-print("AI Brain v16.1 - All layers loaded (with fallbacks)")
+print("AI Brain v16.2 - All layers loaded (with SOURCE TRACKING)")
 print("="*80)
 
 # ============================================================================
@@ -365,30 +362,32 @@ def calculate_confidence(scores):
 def extract_score(result):
     """Extract score from various result formats"""
     if result is None:
-        return None
+        return None, 'ERROR'
     if isinstance(result, dict):
+        source = result.get('source', 'UNKNOWN')
         if 'score' in result:
-            return result['score']
+            return result['score'], source
         elif 'prediction' in result:
-            return result['prediction'] * 100
+            return result['prediction'] * 100, source
         elif 'final_score' in result:
-            return result['final_score']
+            return result['final_score'], source
     elif isinstance(result, (int, float)):
-        return result
-    return None
+        return result, 'UNKNOWN'
+    return None, 'ERROR'
 
 # ============================================================================
-# ANA ANALİZ FONKSİYONU (AI BRAIN v16.1)
+# ANA ANALİZ FONKSİYONU (AI BRAIN v16.2 + SOURCE TRACKING)
 # ============================================================================
 
 def analyze_with_ai(symbol, interval='1h'):
     print(f"\n{'='*80}")
-    print(f"🧠 AI BRAIN v16.1 - QUANTUM ANALYSIS + PHASE 3+6+8 (BUGFIXED)")
+    print(f"🧠 AI BRAIN v16.2 - QUANTUM ANALYSIS + SOURCE TRACKING")
     print(f"   Symbol: {symbol}")
     print(f"   Interval: {interval}")
     print(f"{'='*80}\n")
     
     layer_scores = {}
+    layer_sources = {}
     weighted_sum = 0.0
     active_weight = 0.0
 
@@ -398,21 +397,26 @@ def analyze_with_ai(symbol, interval='1h'):
                 raise Exception("Function unavailable")
             
             result = func(*params) if params else func(symbol)
-            score = extract_score(result)
+            score, source = extract_score(result)
             
             if score is not None:
                 score = max(0, min(100, score))
                 layer_scores[name] = score
+                layer_sources[name] = source
                 nonlocal weighted_sum, active_weight
                 weighted_sum += score * weight
                 active_weight += weight
-                print(f"✅ {name.capitalize()}: {score:.1f}/100 (weight: {weight})")
+                
+                source_icon = '✅' if source == 'REAL' else '⚠️' if source == 'FALLBACK' else '❌'
+                print(f"{source_icon} {name.capitalize()}: {score:.1f}/100 (weight: {weight}) [{source}]")
             else:
                 layer_scores[name] = None
-                print(f"⚠️ {name}: No score returned")
+                layer_sources[name] = 'ERROR'
+                print(f"❌ {name}: No score returned [ERROR]")
         except Exception as e:
-            print(f"⚠️ {name} error: {str(e)[:50]}")
+            print(f"❌ {name} error: {str(e)[:50]} [ERROR]")
             layer_scores[name] = None
+            layer_sources[name] = 'ERROR'
 
     # ========================================================================
     # PHASE 1-6 LAYERS
@@ -456,26 +460,30 @@ def analyze_with_ai(symbol, interval='1h'):
     # Quantum Random Forest
     try:
         qrf_result = get_quantum_forest_signal(quantum_features)
-        qrf_score = extract_score(qrf_result)
+        qrf_score, qrf_source = extract_score(qrf_result)
         if qrf_score:
             layer_scores['quantum_forest'] = qrf_score
+            layer_sources['quantum_forest'] = qrf_source
             weighted_sum += qrf_score * QUANTUM_WEIGHTS['quantum_forest']
             active_weight += QUANTUM_WEIGHTS['quantum_forest']
-            print(f"✅ Quantum Forest: {qrf_score:.1f}/100 (Phase 8.1)")
+            qrf_icon = '✅' if qrf_source == 'REAL' else '⚠️'
+            print(f"{qrf_icon} Quantum Forest: {qrf_score:.1f}/100 [{qrf_source}] (Phase 8.1)")
     except Exception as e:
-        print(f"⚠️ Quantum Forest error: {str(e)[:50]}")
+        print(f"❌ Quantum Forest error: {str(e)[:50]} [ERROR]")
     
     # Quantum Neural Networks
     try:
         qnn_result = get_quantum_nn_signal(quantum_features)
-        qnn_score = extract_score(qnn_result)
+        qnn_score, qnn_source = extract_score(qnn_result)
         if qnn_score:
             layer_scores['quantum_nn'] = qnn_score
+            layer_sources['quantum_nn'] = qnn_source
             weighted_sum += qnn_score * QUANTUM_WEIGHTS['quantum_nn']
             active_weight += QUANTUM_WEIGHTS['quantum_nn']
-            print(f"✅ Quantum NN: {qnn_score:.1f}/100 (Phase 8.2)")
+            qnn_icon = '✅' if qnn_source == 'REAL' else '⚠️'
+            print(f"{qnn_icon} Quantum NN: {qnn_score:.1f}/100 [{qnn_source}] (Phase 8.2)")
     except Exception as e:
-        print(f"⚠️ Quantum NN error: {str(e)[:50]}")
+        print(f"❌ Quantum NN error: {str(e)[:50]} [ERROR]")
     
     # Quantum Annealing
     try:
@@ -484,14 +492,17 @@ def analyze_with_ai(symbol, interval='1h'):
             'ETH': {'expected_return': (layer_scores.get('cross_asset', 50) or 50) / 100, 'volatility': (layer_scores.get('kalman', 50) or 50) / 100},
         }
         qa_result = get_quantum_annealing_allocation(assets_data)
+        qa_source = qa_result.get('source', 'FALLBACK') if isinstance(qa_result, dict) else 'UNKNOWN'
         if isinstance(qa_result, dict) and 'expected_return' in qa_result:
             qa_score = min(100, max(0, (qa_result['expected_return'] * 100) + 50))
             layer_scores['quantum_annealing'] = qa_score
+            layer_sources['quantum_annealing'] = qa_source
             weighted_sum += qa_score * QUANTUM_WEIGHTS['quantum_annealing']
             active_weight += QUANTUM_WEIGHTS['quantum_annealing']
-            print(f"✅ Quantum Annealing: {qa_score:.1f}/100 (Phase 8.3)")
+            qa_icon = '✅' if qa_source == 'REAL' else '⚠️'
+            print(f"{qa_icon} Quantum Annealing: {qa_score:.1f}/100 [{qa_source}] (Phase 8.3)")
     except Exception as e:
-        print(f"⚠️ Quantum Annealing error: {str(e)[:50]}")
+        print(f"❌ Quantum Annealing error: {str(e)[:50]} [ERROR]")
     
     # ========================================================================
     # FINAL SCORE
@@ -507,10 +518,17 @@ def analyze_with_ai(symbol, interval='1h'):
     confidence = calculate_confidence([s for s in layer_scores.values() if s is not None])
     signal = get_signal_text(final_score)
     
+    # Source statistics
+    real_count = sum(1 for s in layer_sources.values() if s == 'REAL')
+    fallback_count = sum(1 for s in layer_sources.values() if s == 'FALLBACK')
+    error_count = sum(1 for s in layer_sources.values() if s == 'ERROR')
+    
     print(f"\n{'='*80}")
-    print(f"🎯 FINAL RESULTS (v16.1)")
+    print(f"🎯 FINAL RESULTS (v16.2 + SOURCE TRACKING)")
     print(f"{'='*80}")
     print(f"   Active Layers: {active_layers}/20")
+    print(f"   Data Quality: {real_count} REAL | {fallback_count} FALLBACK | {error_count} ERROR")
+    print(f"   Real Data %: {(real_count/20*100):.0f}%")
     print(f"   Final Score: {final_score:.1f}/100")
     print(f"   Signal: {signal}")
     print(f"   Confidence: {confidence:.1%}")
@@ -521,9 +539,15 @@ def analyze_with_ai(symbol, interval='1h'):
         'signal': signal,
         'confidence': confidence,
         'layers': layer_scores,
+        'sources': layer_sources,
         'active_layers': active_layers,
         'total_layers': 20,
-        'version': '16.1',
+        'data_quality': {
+            'real': real_count,
+            'fallback': fallback_count,
+            'error': error_count
+        },
+        'version': '16.2',
         'phase': 'Phase 7 Quantum + Phase 3+6 Enhanced + Phase 8 Quantum AI'
     }
 
@@ -534,10 +558,10 @@ def make_trading_decision(symbol="BTCUSDT", interval="1h", timeframe=None, **kwa
 
 class AIBrain:
     def __init__(self):
-        self.version = "16.1"
+        self.version = "16.2"
         self.layers = LAYER_WEIGHTS.copy()
         self.quantum_layers = QUANTUM_WEIGHTS.copy()
-        print(f"AIBrain v{self.version} initialized (Phase 3+6+8 BUGFIXED)")
+        print(f"AIBrain v{self.version} initialized (Phase 3+6+8 + SOURCE TRACKING)")
     
     def analyze(self, symbol='BTCUSDT', interval='1h'):
         return analyze_with_ai(symbol, interval)
@@ -547,7 +571,7 @@ class AIBrain:
 
 if __name__ == "__main__":
     print("="*80)
-    print("AI BRAIN v16.1 TEST - FULL INTEGRATION (Phase 3+6+8 BUGFIXED)")
+    print("AI BRAIN v16.2 TEST - FULL INTEGRATION (Phase 3+6+8 + SOURCE TRACKING)")
     print("="*80)
     test_symbols = ['BTCUSDT', 'ETHUSDT']
     for symbol in test_symbols:
@@ -557,3 +581,4 @@ if __name__ == "__main__":
         print(f"   Signal: {result['signal']}")
         print(f"   Confidence: {result['confidence']:.1%}")
         print(f"   Active Layers: {result['active_layers']}/{result['total_layers']}")
+        print(f"   Data Quality: {result['data_quality']['real']} REAL, {result['data_quality']['fallback']} FALLBACK, {result['data_quality']['error']} ERROR")
