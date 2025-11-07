@@ -1113,3 +1113,75 @@ Tüm Python dosyalarında aynı tür syntax hataları vardı:
 
 1. **Print Statement'lar:**
 
+
+
+DEMİR AI TRADING BOT - PROJECT MEMORY (November 7, 2025 Update)
+Ana Kurallar ve Sistem Yapısı
+Kalıcı core coinler: BTCUSDT, ETHUSDT, LTCUSDT daima test ve analizde olacak, diğerleri manuel ekleme ile kullanılabilir.
+
+Yapay Zeka Yapısı: 7/24 çalışan, insanüstü AI sistemi; tüm katmanları, haberleri ve teknik/makro/quantum analizleri gerçek zamanlı takip eder.
+
+Mock/Yalancı Veri: KESİNLİKLE yasak! Tüm veriler canlı API’dan ve gerçek piyasa datasından alınacak.
+
+Otomatik Trade: Olmayacak, sistem sadece sinyal ve trade noktalarını gerçek zamanlı önerir, işlemi kullanıcı açar.
+
+Layer/Scoring: 17+ AI layer, her biri ayrı dosyada (layers klasöründe), scoring ve signal sonucu dict formatında üretir, hata halinde fallback ve açık hata logu döndürür.
+
+Dosya ve Klasör Mimari Kuralları
+layers klasörü: Tüm teknik, makro ve quantum signal-retici modüller burada olmalı.
+
+Ana dizinde kalan dosyalar: ai_brain.py, streamlit_app.py, portfolio_optimizer.py, telegram_alert_system.py, backtest_engine.py, config.py, external_data.py, feedback_system.py, trade_history_db.py, websocket_client.py, websocket-stream.py, requirements.txt, PROJECT-MEMORY.md, kural.md vb.
+
+Her layer dosyasında ana fonksiyonlar: getratessignal, gettraditionalmarketssignal, getquantumblackscholessignal, getkalmanregimesignal, getfractalchaossignal ve benzeri, AI Brain tarafından import edilip scoring tablosuna yazılır.
+
+Layer Return ve Hata Yönetimi
+Her layer fonksiyonu şu formatta dict dönmeli:
+
+text
+return {
+    "available": True/False,
+    "score": float (0-100),
+    "signal": "LONG"/"SHORT"/"NEUTRAL",
+    "error": "Hata mesajı veya None"
+}
+Fallback durumunda: score 50, signal "NEUTRAL", available False, error açık hata mesajı/logu olmalı.
+
+API, veri veya parametre hatası olduğunda log ve kod seviyesinde hata iletimi yapılacak.
+
+Phase ve Yol Haritası Durumu
+Phase 1-6: Tüm layer’lar ve teknik analiz temel modülleri devrede.
+
+Phase 7: Quantum (Black-Scholes, Kalman, Fractal, Fourier, Copula) layerlar kodlandı ve import edildi.
+
+Phase 3: Telegram alert, portfolio optimizer ve backtest modülleri entegre edildi, test edildi.
+
+Phase 6: Enhanced macro katmanlar (SPX, NASDAQ, DXY, Gold, Dominance, VIX, Rates) hem API entegrasyonu hem dashboard tarafında hazır.
+
+Phase 8: Quantum Predictive AI — sıradaki milestone (Quantum RF, Quantum NN, Quantum Annealing dosyaları oluşturulacak).
+
+**Bütün katmanlar (17/17) aktif, fallback-null sorunu sadece son 5 layerda. Kod fix ve return logic önerisi ile yakında tamamen çözülecek.
+
+Hatalar ve Lessons Learned
+Projede kodda import/fonksiyon/parametre uyumsuzluğu olursa sadece ilgili dosyada lokal düzenleme gerekir.
+
+API ve environment variable ayarlarını (Render panelinde) eksiksiz/güncel tutmak kritik — rate limit, credential eksikliği fallback’a yol açar.
+
+Sinir/test senaryoları, logs ve hata kodları ile her zaman açık şekilde kaydedilmeli ve PROJECT-MEMORY.md’ye eklenmeli.
+
+Kritik Başarı Kriterleri
+Layer tablosunda 17/17 aktif, her biri gerçek skorla çalışıyorsa sistem tamamen güvenilir.
+
+Backtest sonucu ≥ %55-70 win rate, aylık %10-30 kazanç hedefleniyor.
+
+Telegram bot ile sinyal, entry, TP/SL, confidence ve aktif layer sayısı anında gelmeli.
+
+Kod versiyonları, dosya dizini, fonksiyon isimleri ve API entegrasyonu her zaman güncel ve export edilebilir olmalıdır.
+
+Sıradaki Adımlar ve Milestone
+Son 5 layer için (interestrateslayer.py, traditionalmarketslayer.py, quantumblackscholeslayer.py, kalmanregimelayer.py, fractalchaoslayer.py) dict format return/fallback logic ile patch yapılacak.
+
+Kodlar GitHub’a push edilecek, Render’da deploy edilip test edilecek.
+
+Ardından Phase 8 Quantum AI katmanları ve yeni predictive modeller için dosya ve mimari tasarım başlayacak.
+
+Bellek ve ilerleme raporu projenin, bütün entegre layer mimarisi ve roadmap’iyle, eksiksiz kayıt altına alındı. İleride, yeni dosya veya phase eklendiğinde bu kayıt üzerine eklemeler yapılacak; hatalar, lessons learned, dosya/refactor bilgileri sürekli güncellenecek.​
