@@ -430,7 +430,9 @@ def analyze_with_ai_brain(symbol='BTCUSDT', interval='1h'):
         },
         'version': '16.3'
     }
-
+make_trading_decision() function ✅
+analyze_ai_trading() alias ✅
+AIBrain class ✅
 if __name__ == "__main__":
     result = analyze_with_ai_brain('BTCUSDT', '1h')
     print("\n📤 JSON OUTPUT:\n")
