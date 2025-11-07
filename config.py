@@ -1,196 +1,192 @@
 """
-DEMIR - Configuration
-API Keys, Parameters, Settings
-
-HOTFIX 2025-11-02 16:11:
-------------------------
-✅ Added all missing API keys from Render dashboard
-✅ All existing configurations preserved
-✅ No features removed
+CONFIG.PY v3 - REAL DATA CONFIG
+==============================
+Date: 7 Kasım 2025, 20:50 CET
+Version: 3.0 - REEL API Configuration
 """
 
 import os
-from typing import Dict, Any
+from dotenv import load_dotenv
 
-# ============================================
-# API KEYS (Environment Variables)
-# ============================================
+# Load environment variables from .env file
+load_dotenv()
 
-# Binance Trading API
-BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
-BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET', '')
+# ============================================================================
+# EXCHANGE CONFIGS
+# ============================================================================
 
-# Telegram Notifications
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
+BINANCE_CONFIG = {
+    'api_key': os.getenv('BINANCE_API_KEY', ''),
+    'api_secret': os.getenv('BINANCE_API_SECRET', ''),
+    'use_testnet': os.getenv('BINANCE_USE_TESTNET', 'False').lower() == 'true',
+    'default_pair': 'BTCUSDT',
+    'default_interval': '1h',
+}
 
-# External Data APIs (⭐ ADDED FROM RENDER DASHBOARD)
-CMC_API_KEY = os.getenv('CMC_API_KEY', '')  # CoinMarketCap
-COINGLASS_API_KEY = os.getenv('COINGLASS_API_KEY', '')  # Coinglass
-CRYPTOALERT_API_KEY = os.getenv('CRYPTOALERT_API_KEY', '')  # CryptoAlert
-CRYPTOPANIC_KEY = os.getenv('CRYPTOPANIC_KEY', '')  # CryptoPanic News
-DEXCHECK_API_KEY = os.getenv('DEXCHECK_API_KEY', '')  # DexCheck
-NEWSAPI_KEY = os.getenv('NEWSAPI_KEY', '')  # NewsAPI.org
+# ============================================================================
+# API KEYS - REEL DATA SOURCES
+# ============================================================================
 
-# System
-PYTHON_VERSION = os.getenv('PYTHON_VERSION', '3.11')
+EXTERNAL_APIS = {
+    # Alternative.me - Fear & Greed (FREE, NO KEY)
+    'ALTERNATIVE_ME': {
+        'endpoint': 'https://api.alternative.me/fng/?limit=1',
+        'timeout': 10,
+        'enabled': True
+    },
+    
+    # CoinGecko - Bitcoin Dominance (FREE, NO KEY)
+    'COINGECKO': {
+        'endpoint': 'https://api.coingecko.com/api/v3/',
+        'timeout': 10,
+        'enabled': True,
+        'api_key': os.getenv('COINGECKO_API_KEY', ''),
+    },
+    
+    # Yahoo Finance - VIX, Treasury Yields (FREE, NO KEY)
+    'YAHOO_FINANCE': {
+        'timeout': 20,
+        'enabled': True,
+    },
+    
+    # Twelve Data - VIX, Premium Data (OPTIONAL)
+    'TWELVE_DATA': {
+        'api_key': os.getenv('TWELVE_DATA_API_KEY', ''),
+        'endpoint': 'https://api.twelvedata.com/',
+        'timeout': 15,
+        'enabled': bool(os.getenv('TWELVE_DATA_API_KEY')),
+    },
+    
+    # NewsAPI - News & Sentiment (OPTIONAL)
+    'NEWSAPI': {
+        'api_key': os.getenv('NEWSAPI_KEY', ''),
+        'endpoint': 'https://newsapi.org/v2/',
+        'timeout': 10,
+        'enabled': bool(os.getenv('NEWSAPI_KEY')),
+    },
+    
+    # Binance - Live Data & Funding Rates (FREE)
+    'BINANCE_API': {
+        'endpoint': 'https://api.binance.com',
+        'endpoint_futures': 'https://fapi.binance.com',
+        'timeout': 15,
+        'enabled': True,
+    }
+}
 
-# ============================================
+# ============================================================================
+# TELEGRAM ALERTS
+# ============================================================================
+
+TELEGRAM_CONFIG = {
+    'token': os.getenv('TELEGRAM_TOKEN', ''),
+    'chat_id': os.getenv('TELEGRAM_CHAT_ID', ''),
+    'enabled': bool(os.getenv('TELEGRAM_TOKEN') and os.getenv('TELEGRAM_CHAT_ID')),
+    'timeout': 10,
+}
+
+# ============================================================================
+# DATABASE
+# ============================================================================
+
+DATABASE_CONFIG = {
+    'type': 'sqlite',  # sqlite, postgresql, mysql
+    'path': 'phase_9/data/demir.db',
+    'echo': False,  # Set to True for SQL logging
+}
+
+# ============================================================================
 # TRADING PARAMETERS
-# ============================================
+# ============================================================================
 
 TRADING_CONFIG = {
-    # Risk yönetimi
-    'max_position_size': 0.1,  # Bakiyenin %10'u
-    'stop_loss_pct': 2.0,      # %2 stop loss
-    'take_profit_pct': 5.0,    # %5 take profit
-    
-    # Sinyal parametreleri
-    'min_confidence': 60,      # Minimum güven skoru (0-100)
-    'signal_cooldown': 3600,   # Sinyaller arası bekleme (saniye)
-    
-    # Timeframes
-    'default_timeframe': '1h',
-    'supported_timeframes': ['15m', '1h', '4h', '1d'],
-    
-    # Symbols
-    'default_symbols': ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'],
-    'max_concurrent_positions': 3
+    'default_risk_level': 0.5,  # 0.1 - 1.0
+    'default_position_size': 10,  # %
+    'min_confidence': 0.60,  # Min confidence to trade
+    'min_score': 55,  # Min score to trade
+    'max_score': 45,  # Max score (reverse) for SHORT
 }
 
+# ============================================================================
+# ANALYSIS LAYERS
+# ============================================================================
 
-# ============================================
-# TECHNICAL ANALYSIS PARAMETERS
-# ============================================
-
-TA_CONFIG = {
-    'rsi_period': 14,
-    'rsi_overbought': 70,
-    'rsi_oversold': 30,
-    'macd_fast': 12,
-    'macd_slow': 26,
-    'macd_signal': 9,
-    'bollinger_period': 20,
-    'bollinger_std': 2,
-    'ema_periods': [9, 21, 50, 200],
-    'volume_profile_bins': 20,
-    'fibonacci_lookback': 100
+LAYERS_CONFIG = {
+    'enabled_layers': [
+        'external_data',      # Fear & Greed, Funding, BTC Dom
+        'interest_rates',     # Treasury yields
+        'vix',               # VIX fear index
+        'strategy',          # Strategy engine
+        'macro_correlation', # Macro data
+        'cross_asset',       # Cross-asset correlation
+        'traditional_markets', # Stock/Bond markets
+        'kelly_enhanced',    # Kelly criterion
+        'monte_carlo',       # Monte Carlo simulation
+        'news_sentiment',    # News sentiment analysis
+    ],
+    'cache_timeout': 300,  # 5 minutes
 }
 
-
-# ============================================
-# DATABASE SETTINGS
-# ============================================
-
-DB_CONFIG = {
-    'type': 'sqlite',  # sqlite veya postgresql
-    'sqlite_path': 'demir_trading.db',
-    # PostgreSQL için (production)
-    'postgres_host': os.getenv('DB_HOST', 'localhost'),
-    'postgres_port': os.getenv('DB_PORT', '5432'),
-    'postgres_db': os.getenv('DB_NAME', 'demir_db'),
-    'postgres_user': os.getenv('DB_USER', 'postgres'),
-    'postgres_password': os.getenv('DB_PASSWORD', '')
-}
-
-
-# ============================================
+# ============================================================================
 # LOGGING
-# ============================================
+# ============================================================================
 
 LOGGING_CONFIG = {
-    'level': 'INFO',
+    'level': 'INFO',  # DEBUG, INFO, WARNING, ERROR
     'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    'file': 'demir.log'
+    'log_file': 'phase_9/logs/demir.log',
+    'max_bytes': 10485760,  # 10MB
+    'backup_count': 5,
 }
 
+# ============================================================================
+# RENDER SPECIFIC
+# ============================================================================
 
-# ============================================
-# STREAMLIT UI SETTINGS
-# ============================================
-
-UI_CONFIG = {
-    'page_title': 'DEMIR Trading Bot',
-    'page_icon': '🤖',
-    'layout': 'wide',
-    'refresh_interval': 5,  # saniye
-    'chart_height': 500
+RENDER_CONFIG = {
+    'use_render': os.getenv('RENDER', 'False').lower() == 'true',
+    'timeout_multiplier': 2,  # Double timeouts on Render
+    'max_retries': 3,
+    'retry_delay': 3,
 }
 
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
 
-# ============================================
-# HELPER FUNCTIONS
-# ============================================
+FEATURES = {
+    'use_real_data': True,  # Use REAL_DATA layers
+    'use_telegram': TELEGRAM_CONFIG['enabled'],
+    'use_database': True,
+    'use_cache': True,
+    'debug_mode': os.getenv('DEBUG', 'False').lower() == 'true',
+}
 
-def get_config(section: str = None) -> Dict[str, Any]:
-    """Konfigürasyon verilerini döndür"""
-    configs = {
-        'trading': TRADING_CONFIG,
-        'ta': TA_CONFIG,
-        'db': DB_CONFIG,
-        'logging': LOGGING_CONFIG,
-        'ui': UI_CONFIG
-    }
-    if section:
-        return configs.get(section, {})
-    return configs
+# ============================================================================
+# VALIDATE CONFIG
+# ============================================================================
 
-def get_api_status() -> Dict[str, bool]:
-    """
-    Check which API keys are configured
+def validate_config():
+    """Validate critical config values"""
+    errors = []
     
-    Returns:
-        dict: API availability status
-    """
-    return {
-        'binance': bool(BINANCE_API_KEY and BINANCE_API_SECRET),
-        'telegram': bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
-        'cmc': bool(CMC_API_KEY),
-        'coinglass': bool(COINGLASS_API_KEY),
-        'cryptoalert': bool(CRYPTOALERT_API_KEY),
-        'cryptopanic': bool(CRYPTOPANIC_KEY),
-        'dexcheck': bool(DEXCHECK_API_KEY),
-        'newsapi': bool(NEWSAPI_KEY),
-    }
+    # Check if at least one API is enabled
+    api_enabled = any(v.get('enabled', False) for v in EXTERNAL_APIS.values())
+    if not api_enabled:
+        errors.append("❌ No external APIs enabled!")
+    
+    # Warn if Telegram not configured
+    if not TELEGRAM_CONFIG['enabled']:
+        print("⚠️ WARNING: Telegram not configured. Alerts will be disabled.")
+    
+    # Warn if Binance API not configured for trading
+    if not BINANCE_CONFIG['api_key']:
+        print("⚠️ WARNING: Binance API not configured. Trading will be disabled.")
+    
+    return errors
 
-def validate_config() -> bool:
-    """Zorunlu ayarları kontrol et"""
-    # Kritik ayarlar kontrolü
-    issues = []
-    
-    # Check Binance API (required for trading)
-    if not (BINANCE_API_KEY and BINANCE_API_SECRET):
-        issues.append("⚠️ Binance API keys missing")
-    
-    # Check Telegram (optional but recommended)
-    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
-        issues.append("⚠️ Telegram credentials missing (alerts disabled)")
-    
-    if issues:
-        print("\n🔍 Configuration Issues:")
-        for issue in issues:
-            print(f"  {issue}")
-        print()
-    else:
-        print("✅ Configuration validated successfully!")
-    
-    return len(issues) == 0
-
-
-if __name__ == "__main__":
-    print("\n" + "="*80)
-    print("🔱 DEMIR AI TRADING BOT - Configuration HOTFIX")
-    print("="*80)
-    
-    # Display API status
-    print("\n📊 API Status:")
-    api_status = get_api_status()
-    for api_name, is_available in api_status.items():
-        status = "✅" if is_available else "❌"
-        print(f"  {status} {api_name.upper()}")
-    
-    # Validate configuration
-    print("\n🔍 Validating Configuration...")
-    validate_config()
-    
-    print("\n" + "="*80)
+# Run validation
+config_errors = validate_config()
+if config_errors:
+    for error in config_errors:
+        print(error)
