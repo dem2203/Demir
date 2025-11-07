@@ -111,6 +111,11 @@ APScheduler>=3.10.0      # Advanced scheduling
 # ============================================================================
 # kaleido>=0.2.1          # Uncomment for PNG export (chart_generator.py)
 
+
+hmmlearn>=0.3.0          # Hidden Markov Models
+pykalman>=0.9.5          # Kalman Filter
+statsmodels>=0.14.0      # Advanced statistics
+
 # ============================================================================
 # RENDER DEPLOYMENT NOTES:
 # ============================================================================
