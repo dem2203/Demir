@@ -1,13 +1,16 @@
-# requirements.txt - PHASE 8 + PHASE 9 HYBRID COMPLETE
+# requirements.txt - RENDER OPTIMIZED
 # ============================================================================
-# Date: 7 Kasım 2025, 15:58 CET
-# Version: PHASE 1-9 COMPLETE + HYBRID AUTONOMOUS
+# Date: 7 Kasım 2025, 16:15 CET
+# Version: RENDER-DEPLOYMENT OPTIMIZED
+# 
+# FIXED (7 Nov 2025):
+# ✅ schedule==1.2.2 (max available)
+# ✅ Removed TensorFlow (too heavy for Render free tier)
+# ✅ Using scikit-learn instead of TensorFlow
+# ✅ Lightweight dependencies for Render
+# ✅ Python 3.10 compatible
 #
-# UPDATED (7 Nov 2025):
-# ✅ Phase 8: schedule, tensorflow (meta-learner)
-# ✅ Phase 9: Multi-channel alerts (email, SMS, push)
-# ✅ State persistence: sqlite3 (built-in)
-# ✅ All previous packages maintained
+# TESTED ON: Render.com free tier
 # ============================================================================
 
 # ============================================================================
@@ -42,10 +45,11 @@ statsmodels>=0.14.0
 xgboost==2.0.3
 
 # ============================================================================
-# NEURAL NETWORKS - PHASE 8 META-LEARNER (NEW!)
+# NEURAL NETWORKS - Phase 8 META-LEARNER
 # ============================================================================
-tensorflow>=2.13.0
-keras>=2.13.0
+# NOTE: TensorFlow removed due to Render size constraints
+# Using scikit-learn RandomForest as meta-learner instead
+# lightgbm>=4.0.0  # Alternative lightweight ML (OPTIONAL)
 
 # ============================================================================
 # GARCH VOLATILITY (Phase 3 Backtest)
@@ -94,7 +98,7 @@ fredapi==0.5.1
 # ============================================================================
 # PHASE 8: ADAPTIVE WEIGHTING & OPTIMIZATION
 # ============================================================================
-schedule==1.1.10         # Phase 9 scheduler (7/24 monitoring)
+schedule==1.2.2         # Phase 9 scheduler (7/24 monitoring) - FIXED VERSION
 
 # ============================================================================
 # PHASE 9: HYBRID AUTONOMOUS MODE - ALERTS
@@ -105,12 +109,16 @@ firebase-admin==6.2.0    # Push notifications
 email-validator==2.1.0   # Email validation
 
 # ============================================================================
-# OPTIONAL: Advanced Features
+# RENDER-SPECIFIC OPTIMIZATIONS
 # ============================================================================
-# kaleido>=0.2.1          # PNG export
-# sendgrid>=6.10.0        # SendGrid email
+gunicorn>=21.0.0         # WSGI for Render deployment
 
 # ============================================================================
-# INSTALLATION:
+# INSTALLATION FOR RENDER:
 # pip install -r requirements.txt
+#
+# IF BUILD FAILS:
+# 1. Remove firebase-admin (if not using push)
+# 2. Remove twilio/vonage (if not using SMS)
+# 3. Remove yfinance (if not using)
 # ============================================================================
