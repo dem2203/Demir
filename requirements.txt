@@ -1,14 +1,13 @@
+# requirements.txt - PHASE 8 + PHASE 9 HYBRID COMPLETE
 # ============================================================================
-# DEMIR AI TRADING BOT - requirements.txt - SPRINT 1 UPDATE
-# ============================================================================
-# Date: 3 Kasım 2025, 23:32 CET
-# Version: PHASE 1-6 SPRINT 1 COMPLETE
+# Date: 7 Kasım 2025, 15:58 CET
+# Version: PHASE 1-9 COMPLETE + HYBRID AUTONOMOUS
 #
-# UPDATED (3 Nov 2025):
-# ---------------------
-# ✅ Added bcrypt>=4.1.1 (auth_system.py)
-# ✅ All Phase 1-6 packages maintained
-# ✅ Plotly already present (chart_generator.py)
+# UPDATED (7 Nov 2025):
+# ✅ Phase 8: schedule, tensorflow (meta-learner)
+# ✅ Phase 9: Multi-channel alerts (email, SMS, push)
+# ✅ State persistence: sqlite3 (built-in)
+# ✅ All previous packages maintained
 # ============================================================================
 
 # ============================================================================
@@ -32,96 +31,86 @@ matplotlib>=3.7.0
 # ============================================================================
 # TECHNICAL ANALYSIS (Phase 1-5)
 # ============================================================================
-ta>=0.11.0               # Technical Analysis library
-scipy>=1.11.0            # Scientific computing (for GARCH, stats)
+ta>=0.11.0
+scipy>=1.11.0
 
 # ============================================================================
 # MACHINE LEARNING (Phase 3B+)
 # ============================================================================
-scikit-learn>=1.3.0      # Machine learning (Markov, Kelly)
-statsmodels>=0.14.0      # Statistical models (GARCH volatility)
+scikit-learn>=1.3.0
+statsmodels>=0.14.0
+xgboost==2.0.3
 
 # ============================================================================
-# GARCH VOLATILITY (Phase 3 Backtest - CRITICAL!)
+# NEURAL NETWORKS - PHASE 8 META-LEARNER (NEW!)
 # ============================================================================
-arch>=5.3.1              # GARCH models for volatility forecasting
+tensorflow>=2.13.0
+keras>=2.13.0
+
+# ============================================================================
+# GARCH VOLATILITY (Phase 3 Backtest)
+# ============================================================================
+arch>=5.3.1
 
 # ============================================================================
 # WEBSOCKET & REAL-TIME DATA (Phase 4.1)
 # ============================================================================
-websocket-client>=1.6.0  # WebSocket connections
-python-binance>=1.0.17   # Binance API wrapper
+websocket-client>=1.6.0
+python-binance>=1.0.17
 
 # ============================================================================
-# DATABASE (Phase 5)
+# DATABASE (Phase 5) - sqlite3 built-in!
 # ============================================================================
-sqlalchemy>=2.0.0        # Database ORM
-# sqlite3 is included in Python standard library
+sqlalchemy>=2.0.0
 
 # ============================================================================
 # ASYNC & THREADING (Phase 4+)
 # ============================================================================
-# asyncio>=3.4.3         # Built into Python 3.4+ (no need to install)
-aiohttp>=3.9.0           # Async HTTP requests
+aiohttp>=3.9.0
 
 # ============================================================================
 # UTILITIES
 # ============================================================================
-python-dotenv>=1.0.0     # Environment variables
-pytz>=2023.3             # Timezone handling
+python-dotenv>=1.0.0
+pytz>=2023.3
 
 # ============================================================================
-# PHASE 3 AUTOMATION - TELEGRAM ALERTS (ENABLED!)
+# PHASE 3 AUTOMATION - TELEGRAM ALERTS
 # ============================================================================
-python-telegram-bot>=20.0  # Telegram bot for alerts & notifications
+python-telegram-bot>=20.0
 
 # ============================================================================
-# PHASE 5 AUTHENTICATION (NEW! - 3 Nov 2025)
+# PHASE 5 AUTHENTICATION
 # ============================================================================
-bcrypt>=4.1.1            # Password hashing for auth_system.py
+bcrypt>=4.1.1
 
 # ============================================================================
-# OPTIONAL: EMAIL ALERTS
+# NEWS & MARKET DATA
 # ============================================================================
-# sendgrid>=6.10.0           # Uncomment if using SendGrid
-
-# ============================================================================
-# OPTIONAL: ADVANCED CHARTING (PNG export)
-# ============================================================================
-# kaleido>=0.2.1            # Uncomment for PNG export (chart_generator.py)
-
-# Phase 4.3: Machine Learning
-xgboost==2.0.3
-scikit-learn==1.4.0
-
-# Phase 4.4: News Sentiment v2  
 textblob==0.18.0
-yfinance==0.2.36        # Yahoo Finance - FREE!
-fredapi==0.5.1          # Federal Reserve data - FREE!
+yfinance==0.2.36
+fredapi==0.5.1
 
 # ============================================================================
-# INSTALLATION NOTES:
+# PHASE 8: ADAPTIVE WEIGHTING & OPTIMIZATION
 # ============================================================================
-# For Backtest Engine to work properly:
-#   - arch package is REQUIRED (GARCH volatility)
-#   - statsmodels required (statistical analysis)
-#
-# For Auto-Trade Manager:
-#   - python-binance required (Binance API)
-#   - Valid API keys in config.py
-#
-# For Telegram Alerts:
-#   - python-telegram-bot required
-#   - Bot token & chat ID in config.py
-#
-# For Authentication (NEW!):
-#   - bcrypt required (password hashing)
-#   - auth_system.py handles user management
-#
-# For Chart Export to PNG (OPTIONAL):
-#   - Uncomment kaleido if you need PNG export
-#   - HTML export works without kaleido
-#
-# Install all:
-#   pip install -r requirements.txt
+schedule==1.1.10         # Phase 9 scheduler (7/24 monitoring)
+
+# ============================================================================
+# PHASE 9: HYBRID AUTONOMOUS MODE - ALERTS
+# ============================================================================
+twilio==8.10.0           # SMS alerts (Twilio)
+vonage==4.1.0            # SMS alerts (Vonage alternative)
+firebase-admin==6.2.0    # Push notifications
+email-validator==2.1.0   # Email validation
+
+# ============================================================================
+# OPTIONAL: Advanced Features
+# ============================================================================
+# kaleido>=0.2.1          # PNG export
+# sendgrid>=6.10.0        # SendGrid email
+
+# ============================================================================
+# INSTALLATION:
+# pip install -r requirements.txt
 # ============================================================================
