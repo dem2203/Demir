@@ -1,83 +1,98 @@
-# Enhanced Interest Rates Layer - Phase 6.5 MERGED & FIXED
-# Date: 7 Kasım 2025
-# Version: 2.5 - Senin kod + Benim bugfixes birleştirildi
-#
-# ✅ IMPROVEMENTS:
-# - Timeout increased: 10s → 20s
-# - Retry logic: 2 attempts with 2s delay
-# - Fallback values: Realistic defaults instead of NULL
-# - Better error handling
-# - Always returns valid score (no NULL)
-# ============================================================================
+"""
+ENHANCED RATES LAYER v3 - REEL VERİ İLE ÇALIŞ
+==============================================
+Date: 7 Kasım 2025, 20:00 CET
+Version: 3.0 - Real Data + Retry Logic + Intelligent Fallbacks
+"""
 
 import requests
+import os
+import logging
 import time
 from typing import Dict, Optional
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class EnhancedRatesLayer:
-    """Enhanced Interest Rates Layer with robust error handling"""
+    """Enhanced Interest Rates Layer with robust real data handling"""
     
     def __init__(self):
-        """Initialize with timeout and retry settings"""
-        self.timeout = 20  # INCREASED from 10
-        self.max_retries = 2  # NEW: Retry logic
-        self.fallback_rate = 4.25  # NEW: Realistic fallback (avg US 10Y)
-        print("✅ Enhanced Rates Layer v2.5 initialized (Timeout: 20s, Retries: 2)")
+        """Initialize with aggressive settings for Render"""
+        self.timeout = 25  # Very long timeout for Render
+        self.max_retries = 3  # Try 3 times
+        self.retry_delay = 3  # 3 second delay between retries
+        self.fallback_rate = 4.25  # Realistic fallback
+        logger.info(f"✅ Enhanced Rates Layer v3 initialized (Timeout: {self.timeout}s, Retries: {self.max_retries})")
     
     def get_10y_treasury_yield(self) -> Optional[float]:
         """
-        Get 10-Year US Treasury Yield with retry logic
-        Returns: Float or None on failure
+        Get 10-Year US Treasury Yield with AGGRESSIVE retry logic
+        Tries: Yahoo Finance → Direct API → Fallback
         """
-        for attempt in range(self.max_retries):  # NEW: Retry loop
+        
+        # Method 1: Yahoo Finance
+        for attempt in range(self.max_retries):
             try:
-                print(f"  📡 Fetching 10Y Treasury Yield (Attempt {attempt+1}/{self.max_retries})...")
-                
+                logger.info(f" 📡 [Yahoo Finance] Attempt {attempt+1}/{self.max_retries}...")
                 url = "https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX"
                 response = requests.get(
-                    url, 
-                    params={'interval': '1d', 'range': '5d'}, 
-                    timeout=self.timeout  # INCREASED timeout
+                    url,
+                    params={'interval': '1d', 'range': '5d'},
+                    timeout=self.timeout,
+                    headers={'User-Agent': 'Mozilla/5.0'}  # Add header to avoid block
                 )
-                
+                response.raise_for_status()
                 data = response.json()
-                closes = [c for c in data['chart']['result'][0]['indicators']['quote'][0]['close'] if c]
                 
-                if closes:
-                    yield_value = closes[-1]
-                    print(f"     ✅ Got 10Y yield: {yield_value:.2f}%")
-                    return yield_value
+                if 'chart' in data and 'result' in data['chart']:
+                    result = data['chart']['result'][0]
+                    closes = result.get('indicators', {}).get('quote', [{}])[0].get('close', [])
+                    closes = [c for c in closes if c]
+                    
+                    if closes:
+                        yield_value = closes[-1]
+                        logger.info(f" ✅ Yahoo Finance: 10Y yield = {yield_value:.3f}%")
+                        return yield_value
+                    else:
+                        logger.warning(f" ⚠️ Yahoo Finance: No close data")
                 else:
-                    print(f"     ⚠️ No data in response")
-                    if attempt < self.max_retries - 1:
-                        time.sleep(2)
-                        continue
-                    return None
+                    logger.warning(f" ⚠️ Yahoo Finance: Invalid response structure")
                     
             except requests.exceptions.Timeout:
-                print(f"     ⚠️ Timeout on attempt {attempt+1}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(2)
-                    continue
-                return None
+                logger.warning(f" ⚠️ Yahoo Finance: Timeout (attempt {attempt+1})")
+            except requests.exceptions.ConnectionError:
+                logger.warning(f" ⚠️ Yahoo Finance: Connection error (attempt {attempt+1})")
+            except Exception as e:
+                logger.warning(f" ⚠️ Yahoo Finance: {str(e)[:60]} (attempt {attempt+1})")
+            
+            if attempt < self.max_retries - 1:
+                time.sleep(self.retry_delay)
+        
+        # Method 2: US Treasury API
+        for attempt in range(self.max_retries):
+            try:
+                logger.info(f" 📡 [US Treasury] Attempt {attempt+1}/{self.max_retries}...")
+                # Direct Treasury data
+                url = "https://www.treasurydirect.gov/NP_WS/debt/current"
+                response = requests.get(url, timeout=self.timeout)
+                response.raise_for_status()
                 
-            except requests.exceptions.ConnectionError as e:
-                print(f"     ⚠️ Connection error: {str(e)[:50]}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(2)
-                    continue
+                # US Treasury returns different format, extract if possible
+                # This is a simplified version - full parsing needed
+                logger.info(f" ✅ US Treasury: Connected")
+                # For now, return None as we need to parse Treasury format
                 return None
                 
             except Exception as e:
-                print(f"     ⚠️ Error: {str(e)[:50]}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(2)
-                    continue
-                return None
+                logger.warning(f" ⚠️ US Treasury: {str(e)[:50]} (attempt {attempt+1})")
+            
+            if attempt < self.max_retries - 1:
+                time.sleep(self.retry_delay)
         
-        print(f"     ❌ All {self.max_retries} attempts failed")
+        logger.error(f" ❌ All yield fetching attempts failed")
         return None
-
+    
     def calculate_rates_score(self, symbol: str = 'BTCUSDT') -> Dict:
         """
         Calculate interest rates score for crypto market
@@ -87,104 +102,123 @@ class EnhancedRatesLayer:
         - Higher rates (> 5.0%) = Bearish for crypto → Score 40-
         - Medium rates = Neutral → Score 50
         
-        Args:
-            symbol: Trading pair (unused, for compatibility)
-        
-        Returns:
-            Dict with score, signal, yield, confidence
+        Confidence based on data freshness:
+        - Real API data: 0.95
+        - Fallback data: 0.65
         """
-        print(f"\n📊 Calculating Rates Score...")
+        
+        logger.info(f"\n📊 CALCULATING INTEREST RATES SCORE FOR {symbol}...")
         
         # Get 10Y yield
         yield_10y = self.get_10y_treasury_yield()
         
-        # NEW: Always use fallback if None
-        if not yield_10y:
-            print(f"     📌 Using fallback rate: {self.fallback_rate}%")
+        # Use fallback if needed
+        if yield_10y is None:
+            logger.warning(f" 📌 Using fallback rate: {self.fallback_rate}%")
             yield_10y = self.fallback_rate
             using_fallback = True
+            confidence = 0.65
         else:
             using_fallback = False
+            confidence = 0.95
         
         # Calculate score based on yield level
-        if yield_10y < 4.0:
+        if yield_10y < 3.5:
+            score = 70
+            signal = 'STRONG_LONG'
+            explanation = "Very low rates → Crypto very bullish (risk-on, capital flows to alternatives)"
+        elif yield_10y < 4.0:
             score = 60
             signal = 'LONG'
-            explanation = "Low interest rates favor crypto (capital flows to risk assets)"
-        elif yield_10y > 5.0:
-            score = 40
-            signal = 'SHORT'
-            explanation = "High interest rates deter crypto (flight to safety)"
-        else:
+            explanation = "Low rates → Crypto bullish (cheap capital, risk assets favored)"
+        elif yield_10y < 4.5:
+            score = 55
+            signal = 'LONG'
+            explanation = "Moderate-low rates → Slightly bullish for crypto"
+        elif yield_10y < 5.0:
             score = 50
             signal = 'NEUTRAL'
-            explanation = "Moderate interest rates - balanced crypto sentiment"
-        
-        # Calculate trend (how much rates changed recently)
-        recent_trend = 0  # Can be enhanced with historical data
-        
-        # Confidence based on data freshness
-        confidence = 0.8 if not using_fallback else 0.6
+            explanation = "Moderate rates → Balanced sentiment for crypto"
+        elif yield_10y < 5.5:
+            score = 45
+            signal = 'SHORT'
+            explanation = "Moderate-high rates → Slightly bearish for crypto"
+        elif yield_10y < 6.0:
+            score = 40
+            signal = 'SHORT'
+            explanation = "High rates → Bearish for crypto (capital flows to bonds)"
+        else:
+            score = 30
+            signal = 'STRONG_SHORT'
+            explanation = "Very high rates → Very bearish for crypto (flight to safety)"
         
         result = {
             'score': score,
             'signal': signal,
             'explanation': explanation,
-            'yield_10y': round(yield_10y, 2),
+            'yield_10y': round(yield_10y, 3),
             'confidence': confidence,
             'using_fallback': using_fallback,
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'available': True  # NEW: Always True now (fallback ensures this)
+            'available': True,
+            'symbol': symbol,
+            'source': 'FALLBACK' if using_fallback else 'REAL_API'
         }
         
-        print(f"     📊 Score: {score}/100 | Signal: {signal}")
-        print(f"     10Y Yield: {yield_10y:.2f}% | Confidence: {confidence:.0%}")
+        logger.info(f"")
+        logger.info(f" 📊 Score: {score}/100 | Signal: {signal}")
+        logger.info(f" 10Y Yield: {yield_10y:.3f}% | Confidence: {confidence:.0%}")
+        logger.info(f" Source: {result['source']}")
         
         return result
-
+    
     def get_rates_signal(self, symbol: str = 'BTCUSDT') -> Dict:
-        """
-        Wrapper function for compatibility
-        Returns: Same as calculate_rates_score
-        """
+        """Wrapper function for compatibility"""
         return self.calculate_rates_score(symbol)
 
-# ============================================================================
-# WRAPPER FUNCTIONS FOR AI_BRAIN COMPATIBILITY
-# ============================================================================
+# ============================================
+# MODULE-LEVEL FUNCTIONS FOR IMPORT
+# ============================================
+
+_layer_instance = None
+
+def _get_instance():
+    """Get or create layer instance"""
+    global _layer_instance
+    if _layer_instance is None:
+        _layer_instance = EnhancedRatesLayer()
+    return _layer_instance
 
 def get_rates_signal(symbol: str = 'BTCUSDT') -> Dict:
-    """
-    Main entry point for ai_brain
-    Usage: from layers.enhanced_rates_layer import get_rates_signal
-    """
-    layer = EnhancedRatesLayer()
-    return layer.calculate_rates_score(symbol)
+    """Main entry point for ai_brain"""
+    return _get_instance().calculate_rates_score(symbol)
 
 def get_interest_rates_signal(symbol: str = 'BTCUSDT') -> Dict:
     """Alternative function name for compatibility"""
-    layer = EnhancedRatesLayer()
-    return layer.calculate_rates_score(symbol)
+    return _get_instance().calculate_rates_score(symbol)
 
-# ============================================================================
-# TEST & DEBUG
-# ============================================================================
+def calculate_rates_score(symbol: str = 'BTCUSDT') -> Dict:
+    """Direct score calculation"""
+    return _get_instance().calculate_rates_score(symbol)
+
+# ============================================
+# TEST
+# ============================================
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("🏦 ENHANCED INTEREST RATES LAYER v2.5 - TEST")
-    print("=" * 70)
+    print("\n" + "="*70)
+    print("🏦 ENHANCED RATES LAYER v3 - REAL DATA TEST")
+    print("="*70)
     
     layer = EnhancedRatesLayer()
     result = layer.calculate_rates_score("BTCUSDT")
     
-    print("\n" + "=" * 70)
+    print("\n" + "="*70)
     print("📊 FINAL RESULT:")
-    print(f"   Score: {result['score']}/100")
-    print(f"   Signal: {result['signal']}")
-    print(f"   10Y Yield: {result['yield_10y']}%")
-    print(f"   Confidence: {result['confidence']:.0%}")
-    print(f"   Available: {result['available']}")
-    print(f"   Using Fallback: {result['using_fallback']}")
-    print(f"   Explanation: {result['explanation']}")
-    print("=" * 70)
+    print(f" Score: {result['score']}/100 | Signal: {result['signal']}")
+    print(f" 10Y Yield: {result['yield_10y']}%")
+    print(f" Confidence: {result['confidence']:.0%}")
+    print(f" Using Fallback: {result['using_fallback']}")
+    print(f" Source: {result['source']}")
+    print(f" Explanation: {result['explanation']}")
+    print("="*70)
