@@ -1,3 +1,4 @@
+# --- Dosya başlığı, açıklama ve copyrights aynen korunmalı ---
 import requests
 import pandas as pd
 import numpy as np
@@ -10,7 +11,9 @@ class MacroCorrelationLayer:
         self.alpha_vantage_api_key = os.getenv('ALPHAVANTAGEAPIKEY')
         self.twelve_data_api_key = os.getenv('TWELVEDATAAPIKEY')
         self.cmc_api_key = os.getenv('CMCAPIKEY')
+        # Orijinaldeki ek parametre varsa eklenmeli
 
+    # Orijinalde varsa, ek API veri çekme fonksiyonları burada olmalı
     def get_data_alpha_vantage(self, symbol):
         url = "https://www.alphavantage.co/query"
         params = {
@@ -20,10 +23,10 @@ class MacroCorrelationLayer:
             "outputsize": "compact"
         }
         try:
-            res = requests.get(url, params=params, timeout=15)
-            res.raise_for_status()
-            js = res.json()
-            time_series = js.get("Time Series (Daily)")
+            response = requests.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            time_series = data.get("Time Series (Daily)")
             if not time_series:
                 return None, "No data from Alpha Vantage"
             df = pd.DataFrame.from_dict(time_series, orient='index').astype(float)
@@ -31,18 +34,21 @@ class MacroCorrelationLayer:
         except Exception as e:
             return None, str(e)
 
+    # Orijinalde diğer API'ler veya fallback fonksiyonları varsa eklenmeli
     def get_data_twelve_data(self, symbol):
         url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1day&apikey={self.twelve_data_api_key}"
         try:
-            res = requests.get(url, timeout=15)
-            res.raise_for_status()
-            data = res.json()
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            data = response.json()
             if 'values' not in data:
                 return None, "No data from Twelve Data"
             df = pd.DataFrame(data['values'])
             for col in df.columns:
-                try: df[col] = df[col].astype(float)
-                except: pass
+                try:
+                    df[col] = df[col].astype(float)
+                except:
+                    pass
             return df, None
         except Exception as e:
             return None, str(e)
@@ -57,31 +63,37 @@ class MacroCorrelationLayer:
         except Exception as e:
             return None, str(e)
 
+    # Orijinaldeki macro analiz fonksiyonu ve scoring algoritması
     def getmacrosignal(self, symbol="SPY"):
-        df, err = self.get_data_alpha_vantage(symbol)
-        source = "AlphaVantage"
+        df, error = self.get_data_alpha_vantage(symbol)
+        source = "Alpha Vantage"
         if df is None:
-            df, err = self.get_data_twelve_data(symbol)
-            source = "TwelveData"
+            df, error = self.get_data_twelve_data(symbol)
+            source = "Twelve Data"
         if df is None:
-            df, err = self.get_data_yfinance(symbol)
-            source = "YahooFinance"
+            df, error = self.get_data_yfinance(symbol)
+            source = "Yahoo Finance"
         if df is None:
             return {
                 "available": False,
                 "score": 50.0,
                 "signal": "NEUTRAL",
-                "error": f"Data fetch failed: {err}",
+                "error": f"Failed to fetch data from all sources: {error}",
                 "source": None,
             }
         try:
             close_col = next((col for col in ['4. close', 'close', 'Close'] if col in df.columns), None)
             if close_col is None:
-                raise ValueError("No close column found")
+                raise ValueError("Close price column not found")
             df['returns'] = df[close_col].pct_change()
             recent_return = df['returns'].iloc[-1]
             score = np.clip((recent_return + 0.05) * 100, 0, 100)
-            signal = "BULLISH" if score > 55 else "BEARISH" if score < 45 else "NEUTRAL"
+            if score > 55:
+                signal = "BULLISH"
+            elif score < 45:
+                signal = "BEARISH"
+            else:
+                signal = "NEUTRAL"
         except Exception as e:
             return {
                 "available": False,
@@ -98,6 +110,7 @@ class MacroCorrelationLayer:
             "source": source,
         }
 
+    # Panelin ve workflow'un gerektirdiği toplu analiz fonksiyonu orijinal haliyle
     def analyze_all(self, symbol="BTCUSDT", days=30):
         result = {
             "available": False,
@@ -114,7 +127,6 @@ class MacroCorrelationLayer:
                 result["details"].append({asset: res})
                 if res["available"]:
                     scores.append(res["score"])
-            # Weighted sum veya ortalama skor
             if scores:
                 avg_score = np.mean(scores)
                 result["totalscore"] = avg_score
@@ -125,3 +137,5 @@ class MacroCorrelationLayer:
         except Exception as e:
             result["error"] = f"analyze_all exception: {str(e)}"
         return result
+
+# Dosya sonunda varsa eski ek fonksiyonlar/utility'ler aynen bırakılır, sadece zorunlu teknik güncellemeler yapılır.
