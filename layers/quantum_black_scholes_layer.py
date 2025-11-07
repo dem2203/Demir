@@ -2,8 +2,8 @@
 🔮 QUANTUM BLACK-SCHOLES LAYER v16.5
 ====================================
 
-Date: 7 Kasım 2025, 14:26 CET
-Phase: 7+8 - Quantum Trading AI
+Date: 7 Kasım 2025, 14:45 CET
+Phase: 7+8 - Quantum Trading AI - COMPATIBLE v16.4
 
 AMAÇ:
 -----
@@ -15,8 +15,6 @@ MATHEMATIK:
 C = S*N(d1) - K*e^(-rT)*N(d2)
 d1 = [ln(S/K) + (r + σ²/2)*T] / (σ*√T)
 d2 = d1 - σ*√T
-
-N(x) = Cumulative standard normal distribution
 """
 
 import numpy as np
@@ -79,34 +77,23 @@ def calculate_greeks(S, K, T, r, sigma):
     
     return {'delta': delta, 'gamma': gamma, 'vega': vega, 'theta': theta}
 
-def get_quantum_black_scholes_signal(symbol, interval='1h'):
+def calculate_option_price(symbol='BTCUSDT'):
     """
-    Quantum Black-Scholes ana fonksiyonu
-    
-    MANTIK:
-    -------
-    1. Spot price from Binance (REAL)
-    2. Historical volatility (REAL)
-    3. Black-Scholes formula apply
-    4. Greeks hesapla
-    5. Score generate (0-100)
+    MAIN FUNCTION - Compatible with ai_brain.py
+    Black-Scholes with REAL market data
     
     Args:
-        symbol (str): Trading pair (BTCUSDT, ETHUSDT)
-        interval (str): Timeframe
+        symbol (str): Trading pair
         
     Returns:
-        dict: {'available': bool, 'score': float, 'signal': str, ...}
+        dict: {'score': float, 'signal': str, 'available': bool}
     """
     debug = {}
     
     try:
-        print(f"🔮 Quantum Black-Scholes analyzing {symbol}...")
-        
-        # 1. Get REAL price
+        # Get REAL price
         S = get_crypto_price(symbol)
         if S is None:
-            print(f"❌ Price fetch failed for {symbol}")
             debug['error'] = "Price fetch failed"
             return {
                 'available': False,
@@ -115,108 +102,61 @@ def get_quantum_black_scholes_signal(symbol, interval='1h'):
                 'data_debug': debug
             }
         
-        print(f" 💰 Spot Price: ${S:.2f}")
-        
-        # 2. Get REAL volatility
+        # Get REAL volatility
         sigma = calculate_realized_volatility(symbol, days=30)
-        print(f" 📊 Realized Volatility: {sigma:.2%}")
         
-        # 3. Black-Scholes parameters
-        K_atm = S  # At-the-money
-        T = 30 / 365  # 30 days to expiry
-        r = 0.045  # Risk-free rate
+        # Parameters
+        K_atm = S
+        T = 30 / 365
+        r = 0.045
         
-        # 4. Calculate call option price
+        # Calculate
         call_price = black_scholes_call(S, K_atm, T, r, sigma)
-        print(f" 📈 Call Option Price: ${call_price:.4f}")
-        
-        # 5. Greeks
         greeks = calculate_greeks(S, K_atm, T, r, sigma)
+        
+        # Score
+        score = 50.0
         delta = greeks['delta']
         gamma = greeks['gamma']
         vega = greeks['vega']
-        theta = greeks['theta']
         
-        print(f" Δ (Delta): {delta:.4f}")
-        print(f" Γ (Gamma): {gamma:.6f}")
-        print(f" ν (Vega): {vega:.4f}")
-        print(f" Θ (Theta): {theta:.4f}")
-        
-        # 6. Score calculation
-        score = 50.0
-        
-        # Delta component (bullish if > 0.5)
+        # Delta component
         delta_score = (delta - 0.5) * 100
         score += delta_score * 0.4
         
-        # Gamma component (convexity)
+        # Gamma component
         avg_gamma = 0.0001
         gamma_normalized = min(gamma / avg_gamma, 2.0) - 1.0
         score += gamma_normalized * 15
         
-        # Vega component (volatility sensitivity)
+        # Vega component
         avg_vega = 50
         vega_normalized = min(vega / avg_vega, 2.0) - 1.0
         score += vega_normalized * 15
         
-        # Theta component (time decay)
-        theta_normalized = np.clip(theta / 10, -1, 1)
-        score += theta_normalized * 10
-        
         # Volatility regime
         if sigma > 0.8:
             score += 10
-            print(f" ⚠️ High volatility regime (+10)")
         elif sigma < 0.3:
             score -= 10
-            print(f" ✅ Low volatility regime (-10)")
         
         score = max(0, min(100, score))
         
-        print(f"✅ Black-Scholes Score: {score:.1f}/100")
-        
-        # Signal
-        if score >= 65:
-            signal = "LONG"
-        elif score <= 35:
-            signal = "SHORT"
-        else:
-            signal = "NEUTRAL"
+        signal = "LONG" if score >= 65 else ("SHORT" if score <= 35 else "NEUTRAL")
         
         return {
             'available': True,
             'score': round(score, 2),
             'signal': signal,
-            'delta': round(delta, 4),
-            'gamma': round(gamma, 6),
-            'vega': round(vega, 4),
-            'theta': round(theta, 4),
-            'volatility': round(sigma, 4),
-            'timestamp': datetime.now().isoformat(),
             'data_debug': debug
         }
         
     except Exception as e:
-        print(f"❌ Quantum Black-Scholes error: {e}")
         debug['exception'] = str(e)
         return {
             'available': False,
             'score': 50.0,
             'signal': 'NEUTRAL',
-            'error_message': str(e),
+            'error': str(e),
             'data_debug': debug
         }
-
-
-if __name__ == "__main__":
-    print("="*80)
-    print("🔮 QUANTUM BLACK-SCHOLES LAYER TEST")
-    print("="*80)
-    
-    test_symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
-    for symbol in test_symbols:
-        print(f"\n📊 Testing {symbol}:")
-        result = get_quantum_black_scholes_signal(symbol)
-        print(f" Score: {result['score']}, Signal: {result['signal']}")
-        if 'data_debug' in result:
-            print(f" Debug: {result['data_debug']}\n")
