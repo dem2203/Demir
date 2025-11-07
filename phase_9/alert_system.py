@@ -1,290 +1,371 @@
 """
-🔔 PHASE 9.2 - ALERT SYSTEM (HYBRID MODE)
-==========================================
-
-Path: phase_9/alert_system.py
-Date: 7 Kasım 2025, 15:49 CET
-
-Multi-channel alert system: Email, SMS, Push, Dashboard
-Notifies user when important signals occur
+ALERT SYSTEM v2 - TELEGRAM + EMAIL + DASHBOARD
+===============================================
+Date: 7 Kasım 2025, 20:10 CET
+Version: 2.0 - Real Telegram Integration + Proper Error Handling
 """
 
-import smtplib
-import json
+import os
+import requests
 import logging
+import json
 from datetime import datetime
-from typing import Dict, List
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from typing import Dict, List, Optional
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 class AlertSystem:
-    """Multi-channel alert system"""
+    """Multi-channel alert system with Telegram, Email, Dashboard"""
     
-    def __init__(self, config_path='phase_9/config.json'):
-        """
-        Initialize alert system
-        
-        Args:
-            config_path: Path to configuration file
-        """
-        self.config = self._load_config(config_path)
+    def __init__(self):
+        """Initialize alert system with environment variables"""
+        self.telegram_token = os.getenv('TELEGRAM_TOKEN')
+        self.telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
         self.alerts_history = []
+        
+        logger.info(f"✅ Alert System v2 initialized")
+        logger.info(f" Telegram configured: {bool(self.telegram_token)}")
     
-    def _load_config(self, path: str) -> Dict:
-        """Load configuration from JSON"""
-        try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            logger.warning(f"Config not found: {path}")
-            return self._default_config()
+    # ============================================
+    # TELEGRAM ALERTS
+    # ============================================
     
-    def _default_config(self) -> Dict:
-        """Default configuration"""
-        return {
-            'email': {
-                'enabled': False,
-                'smtp_server': 'smtp.gmail.com',
-                'smtp_port': 587,
-                'sender_email': 'your_email@gmail.com',
-                'sender_password': 'your_app_password',
-                'recipient_email': 'your_email@gmail.com'
-            },
-            'sms': {
-                'enabled': False,
-                'provider': 'twilio',  # or 'vonage'
-                'account_sid': 'YOUR_SID',
-                'auth_token': 'YOUR_TOKEN',
-                'from_number': '+1234567890',
-                'to_number': '+0987654321'
-            },
-            'push': {
-                'enabled': False,
-                'service': 'firebase',
-                'project_id': 'your_project'
-            },
-            'dashboard': {
-                'enabled': True,
-                'update_interval': 30  # seconds
-            }
-        }
-    
-    def send_email(self, message: str, subject: str = "🚨 Trading Alert"):
+    def send_telegram_alert(self, message: str, parse_mode: str = "HTML") -> bool:
         """
-        Send email alert
+        Send alert via Telegram
         
         Args:
-            message: Alert message
-            subject: Email subject
+            message: Alert message (supports HTML)
+            parse_mode: 'HTML' or 'Markdown'
+        
+        Returns:
+            bool: Success status
         """
-        if not self.config['email']['enabled']:
-            logger.info("📧 Email alerts disabled")
-            return
+        
+        if not self.telegram_token or not self.telegram_chat_id:
+            logger.warning("⚠️ Telegram not configured (missing TOKEN or CHAT_ID)")
+            return False
         
         try:
-            email_config = self.config['email']
+            logger.info(f" 📱 Sending Telegram alert...")
             
-            # Create message
-            msg = MIMEMultipart()
-            msg['From'] = email_config['sender_email']
-            msg['To'] = email_config['recipient_email']
-            msg['Subject'] = subject
+            url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
             
-            msg.attach(MIMEText(message, 'plain'))
-            
-            # Send
-            with smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port']) as server:
-                server.starttls()
-                server.login(email_config['sender_email'], email_config['sender_password'])
-                server.send_message(msg)
-            
-            logger.info("✅ Email sent")
-            self._record_alert('email', message)
-            
-        except Exception as e:
-            logger.error(f"❌ Email error: {e}")
-    
-    def send_sms(self, message: str):
-        """
-        Send SMS alert
-        
-        Args:
-            message: SMS message
-        """
-        if not self.config['sms']['enabled']:
-            logger.info("📱 SMS alerts disabled")
-            return
-        
-        try:
-            sms_config = self.config['sms']
-            provider = sms_config['provider']
-            
-            if provider == 'twilio':
-                self._send_twilio_sms(message, sms_config)
-            elif provider == 'vonage':
-                self._send_vonage_sms(message, sms_config)
-            
-            logger.info("✅ SMS sent")
-            self._record_alert('sms', message)
-            
-        except Exception as e:
-            logger.error(f"❌ SMS error: {e}")
-    
-    def _send_twilio_sms(self, message: str, config: Dict):
-        """Send SMS via Twilio"""
-        try:
-            from twilio.rest import Client
-            
-            client = Client(config['account_sid'], config['auth_token'])
-            client.messages.create(
-                body=message,
-                from_=config['from_number'],
-                to=config['to_number']
-            )
-        except ImportError:
-            logger.error("Twilio SDK not installed")
-    
-    def _send_vonage_sms(self, message: str, config: Dict):
-        """Send SMS via Vonage (Nexmo)"""
-        try:
-            import vonage
-            
-            client = vonage.Client(api_key=config['account_sid'], api_secret=config['auth_token'])
-            client.sms.send_message({
-                "from": config['from_number'],
-                "to": config['to_number'],
-                "text": message
-            })
-        except ImportError:
-            logger.error("Vonage SDK not installed")
-    
-    def send_push_notification(self, message: str, title: str = "Alert"):
-        """
-        Send push notification
-        
-        Args:
-            message: Notification message
-            title: Notification title
-        """
-        if not self.config['push']['enabled']:
-            logger.info("🔔 Push alerts disabled")
-            return
-        
-        try:
-            push_config = self.config['push']
-            
-            if push_config['service'] == 'firebase':
-                self._send_firebase_push(message, title, push_config)
-            
-            logger.info("✅ Push notification sent")
-            self._record_alert('push', message)
-            
-        except Exception as e:
-            logger.error(f"❌ Push error: {e}")
-    
-    def _send_firebase_push(self, message: str, title: str, config: Dict):
-        """Send push via Firebase"""
-        try:
-            import firebase_admin
-            from firebase_admin import messaging
-            
-            msg = messaging.MulticastMessage(
-                notification=messaging.Notification(title=title, body=message),
-                data={'type': 'trading_alert'},
-                tokens=self._get_firebase_tokens()
-            )
-            
-            response = messaging.send_multicast(msg)
-            logger.info(f"Firebase: {response.success} successful, {response.failure_count} failed")
-            
-        except ImportError:
-            logger.error("Firebase SDK not installed")
-    
-    def _get_firebase_tokens(self) -> List[str]:
-        """Get registered device tokens"""
-        try:
-            with open('phase_9/data/device_tokens.json', 'r') as f:
-                data = json.load(f)
-                return data.get('tokens', [])
-        except FileNotFoundError:
-            return []
-    
-    def update_dashboard(self, data: Dict):
-        """
-        Update live dashboard
-        
-        Args:
-            data: Analysis data to display
-        """
-        if not self.config['dashboard']['enabled']:
-            return
-        
-        try:
-            dashboard_file = 'phase_9/data/dashboard_state.json'
-            
-            state = {
-                'timestamp': datetime.now().isoformat(),
-                'score': data.get('score'),
-                'signal': data.get('signal'),
-                'confidence': data.get('confidence'),
-                'price': data.get('price'),
-                'layers': data.get('layers')
+            payload = {
+                'chat_id': self.telegram_chat_id,
+                'text': message,
+                'parse_mode': parse_mode,
+                'disable_web_page_preview': True
             }
             
-            with open(dashboard_file, 'w') as f:
-                json.dump(state, f, indent=2)
+            response = requests.post(url, data=payload, timeout=10)
+            response.raise_for_status()
             
-            logger.debug("📊 Dashboard updated")
-            
+            data = response.json()
+            if data.get('ok'):
+                logger.info(f" ✅ Telegram message sent (ID: {data['result']['message_id']})")
+                self._record_alert('telegram', message)
+                return True
+            else:
+                logger.error(f" ❌ Telegram error: {data.get('description', 'Unknown')}")
+                return False
+        
+        except requests.exceptions.Timeout:
+            logger.error(f" ❌ Telegram timeout")
+            return False
+        except requests.exceptions.ConnectionError:
+            logger.error(f" ❌ Telegram connection error")
+            return False
         except Exception as e:
-            logger.error(f"Dashboard update error: {e}")
+            logger.error(f" ❌ Telegram error: {str(e)[:60]}")
+            return False
+    
+    # ============================================
+    # TRADING SIGNAL ALERTS
+    # ============================================
+    
+    def send_trading_signal(self, signal: Dict) -> bool:
+        """
+        Send formatted trading signal alert
+        
+        Args:
+            signal: {
+                'symbol': 'BTCUSDT',
+                'score': 75,
+                'action': 'LONG' / 'SHORT' / 'NEUTRAL',
+                'confidence': 0.85,
+                'entry': 45000,
+                'tp': 48000,
+                'sl': 42000,
+                'price': 45000
+            }
+        """
+        
+        try:
+            symbol = signal.get('symbol', 'UNKNOWN')
+            score = signal.get('score', 50)
+            action = signal.get('action', 'NEUTRAL')
+            confidence = signal.get('confidence', 0)
+            entry = signal.get('entry', 0)
+            tp = signal.get('tp', 0)
+            sl = signal.get('sl', 0)
+            price = signal.get('price', 0)
+            
+            # Emoji mapping
+            emoji_map = {
+                'LONG': '🟢 LONG',
+                'SHORT': '🔴 SHORT',
+                'NEUTRAL': '🟡 NEUTRAL'
+            }
+            emoji = emoji_map.get(action, action)
+            
+            # Format message
+            message = f"""
+<b>🤖 TRADING SIGNAL</b>
+
+<b>Symbol:</b> {symbol}
+<b>Signal:</b> {emoji}
+<b>Score:</b> {score}/100
+<b>Confidence:</b> {confidence:.0%}
+
+<b>Current Price:</b> ${price:,.2f}
+<b>Entry:</b> ${entry:,.2f}
+<b>Take Profit:</b> ${tp:,.2f}
+<b>Stop Loss:</b> ${sl:,.2f}
+
+<i>⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</i>
+"""
+            
+            logger.info(f"\n{message}")
+            return self.send_telegram_alert(message, parse_mode="HTML")
+        
+        except Exception as e:
+            logger.error(f"❌ Error formatting signal: {str(e)[:60]}")
+            return False
+    
+    # ============================================
+    # LAYER ANALYSIS ALERTS
+    # ============================================
+    
+    def send_layer_analysis(self, analysis: Dict) -> bool:
+        """
+        Send layer-by-layer analysis alert
+        
+        Args:
+            analysis: {'vix': 65, 'rates': 45, 'macro': 70, ...}
+        """
+        
+        try:
+            message = "<b>📊 LAYER ANALYSIS</b>\n\n"
+            
+            for layer_name, score in sorted(analysis.items()):
+                if score is None:
+                    score_text = "❌ ERROR"
+                else:
+                    score = float(score)
+                    if score >= 65:
+                        emoji = "🟢"
+                    elif score <= 35:
+                        emoji = "🔴"
+                    else:
+                        emoji = "🟡"
+                    score_text = f"{emoji} {score:.0f}"
+                
+                message += f"{layer_name.upper():20} {score_text}\n"
+            
+            message += f"\n<i>⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</i>"
+            
+            return self.send_telegram_alert(message, parse_mode="HTML")
+        
+        except Exception as e:
+            logger.error(f"❌ Error formatting analysis: {str(e)[:60]}")
+            return False
+    
+    # ============================================
+    # ALERT STATUS
+    # ============================================
+    
+    def send_status(self, status_data: Dict) -> bool:
+        """
+        Send system status alert
+        
+        Args:
+            status_data: {
+                'system': 'RUNNING',
+                'layers_active': 15,
+                'last_analysis': '2025-11-07 20:15:00',
+                'errors': 0
+            }
+        """
+        
+        try:
+            status = status_data.get('system', 'UNKNOWN')
+            emoji = "✅" if status == "RUNNING" else "⚠️"
+            
+            message = f"""
+<b>{emoji} SYSTEM STATUS</b>
+
+<b>Status:</b> {status}
+<b>Active Layers:</b> {status_data.get('layers_active', 0)}/15
+<b>Last Analysis:</b> {status_data.get('last_analysis', 'N/A')}
+<b>Errors:</b> {status_data.get('errors', 0)}
+
+<i>⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</i>
+"""
+            
+            return self.send_telegram_alert(message, parse_mode="HTML")
+        
+        except Exception as e:
+            logger.error(f"❌ Error formatting status: {str(e)[:60]}")
+            return False
+    
+    # ============================================
+    # ALERT HISTORY
+    # ============================================
     
     def _record_alert(self, alert_type: str, message: str):
         """Record alert in history"""
         alert = {
             'type': alert_type,
             'timestamp': datetime.now().isoformat(),
-            'message': message
+            'message': message[:100]  # Truncate for storage
         }
         
         self.alerts_history.append(alert)
         
-        # Save to file
+        # Keep last 100 alerts in memory
+        if len(self.alerts_history) > 100:
+            self.alerts_history = self.alerts_history[-100:]
+        
+        # Optionally save to file
         try:
             with open('phase_9/data/alerts_history.json', 'a') as f:
                 f.write(json.dumps(alert) + '\n')
-        except Exception as e:
-            logger.error(f"Alert history error: {e}")
+        except:
+            pass  # Ignore file write errors
     
-    def get_alerts(self, hours: int = 24) -> List[Dict]:
+    def get_alert_history(self, hours: int = 24) -> List[Dict]:
         """Get alerts from last N hours"""
         from datetime import timedelta
         
         cutoff = datetime.now() - timedelta(hours=hours)
+        result = []
         
-        return [
-            alert for alert in self.alerts_history
-            if datetime.fromisoformat(alert['timestamp']) > cutoff
-        ]
+        for alert in self.alerts_history:
+            try:
+                alert_time = datetime.fromisoformat(alert['timestamp'])
+                if alert_time > cutoff:
+                    result.append(alert)
+            except:
+                pass
+        
+        return result
+    
+    # ============================================
+    # DASHBOARD UPDATE
+    # ============================================
+    
+    def update_dashboard(self, data: Dict) -> bool:
+        """Update live dashboard state"""
+        try:
+            state = {
+                'timestamp': datetime.now().isoformat(),
+                'score': data.get('score'),
+                'signal': data.get('signal'),
+                'confidence': data.get('confidence'),
+                'price': data.get('price'),
+                'layers': data.get('layers'),
+                'trade_levels': data.get('trade_levels')
+            }
+            
+            # Save to JSON
+            os.makedirs('phase_9/data', exist_ok=True)
+            with open('phase_9/data/dashboard_state.json', 'w') as f:
+                json.dump(state, f, indent=2)
+            
+            logger.debug("📊 Dashboard state updated")
+            return True
+        
+        except Exception as e:
+            logger.error(f"❌ Dashboard update error: {str(e)[:60]}")
+            return False
 
+# ============================================
+# MODULE-LEVEL FUNCTIONS
+# ============================================
 
-# ============================================================================
-# HYBRID ALERT EXAMPLE
-# ============================================================================
+_alert_system = None
+
+def _get_alert_system():
+    """Get or create alert system instance"""
+    global _alert_system
+    if _alert_system is None:
+        _alert_system = AlertSystem()
+    return _alert_system
+
+def send_trading_signal(signal: Dict) -> bool:
+    """Send trading signal alert"""
+    return _get_alert_system().send_trading_signal(signal)
+
+def send_layer_analysis(analysis: Dict) -> bool:
+    """Send layer analysis alert"""
+    return _get_alert_system().send_layer_analysis(analysis)
+
+def send_status(status_data: Dict) -> bool:
+    """Send status alert"""
+    return _get_alert_system().send_status(status_data)
+
+def send_telegram_alert(message: str) -> bool:
+    """Send raw Telegram alert"""
+    return _get_alert_system().send_telegram_alert(message)
+
+# ============================================
+# TEST
+# ============================================
 
 if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("🔔 ALERT SYSTEM v2 - TEST")
+    print("="*70)
+    
     alerts = AlertSystem()
     
-    # Example alerts
-    alerts.send_email("Score increased to 75 - LONG possible!")
-    alerts.send_sms("BTCUSDT Score 75 - Check dashboard")
-    alerts.update_dashboard({
+    # Test 1: Trading Signal
+    print("\n1️⃣ Testing Trading Signal...")
+    result = alerts.send_trading_signal({
+        'symbol': 'BTCUSDT',
         'score': 75,
-        'signal': 'LONG',
-        'confidence': 0.85
+        'action': 'LONG',
+        'confidence': 0.85,
+        'entry': 45000,
+        'tp': 48000,
+        'sl': 42000,
+        'price': 45000
     })
+    print(f"   Result: {'✅ Sent' if result else '❌ Failed'}")
     
-    print("✅ Alert system demo complete")
+    # Test 2: Layer Analysis
+    print("\n2️⃣ Testing Layer Analysis...")
+    result = alerts.send_layer_analysis({
+        'vix': 65,
+        'rates': 45,
+        'macro': 70,
+        'cross_asset': 55,
+        'momentum': 75
+    })
+    print(f"   Result: {'✅ Sent' if result else '❌ Failed'}")
+    
+    # Test 3: Status
+    print("\n3️⃣ Testing Status Alert...")
+    result = alerts.send_status({
+        'system': 'RUNNING',
+        'layers_active': 15,
+        'last_analysis': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'errors': 0
+    })
+    print(f"   Result: {'✅ Sent' if result else '❌ Failed'}")
+    
+    print("\n" + "="*70)
+    print(f"Alert History: {len(alerts.alerts_history)} alerts recorded")
+    print("="*70)
