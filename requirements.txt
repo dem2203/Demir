@@ -11,6 +11,9 @@
 # ✅ Python 3.10 compatible (Render default)
 # ✅ All packages latest stable versions
 # ✅ NO pre-release versions
+#
+# UPDATED (8 Nov 2025):
+# ✅ Added Phase 13-16 Production Systems (NO BREAKING CHANGES)
 # ============================================================================
 
 # ============================================================================
@@ -55,7 +58,7 @@ arch>=5.3.1              # GARCH models for volatility forecasting
 # WEBSOCKET & REAL-TIME DATA (Phase 4.1)
 # ============================================================================
 websocket-client>=1.6.0  # WebSocket connections
-python-binance>=1.0.17   # Binance API wrapper
+python-binance>=1.0.17   # Binance API wrapper (Futures support)
 
 # ============================================================================
 # DATABASE (Phase 5) - sqlite3 is built-in!
@@ -97,6 +100,28 @@ schedule>=1.2.0          # Phase 9 scheduler (7/24 monitoring)
 APScheduler>=3.10.0      # Advanced scheduling
 
 # ============================================================================
+# PHASE 10-12: CONSCIOUSNESS ENGINE
+# ============================================================================
+hmmlearn>=0.3.0          # Hidden Markov Models (regime detection)
+pykalman>=0.9.5          # Kalman Filter (smoothing)
+
+# ============================================================================
+# PHASE 13-16: PRODUCTION SYSTEMS (NEW ADDITIONS - 8 Nov 2025)
+# ============================================================================
+# System Monitoring (Phase 14: Watchdog)
+psutil>=5.9.0            # System resource monitoring & health checks
+
+# Configuration Management (Phase 15-16)
+PyYAML>=6.0              # Config files (integration_config.yaml)
+
+# Testing & Performance (Phase 15)
+pytest>=7.4.0            # Unit testing framework
+pytest-asyncio>=0.21.0   # Async testing support
+
+# Distributed Caching (Phase 14: Daemon state sharing - OPTIONAL)
+redis>=5.0.0             # Redis client (optional for multi-instance)
+
+# ============================================================================
 # PHASE 9: OPTIONAL ALERT CHANNELS
 # ============================================================================
 # Uncomment if using SMS alerts:
@@ -111,17 +136,12 @@ APScheduler>=3.10.0      # Advanced scheduling
 # ============================================================================
 # kaleido>=0.2.1          # Uncomment for PNG export (chart_generator.py)
 
-
-hmmlearn>=0.3.0          # Hidden Markov Models
-pykalman>=0.9.5          # Kalman Filter
-statsmodels>=0.14.0      # Advanced statistics
-
 # ============================================================================
 # RENDER DEPLOYMENT NOTES:
 # ============================================================================
 # 1. Python Version: 3.10 (Render default)
 # 2. Build Command: pip install -r requirements.txt
-# 3. Start Command: streamlit run streamlit_app.py --server.port=10000
+# 3. Start Command: . ./.venv/bin/activate && python main.py & streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
 #
 # IF BUILD STILL FAILS:
 # - Remove 'twilio' line (if not using SMS)
@@ -131,4 +151,10 @@ statsmodels>=0.14.0      # Advanced statistics
 #
 # For APScheduler issue, use:
 # pip install APScheduler==3.10.0 --no-binary APScheduler
+#
+# PHASE 13-16 ADDITIONS:
+# - psutil: System monitoring for Watchdog (Phase 14)
+# - PyYAML: Config management (Phase 15-16)
+# - pytest: Testing framework (Phase 15)
+# - redis: Optional distributed caching (Phase 14)
 # ============================================================================
