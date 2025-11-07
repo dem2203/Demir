@@ -1,124 +1,61 @@
-# requirements.txt - RENDER OPTIMIZED
-# ============================================================================
-# Date: 7 Kasım 2025, 16:15 CET
-# Version: RENDER-DEPLOYMENT OPTIMIZED
-# 
-# FIXED (7 Nov 2025):
-# ✅ schedule==1.2.2 (max available)
-# ✅ Removed TensorFlow (too heavy for Render free tier)
-# ✅ Using scikit-learn instead of TensorFlow
-# ✅ Lightweight dependencies for Render
-# ✅ Python 3.10 compatible
-#
-# TESTED ON: Render.com free tier
-# ============================================================================
+# Requirements.txt v3 - UPDATED WITH REAL DATA
+# Date: 7 Kasım 2025, 20:45 CET
 
-# ============================================================================
-# CORE STREAMLIT & WEB
-# ============================================================================
-streamlit>=1.28.0
-requests>=2.31.0
+# Core
+streamlit==1.28.1
+pandas==1.5.3
+numpy==1.24.3
+python-dateutil==2.8.2
 
-# ============================================================================
-# DATA PROCESSING & ANALYSIS
-# ============================================================================
-pandas>=2.0.0
-numpy>=1.24.0
+# API & Data
+yfinance==0.2.32
+requests==2.31.0
+ccxt==2.73.62
 
-# ============================================================================
-# VISUALIZATION
-# ============================================================================
-plotly>=5.17.0
-matplotlib>=3.7.0
+# Visualization
+plotly==5.17.0
+matplotlib==3.7.2
+seaborn==0.12.2
 
-# ============================================================================
-# TECHNICAL ANALYSIS (Phase 1-5)
-# ============================================================================
-ta>=0.11.0
-scipy>=1.11.0
+# Analysis & ML
+scikit-learn==1.3.0
+scipy==1.11.3
+statsmodels==0.14.0
+ta==0.10.2
 
-# ============================================================================
-# MACHINE LEARNING (Phase 3B+)
-# ============================================================================
-scikit-learn>=1.3.0
-statsmodels>=0.14.0
-xgboost==2.0.3
+# Technical Analysis
+ta-lib==0.4.28
 
-# ============================================================================
-# NEURAL NETWORKS - Phase 8 META-LEARNER
-# ============================================================================
-# NOTE: TensorFlow removed due to Render size constraints
-# Using scikit-learn RandomForest as meta-learner instead
-# lightgbm>=4.0.0  # Alternative lightweight ML (OPTIONAL)
+# Database
+sqlite3  # Built-in
+SQLAlchemy==2.0.21
 
-# ============================================================================
-# GARCH VOLATILITY (Phase 3 Backtest)
-# ============================================================================
-arch>=5.3.1
+# Async/Concurrency
+aiohttp==3.8.5
+asyncio-contextmanager==1.0.0
 
-# ============================================================================
-# WEBSOCKET & REAL-TIME DATA (Phase 4.1)
-# ============================================================================
-websocket-client>=1.6.0
-python-binance>=1.0.17
+# JSON/Config
+python-dotenv==1.0.0
+PyYAML==6.0.1
 
-# ============================================================================
-# DATABASE (Phase 5) - sqlite3 built-in!
-# ============================================================================
-sqlalchemy>=2.0.0
+# Telegram
+python-telegram-bot==20.2
 
-# ============================================================================
-# ASYNC & THREADING (Phase 4+)
-# ============================================================================
-aiohttp>=3.9.0
+# Utilities
+tqdm==4.66.1
+loguru==0.7.2
+pytz==2023.3
+tzlocal==5.0.1
 
-# ============================================================================
-# UTILITIES
-# ============================================================================
-python-dotenv>=1.0.0
-pytz>=2023.3
+# Development
+pytest==7.4.2
+pytest-asyncio==0.21.1
 
-# ============================================================================
-# PHASE 3 AUTOMATION - TELEGRAM ALERTS
-# ============================================================================
-python-telegram-bot>=20.0
+# News/Sentiment
+newsapi==0.0.1
+textblob==0.17.1
+VADER-Sentiment==3.3.2
 
-# ============================================================================
-# PHASE 5 AUTHENTICATION
-# ============================================================================
-bcrypt>=4.1.1
-
-# ============================================================================
-# NEWS & MARKET DATA
-# ============================================================================
-textblob==0.18.0
-yfinance==0.2.36
-fredapi==0.5.1
-
-# ============================================================================
-# PHASE 8: ADAPTIVE WEIGHTING & OPTIMIZATION
-# ============================================================================
-schedule==1.2.2         # Phase 9 scheduler (7/24 monitoring) - FIXED VERSION
-
-# ============================================================================
-# PHASE 9: HYBRID AUTONOMOUS MODE - ALERTS
-# ============================================================================
-twilio==8.10.0           # SMS alerts (Twilio)
-vonage==4.1.0            # SMS alerts (Vonage alternative)
-firebase-admin==6.2.0    # Push notifications
-email-validator==2.1.0   # Email validation
-
-# ============================================================================
-# RENDER-SPECIFIC OPTIMIZATIONS
-# ============================================================================
-gunicorn>=21.0.0         # WSGI for Render deployment
-
-# ============================================================================
-# INSTALLATION FOR RENDER:
-# pip install -r requirements.txt
-#
-# IF BUILD FAILS:
-# 1. Remove firebase-admin (if not using push)
-# 2. Remove twilio/vonage (if not using SMS)
-# 3. Remove yfinance (if not using)
-# ============================================================================
+# HTTP Client
+httpx==0.24.1
+urllib3==2.0.5
