@@ -1,26 +1,26 @@
 # ===========================================
 # news_sentiment_layer.py v2.0 - CRYPTOPANIC API
 # ===========================================
-# ✅ CryptoPanic API for real crypto news
-# ✅ Sentiment analysis (positive/negative/neutral)
-# ✅ Importance filtering
-# ✅ Multi-coin support
+# âœ… CryptoPanic API for real crypto news
+# âœ… Sentiment analysis (positive/negative/neutral)
+# âœ… Importance filtering
+# âœ… Multi-coin support
 # ===========================================
 
 """
-🔱 DEMIR AI TRADING BOT - News Sentiment Layer v2.0
+ğŸ”± DEMIR AI TRADING BOT - News Sentiment Layer v2.0
 ====================================================================
-Tarih: 3 Kasım 2025, 22:25 CET
+Tarih: 3 KasÄ±m 2025, 22:25 CET
 Versiyon: 2.0 - REAL CRYPTOPANIC DATA + SENTIMENT ANALYSIS
 
-YENİ v2.0:
+YENÄ° v2.0:
 ----------
-✅ CryptoPanic API integration
-✅ Real-time crypto news
-✅ Sentiment classification (positive/negative/neutral)
-✅ Importance weighting (hot/important/regular)
-✅ Multi-coin filtering (BTC, ETH, LTC)
-✅ Time-decay scoring
+âœ… CryptoPanic API integration
+âœ… Real-time crypto news
+âœ… Sentiment classification (positive/negative/neutral)
+âœ… Importance weighting (hot/important/regular)
+âœ… Multi-coin filtering (BTC, ETH, LTC)
+âœ… Time-decay scoring
 
 DATA SOURCE:
 ------------
@@ -31,9 +31,9 @@ DATA SOURCE:
 
 SCORING LOGIC:
 --------------
-Positive sentiment → 60-80 (bullish)
-Negative sentiment → 20-40 (bearish)
-Neutral/Mixed → 45-55 (neutral)
+Positive sentiment â†’ 60-80 (bullish)
+Negative sentiment â†’ 20-40 (bearish)
+Neutral/Mixed â†’ 45-55 (neutral)
 
 Importance multiplier:
 - Hot news: 2x weight
@@ -70,7 +70,7 @@ def get_cryptopanic_news(currency: str = 'BTC', filter_type: str = 'rising') -> 
     api_key = os.getenv('CRYPTOPANIC_KEY')
     
     if not api_key:
-        print("⚠️ CRYPTOPANIC_KEY not set in environment")
+        print("âš ï¸ CRYPTOPANIC_KEY not set in environment")
         return []
     
     try:
@@ -88,14 +88,14 @@ def get_cryptopanic_news(currency: str = 'BTC', filter_type: str = 'rising') -> 
         
         if 'results' in data:
             news_list = data['results']
-            print(f"✅ CryptoPanic: {len(news_list)} news articles fetched ({currency})")
+            print(f"âœ… CryptoPanic: {len(news_list)} news articles fetched ({currency})")
             return news_list
         else:
-            print("⚠️ CryptoPanic: No results in response")
+            print("âš ï¸ CryptoPanic: No results in response")
             return []
         
     except Exception as e:
-        print(f"❌ CryptoPanic API error: {e}")
+        print(f"âŒ CryptoPanic API error: {e}")
         return []
 
 
@@ -124,7 +124,7 @@ def classify_sentiment(news_item: Dict[str, Any]) -> str:
             return 'neutral'
         
     except Exception as e:
-        print(f"❌ Sentiment classification error: {e}")
+        print(f"âŒ Sentiment classification error: {e}")
         return 'neutral'
 
 
@@ -176,7 +176,7 @@ def calculate_time_decay(published_at: str) -> float:
             return 0.25
         
     except Exception as e:
-        print(f"❌ Time decay error: {e}")
+        print(f"âŒ Time decay error: {e}")
         return 0.5
 
 
@@ -256,7 +256,7 @@ def calculate_weighted_sentiment(news_list: List[Dict[str, Any]]) -> Dict[str, A
             weighted_scores.append(weighted_score)
             
         except Exception as e:
-            print(f"❌ News scoring error: {e}")
+            print(f"âŒ News scoring error: {e}")
             continue
     
     # Calculate final score
@@ -298,7 +298,7 @@ def analyze_news_sentiment(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
         dict with score, signal, and sentiment details
     """
     print(f"\n{'='*80}")
-    print(f"📰 NEWS SENTIMENT LAYER v2.0 - CRYPTOPANIC ANALYSIS")
+    print(f"ğŸ“° NEWS SENTIMENT LAYER v2.0 - CRYPTOPANIC ANALYSIS")
     print(f"   Symbol: {symbol}")
     print(f"{'='*80}\n")
     
@@ -315,7 +315,7 @@ def analyze_news_sentiment(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
     news_list = get_cryptopanic_news(currency, filter_type='rising')
     
     if not news_list:
-        print("❌ News Sentiment: No news available")
+        print("âŒ News Sentiment: No news available")
         return {
             'available': False,
             'score': 50,
@@ -339,14 +339,14 @@ def analyze_news_sentiment(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
             signal = 'NEUTRAL'
         
         # Print results
-        print(f"📊 NEWS ANALYSIS:")
+        print(f"ğŸ“Š NEWS ANALYSIS:")
         print(f"   Total Articles: {sentiment_result['article_count']}")
         print(f"   Positive: {sentiment_result['positive_count']}")
         print(f"   Negative: {sentiment_result['negative_count']}")
         print(f"   Neutral: {sentiment_result['neutral_count']}")
         
         print(f"\n{'='*80}")
-        print(f"✅ NEWS SENTIMENT ANALYSIS COMPLETE!")
+        print(f"âœ… NEWS SENTIMENT ANALYSIS COMPLETE!")
         print(f"   Score: {score:.1f}/100")
         print(f"   Overall Sentiment: {sentiment.upper()}")
         print(f"   Signal: {signal}")
@@ -365,7 +365,7 @@ def analyze_news_sentiment(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
         }
         
     except Exception as e:
-        print(f"❌ News sentiment analysis error: {e}")
+        print(f"âŒ News sentiment analysis error: {e}")
         return {
             'available': False,
             'score': 50,
@@ -397,7 +397,7 @@ def get_news_signal(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
 # ============================================================================
 if __name__ == "__main__":
     print("="*80)
-    print("🔱 NEWS SENTIMENT LAYER v2.0 TEST")
+    print("ğŸ”± NEWS SENTIMENT LAYER v2.0 TEST")
     print("   CRYPTOPANIC API INTEGRATION")
     print("="*80)
     
@@ -405,7 +405,7 @@ if __name__ == "__main__":
     result = get_news_signal('BTCUSDT')
     
     print("\n" + "="*80)
-    print("📊 NEWS SENTIMENT TEST RESULTS:")
+    print("ğŸ“Š NEWS SENTIMENT TEST RESULTS:")
     print(f"   Available: {result['available']}")
     print(f"   Score: {result.get('score', 'N/A')}/100")
     print(f"   Signal: {result.get('signal', 'N/A')}")
