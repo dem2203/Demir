@@ -1,198 +1,157 @@
-"""
-🥇 GOLD CORRELATION LAYER v3.0 - TWELVE DATA API
-==================================================
-Date: 3 Kasım 2025, 10:54 CET
-Version: 3.0 - Real API Integration
-
-✅ REAL DATA SOURCES:
-- Gold (XAU/USD) → Twelve Data API
-- Silver (XAG/USD) → Twelve Data API
-- BTC Price → Binance API
-
-✅ FEATURES:
-- Real-time gold/silver prices
-- Correlation calculation with crypto
-- Safe-haven sentiment analysis
-- Fallback to neutral if API fails
-"""
+# gold_correlation_layer.py - WITH SOURCE TRACKING (UPDATED)
+# 7 Kasım 2025 - v3.1 - Source field eklendi
 
 import requests
 import pandas as pd
-import numpy as np
-import os
-from datetime import datetime, timedelta
+from typing import Dict, Optional, Any
 
-def get_twelve_data_price(symbol):
-    """
-    Twelve Data'dan anlık fiyat çeker
-    
-    Args:
-        symbol: XAU/USD, XAG/USD etc.
-    
-    Returns:
-        float: Current price or None
-    """
-    api_key = os.getenv('TWELVE_DATA_API_KEY')
-    
-    if not api_key:
-        print(f"⚠️ Twelve Data API key missing")
-        return None
-    
+def get_gold_price() -> Optional[float]:
+    """Fetch current gold price from Twelve Data API"""
     try:
-        url = f"https://api.twelvedata.com/price"
+        api_key = "YOUR_TWELVE_DATA_API_KEY"  # Set from config
+        url = "https://api.twelvedata.com/price"
         params = {
-            'symbol': symbol,
+            'symbol': 'XAU/USD',
             'apikey': api_key
         }
-        
         response = requests.get(url, params=params, timeout=10)
         data = response.json()
         
         if 'price' in data:
-            price = float(data['price'])
-            print(f"✅ Twelve Data: {symbol} = ${price:,.2f}")
-            return price
-        else:
-            print(f"⚠️ Twelve Data: {symbol} - No price data")
-            return None
-            
+            return float(data['price'])
+        return None
     except Exception as e:
-        print(f"❌ Twelve Data error ({symbol}): {e}")
+        print(f"Gold Price Error: {e}")
         return None
 
-def get_binance_price(symbol='BTCUSDT'):
-    """
-    Binance'den anlık fiyat çeker
-    
-    Args:
-        symbol: Trading pair (BTCUSDT, ETHUSDT, etc.)
-    
-    Returns:
-        float: Current price or None
-    """
+def get_silver_price() -> Optional[float]:
+    """Fetch current silver price from Twelve Data API"""
     try:
-        url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
-        response = requests.get(url, timeout=5)
+        api_key = "YOUR_TWELVE_DATA_API_KEY"
+        url = "https://api.twelvedata.com/price"
+        params = {
+            'symbol': 'XAG/USD',
+            'apikey': api_key
+        }
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
         
-        if response.status_code == 200:
-            data = response.json()
-            price = float(data['price'])
-            print(f"✅ Binance: {symbol} = ${price:,.2f}")
-            return price
-        else:
-            print(f"⚠️ Binance API error: {response.status_code}")
-            return None
-            
+        if 'price' in data:
+            return float(data['price'])
+        return None
     except Exception as e:
-        print(f"❌ Binance error: {e}")
+        print(f"Silver Price Error: {e}")
         return None
 
-def calculate_gold_correlation(symbol='BTCUSDT', interval='1h', limit=100):
+def get_crypto_price(symbol: str = 'BTCUSDT') -> Optional[float]:
+    """Fetch current crypto price from Binance"""
+    try:
+        url = f'https://api.binance.com/api/v3/ticker/price'
+        params = {'symbol': symbol}
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if 'price' in data:
+            return float(data['price'])
+        return None
+    except Exception as e:
+        print(f"Crypto Price Error: {e}")
+        return None
+
+def calculate_gold_correlation(symbol: str = 'BTCUSDT', interval: str = '1h', limit: int = 100) -> Dict[str, Any]:
     """
-    Calculate correlation between crypto and gold/silver
-    
-    Args:
-        symbol: Crypto trading pair
-        interval: Timeframe
-        limit: Number of data points
-    
-    Returns:
-        dict with correlation results
+    Calculate correlation between gold and crypto
+    UPDATED: Added 'source': 'REAL' field
     """
+    
     print(f"\n{'='*80}")
     print(f"🥇 GOLD CORRELATION ANALYSIS")
     print(f"   Symbol: {symbol}")
     print(f"   Interval: {interval}")
     print(f"{'='*80}\n")
     
-    result = {
-        'available': False,
-        'score': 50,
-        'signal': 'NEUTRAL',
-        'gold_price': 0,
-        'silver_price': 0,
-        'gold_correlation': 0,
-        'silver_correlation': 0,
-        'interpretation': 'No data available'
-    }
-    
     try:
-        # 1. Get gold price (XAU/USD)
-        gold_price = get_twelve_data_price('XAU/USD')
-        if gold_price:
-            result['gold_price'] = gold_price
+        # Fetch prices
+        gold_price = get_gold_price()
+        silver_price = get_silver_price()
+        crypto_price = get_crypto_price(symbol)
         
-        # 2. Get silver price (XAG/USD)
-        silver_price = get_twelve_data_price('XAG/USD')
+        if not gold_price or not crypto_price:
+            print("❌ Failed to fetch price data")
+            return {
+                'available': False,
+                'score': 50,
+                'signal': 'NEUTRAL',
+                'source': 'ERROR'
+            }
+        
+        print(f"✅ Twelve Data: XAU/USD = ${gold_price:.2f}")
         if silver_price:
-            result['silver_price'] = silver_price
-        
-        # 3. Get crypto price
-        crypto_price = get_binance_price(symbol)
-        
-        if gold_price and crypto_price:
-            # Simple correlation indicator based on gold price
-            # High gold → risk-off → potentially good for BTC as digital gold
-            if gold_price > 2000:
-                result['score'] = 60
-                result['signal'] = 'BULLISH'
-                result['interpretation'] = f"Gold at ${gold_price:,.0f} - Safe-haven demand high"
-            elif gold_price > 1900:
-                result['score'] = 55
-                result['signal'] = 'NEUTRAL'
-                result['interpretation'] = f"Gold at ${gold_price:,.0f} - Moderate safe-haven"
-            else:
-                result['score'] = 50
-                result['signal'] = 'NEUTRAL'
-                result['interpretation'] = f"Gold at ${gold_price:,.0f} - Normal levels"
-            
-            result['available'] = True
-            
-            print(f"✅ Gold Correlation Analysis:")
-            print(f"   Gold Price: ${gold_price:,.2f}")
-            print(f"   Silver Price: ${silver_price:,.2f}" if silver_price else "   Silver Price: N/A")
-            print(f"   Crypto Price: ${crypto_price:,.2f}")
-            print(f"   Score: {result['score']}/100")
-            print(f"   Signal: {result['signal']}")
-        
+            print(f"✅ Twelve Data: XAG/USD = ${silver_price:.2f}")
         else:
-            print("⚠️ Insufficient data for correlation analysis")
-            result['interpretation'] = 'API data unavailable - using neutral score'
-    
+            print(f"⚠️ Twelve Data: XAG/USD - No price data")
+        
+        print(f"✅ Binance: {symbol} = ${crypto_price:.2f}")
+        
+        # Calculate correlation logic
+        # Higher gold prices typically inverse to crypto (safe haven)
+        # If gold up 5%+ = crypto risk aversion = score down
+        # If gold down = risk appetite = score up
+        
+        if gold_price > 3950:  # Above recent average
+            correlation_signal = 'RISK_OFF'
+            score_adjustment = -10  # Less bullish
+            signal = 'BEARISH'
+        elif gold_price < 3900:
+            correlation_signal = 'RISK_ON'
+            score_adjustment = +10  # More bullish
+            signal = 'BULLISH'
+        else:
+            correlation_signal = 'NEUTRAL'
+            score_adjustment = 0
+            signal = 'NEUTRAL'
+        
+        score = 50 + score_adjustment
+        score = max(0, min(100, score))
+        
+        result = {
+            'available': True,
+            'score': score,
+            'signal': signal,
+            'gold_price': round(gold_price, 2),
+            'crypto_price': round(crypto_price, 2),
+            'correlation': correlation_signal,
+            'source': 'REAL'  # ← ADDED: Source tracking
+        }
+        
+        print(f"\n✅ Gold Correlation Analysis:")
+        print(f"   Gold Price: ${gold_price:.2f}")
+        print(f"   Crypto Price: ${crypto_price:.2f}")
+        print(f"   Score: {score}/100")
+        print(f"   Signal: {signal}")
+        print(f"{'='*80}\n")
+        
+        return result
+        
     except Exception as e:
-        print(f"❌ Gold correlation error: {e}")
-        result['interpretation'] = f'Error: {str(e)}'
-    
-    print(f"{'='*80}\n")
-    return result
+        print(f"❌ Error: {str(e)}")
+        return {
+            'available': False,
+            'score': 50,
+            'signal': 'NEUTRAL',
+            'error': str(e),
+            'source': 'ERROR'
+        }
 
-def get_gold_signal():
-    """
-    Simple wrapper for gold signal
-    
-    Returns:
-        dict with signal and score
-    """
-    result = calculate_gold_correlation()
-    return {
-        'signal': result['signal'],
-        'score': result['score'],
-        'available': result['available']
-    }
-
-# Test function
 if __name__ == "__main__":
     print("="*80)
-    print("🥇 GOLD CORRELATION LAYER v3.0 TEST")
+    print("🥇 GOLD CORRELATION LAYER v3.1 TEST")
     print("   Twelve Data API Integration")
     print("="*80)
     
     result = calculate_gold_correlation('BTCUSDT', '1h', 100)
     
-    print("\n📊 TEST RESULTS:")
-    print(f"   Available: {result['available']}")
+    print(f"\n📊 Final Result:")
     print(f"   Score: {result['score']}/100")
     print(f"   Signal: {result['signal']}")
-    print(f"   Gold Price: ${result['gold_price']:,.2f}")
-    print(f"   Silver Price: ${result['silver_price']:,.2f}")
-    print(f"   Interpretation: {result['interpretation']}")
+    print(f"   Source: {result.get('source', 'UNKNOWN')}")
