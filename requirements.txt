@@ -1,5 +1,6 @@
-# Requirements.txt v3 - UPDATED WITH REAL DATA
-# Date: 7 Kasım 2025, 20:45 CET
+# Requirements.txt - FIXED VERSION
+# Date: 7 Kasım 2025, 21:20 CET
+# FIXED: CCXT version + Python compatibility
 
 # Core
 streamlit==1.28.1
@@ -10,7 +11,7 @@ python-dateutil==2.8.2
 # API & Data
 yfinance==0.2.32
 requests==2.31.0
-ccxt==2.73.62
+ccxt==4.5.0  # FIXED: Latest available version
 
 # Visualization
 plotly==5.17.0
@@ -23,16 +24,14 @@ scipy==1.11.3
 statsmodels==0.14.0
 ta==0.10.2
 
-# Technical Analysis
-ta-lib==0.4.28
+# Technical Analysis (optional - may fail on Render)
+# ta-lib==0.4.28  # COMMENT OUT if deployment fails
 
 # Database
-sqlite3  # Built-in
 SQLAlchemy==2.0.21
 
 # Async/Concurrency
 aiohttp==3.8.5
-asyncio-contextmanager==1.0.0
 
 # JSON/Config
 python-dotenv==1.0.0
@@ -54,8 +53,10 @@ pytest-asyncio==0.21.1
 # News/Sentiment
 newsapi==0.0.1
 textblob==0.17.1
-VADER-Sentiment==3.3.2
 
 # HTTP Client
 httpx==0.24.1
 urllib3==2.0.5
+
+# Optional - Data validation
+pydantic==2.4.2
