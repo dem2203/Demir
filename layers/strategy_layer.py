@@ -475,6 +475,7 @@ def get_strategy_signal(symbol: str = 'BTCUSDT') -> Dict[str, Any]:
         'score': result.get('score', 50.0),  # ✅ Float guaranteed!
         'signal': result.get('signal', 'NEUTRAL'),
         'current_price': result.get('current_price'),
+        'indicators': result.get('indicators', {}),
         'indicators': result.get('indicators', {})
     }
 
