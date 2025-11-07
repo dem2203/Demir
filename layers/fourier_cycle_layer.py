@@ -1,230 +1,42 @@
 """
-🔮 FOURIER CYCLE LAYER v1.0
-===========================
-Date: 4 Kasım 2025, 09:15 CET
-Phase: 7.4 - Quantum Mathematics
+🔮 FOURIER CYCLE LAYER v16.5
+============================
+
+Date: 7 Kasım 2025, 14:27 CET
+Phase: 7+8 - Quantum Trading AI
 
 AMAÇ:
 -----
-Fast Fourier Transform (FFT) kullanarak market'taki dominant
-cycle'ları tespit etmek. Spectral analysis ile periodic patterns
-bulmak ve cycle phase'ine göre entry timing optimize etmek.
+Fast Fourier Transform (FFT) ile market'taki dominant cycles
+ve periodic patterns tespit etmek. Spectral analysis ile entry
+timing optimize etmek.
 
-MATEMATİK:
-----------
-1. FFT (Fast Fourier Transform):
-   X(f) = Σ x(t)e^(-i2πft)
-   
-   Time domain → Frequency domain dönüşümü
-
-2. Power Spectral Density (PSD):
-   PSD = |X(f)|²
-   
-   Her frekansın gücü
-
-3. Dominant Cycles:
-   - 7-day cycle (weekly pattern)
-   - 30-day cycle (monthly pattern)
-   - 90-day cycle (quarterly pattern)
-
-4. Phase Detection:
-   - Phase = arctan(Im/Re)
-   - Phase 0° = Cycle bottom (BUY)
-   - Phase 90° = Uptrend
-   - Phase 180° = Cycle top (SELL)
-   - Phase 270° = Downtrend
-
-SINYAL LOJİĞİ:
---------------
-- Dominant cycle phase 0-90° → LONG (60-90)
-- Phase 90-180° → Weak LONG (50-65)
-- Phase 180-270° → SHORT (10-40)
-- Phase 270-360° → Weak SHORT (35-50)
-
-Multiple cycles: Weighted average
-
-SKOR: 0-100
+MATHEMATIK:
+-----------
+FFT: X(f) = Σ x(t)e^(-i2πft)  (Time → Frequency domain)
+PSD: |X(f)|²  (Power spectral density)
+Phase: arctan(Im/Re)
+Cycles: 7-day, 30-day, 90-day patterns
 """
 
 import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
 import requests
-from scipy.fft import fft, fftfreq
-from scipy.signal import find_peaks
+import pandas as pd
+from datetime import datetime
 
-# ============================================================================
-# FFT & SPECTRAL ANALYSIS
-# ============================================================================
-
-def calculate_fft_spectrum(prices):
-    """
-    FFT ile frequency spectrum hesapla
-    
-    Args:
-        prices (array): Price series
-        
-    Returns:
-        tuple: (frequencies, power_spectrum, phases)
-    """
-    try:
-        # Detrend (trend'i çıkar)
-        detrended = prices - np.linspace(prices[0], prices[-1], len(prices))
-        
-        # FFT hesapla
-        fft_values = fft(detrended)
-        
-        # Power spectrum
-        power = np.abs(fft_values)**2
-        
-        # Phases
-        phases = np.angle(fft_values)
-        
-        # Frequencies (sampling rate = 1 per candle)
-        frequencies = fftfreq(len(prices), d=1)
-        
-        # Sadece pozitif frekanslar
-        positive_freq_idx = frequencies > 0
-        frequencies = frequencies[positive_freq_idx]
-        power = power[positive_freq_idx]
-        phases = phases[positive_freq_idx]
-        
-        return frequencies, power, phases
-        
-    except Exception as e:
-        print(f"⚠️ FFT calculation error: {e}")
-        return np.array([]), np.array([]), np.array([])
-
-
-def find_dominant_cycles(frequencies, power, min_period=5, max_period=200):
-    """
-    Dominant cycle'ları bul
-    
-    Args:
-        frequencies (array): Frequency values
-        power (array): Power spectrum
-        min_period (int): Minimum cycle period (candles)
-        max_period (int): Maximum cycle period (candles)
-        
-    Returns:
-        list: [(period, power, frequency), ...]
-    """
-    try:
-        # Period = 1 / frequency
-        periods = 1 / frequencies
-        
-        # Filter by period range
-        valid_idx = (periods >= min_period) & (periods <= max_period)
-        periods = periods[valid_idx]
-        power = power[valid_idx]
-        frequencies = frequencies[valid_idx]
-        
-        if len(power) == 0:
-            return []
-        
-        # Find peaks in power spectrum
-        peaks, properties = find_peaks(power, prominence=np.max(power)*0.1)
-        
-        if len(peaks) == 0:
-            # Return top 3 by power
-            top_idx = np.argsort(power)[-3:]
-            return [(periods[i], power[i], frequencies[i]) for i in top_idx]
-        
-        # Sort by power
-        peak_data = [(periods[i], power[i], frequencies[i]) for i in peaks]
-        peak_data.sort(key=lambda x: x[1], reverse=True)
-        
-        # Return top 5
-        return peak_data[:5]
-        
-    except Exception as e:
-        print(f"⚠️ Cycle detection error: {e}")
-        return []
-
-
-def calculate_cycle_phase(prices, period):
-    """
-    Belirli bir cycle için current phase hesapla
-    
-    Args:
-        prices (array): Price series
-        period (float): Cycle period (candles)
-        
-    Returns:
-        float: Phase in degrees (0-360)
-    """
-    try:
-        if period < 2:
-            return 180.0  # Neutral
-        
-        # Last 2 cycle lengths
-        lookback = int(period * 2)
-        recent_prices = prices[-lookback:] if len(prices) > lookback else prices
-        
-        # Detrend
-        detrended = recent_prices - np.linspace(recent_prices[0], recent_prices[-1], len(recent_prices))
-        
-        # FFT
-        fft_values = fft(detrended)
-        
-        # Frequency corresponding to period
-        freq_idx = int(len(recent_prices) / period)
-        if freq_idx >= len(fft_values) // 2:
-            freq_idx = len(fft_values) // 2 - 1
-        
-        # Phase at this frequency
-        phase_rad = np.angle(fft_values[freq_idx])
-        phase_deg = np.degrees(phase_rad)
-        
-        # Normalize to 0-360
-        if phase_deg < 0:
-            phase_deg += 360
-        
-        return phase_deg
-        
-    except Exception as e:
-        print(f"⚠️ Phase calculation error: {e}")
-        return 180.0  # Neutral
-
-
-def interpret_phase(phase):
-    """
-    Phase'e göre sinyal yorumla
-    
-    Args:
-        phase (float): Phase in degrees (0-360)
-        
-    Returns:
-        tuple: (signal, strength)
-    """
-    if 0 <= phase < 90:
-        return "STRONG_LONG", 1.0  # Bottom to uptrend
-    elif 90 <= phase < 180:
-        return "LONG", 0.6  # Uptrend to top
-    elif 180 <= phase < 270:
-        return "SHORT", 1.0  # Top to downtrend
-    else:  # 270 <= phase < 360
-        return "WEAK_SHORT", 0.6  # Downtrend to bottom
-
-
-# ============================================================================
-# DATA FETCHING
-# ============================================================================
-
-def get_historical_data(symbol, interval='1h', limit=500):
-    """
-    Binance'den historical data çek (FFT için daha fazla data)
-    """
+def fetch_price_data(symbol, interval='1h', limit=256):
+    """Fetch REAL price data for FFT analysis"""
+    debug = {}
     try:
         url = "https://api.binance.com/api/v3/klines"
-        params = {
-            'symbol': symbol,
-            'interval': interval,
-            'limit': limit
-        }
+        params = {'symbol': symbol, 'interval': interval, 'limit': limit}
         response = requests.get(url, params=params, timeout=10)
-        data = response.json()
         
+        if response.status_code != 200:
+            debug['http_error'] = f"HTTP {response.status_code}"
+            return None, debug
+        
+        data = response.json()
         df = pd.DataFrame(data, columns=[
             'timestamp', 'open', 'high', 'low', 'close', 'volume',
             'close_time', 'quote_volume', 'trades', 'taker_buy_base',
@@ -232,121 +44,207 @@ def get_historical_data(symbol, interval='1h', limit=500):
         ])
         
         df['close'] = df['close'].astype(float)
+        debug['info'] = f"Fetched {len(df)} real candles"
+        return df, debug
         
-        return df
     except Exception as e:
-        print(f"⚠️ Data fetch failed: {e}")
-        return None
+        debug['exception'] = str(e)
+        return None, debug
 
+def compute_fft_spectrum(prices, zero_pad=True):
+    """Compute FFT spectrum and dominant frequencies"""
+    try:
+        # Normalize
+        prices_norm = prices - np.mean(prices)
+        prices_norm = prices_norm / np.std(prices_norm) if np.std(prices_norm) > 0 else prices_norm
+        
+        # Zero padding for better resolution
+        if zero_pad:
+            prices_norm = np.pad(prices_norm, (0, len(prices_norm)), mode='constant')
+        
+        # FFT
+        fft_values = np.fft.fft(prices_norm)
+        power = np.abs(fft_values) ** 2
+        
+        # Get frequencies and power
+        freqs = np.fft.fftfreq(len(prices_norm))
+        
+        # Only positive frequencies
+        positive_mask = freqs >= 0
+        freqs = freqs[positive_mask]
+        power = power[positive_mask]
+        
+        # Sort by power
+        sorted_idx = np.argsort(power)[::-1]
+        
+        return {
+            'frequencies': freqs[sorted_idx][:10],
+            'power': power[sorted_idx][:10],
+            'dominant_freq': freqs[sorted_idx][0] if len(sorted_idx) > 0 else 0,
+            'total_power': np.sum(power)
+        }
+    except:
+        return {
+            'frequencies': [],
+            'power': [],
+            'dominant_freq': 0,
+            'total_power': 0
+        }
 
-# ============================================================================
-# FOURIER CYCLE SIGNAL GENERATOR
-# ============================================================================
+def detect_cycles(freqs, powers, price_length):
+    """Detect dominant cycles (7-day, 30-day, 90-day)"""
+    try:
+        cycles = {}
+        
+        # Known cycles (as frequency ratios)
+        known_cycles = {
+            'daily': 1.0 / 1,
+            'weekly': 1.0 / 7,
+            'monthly': 1.0 / 30,
+            'quarterly': 1.0 / 90
+        }
+        
+        for cycle_name, cycle_freq in known_cycles.items():
+            # Find power at this frequency
+            idx = np.argmin(np.abs(freqs - cycle_freq))
+            if idx < len(powers):
+                cycles[cycle_name] = {
+                    'frequency': freqs[idx],
+                    'power': powers[idx],
+                    'period': 1 / (freqs[idx] + 1e-10)
+                }
+        
+        return cycles
+    except:
+        return {}
 
-def get_fourier_cycle_signal(symbol, interval='1h'):
+def calculate_phase_position(prices, dominant_freq):
+    """Calculate phase position in cycle"""
+    try:
+        if dominant_freq == 0:
+            return 0.5  # Neutral
+        
+        # Create analytic signal (Hilbert transform)
+        analytical_signal = np.fft.ifft(np.fft.fft(prices))
+        phase = np.angle(analytical_signal)
+        
+        return (phase[-1] + np.pi) / (2 * np.pi)  # Normalize to 0-1
+    except:
+        return 0.5
+
+def get_fourier_cycle_signal(symbol='BTCUSDT', interval='1h'):
     """
-    Fourier Cycle layer ana fonksiyonu
+    Fourier Cycle Layer ana fonksiyonu
     
     MANTIK:
-    -------
-    1. Historical data çek (500 candle - FFT için yeterli)
-    2. FFT hesapla, power spectrum
-    3. Dominant cycle'ları tespit et
-    4. Her cycle için current phase hesapla
-    5. Phase'leri weighted average ile skorla
-    
-    Args:
-        symbol (str): Trading pair
-        interval (str): Timeframe
-        
-    Returns:
-        float: Score (0-100)
+    1. Fetch REAL price data
+    2. Compute FFT spectrum
+    3. Detect dominant cycles
+    4. Calculate phase position
+    5. Generate score (0-100)
     """
+    debug = {}
+    
     try:
         print(f"🔮 Fourier Cycle analyzing {symbol}...")
         
-        # 1. Data çek
-        df = get_historical_data(symbol, interval, limit=500)
+        # 1. Get REAL data
+        df, fetch_debug = fetch_price_data(symbol, interval, 256)
+        debug.update(fetch_debug)
+        
         if df is None or len(df) < 100:
-            print("⚠️ Insufficient data")
-            return 50.0
+            print(f"❌ Data fetch failed")
+            return {
+                'available': False,
+                'score': 50.0,
+                'signal': 'NEUTRAL',
+                'error_message': 'Insufficient FFT data',
+                'data_debug': debug
+            }
         
         prices = df['close'].values
+        print(f" 📊 Real prices: {len(prices)} candles")
         
-        # 2. FFT spectrum
-        frequencies, power, phases = calculate_fft_spectrum(prices)
+        # 2. Compute FFT
+        spectrum = compute_fft_spectrum(prices, zero_pad=True)
+        dominant_freq = spectrum['dominant_freq']
+        print(f" 📈 Dominant Frequency: {dominant_freq:.4f}")
+        print(f" 💪 Total Power: {spectrum['total_power']:.2f}")
         
-        if len(frequencies) == 0:
-            print("⚠️ FFT failed")
-            return 50.0
+        # 3. Detect cycles
+        cycles = detect_cycles(spectrum['frequencies'], spectrum['power'], len(prices))
+        for cycle_name, cycle_data in cycles.items():
+            print(f" 🔄 {cycle_name}: P={cycle_data['power']:.2f}, Period={cycle_data['period']:.1f}")
         
-        # 3. Dominant cycle'ları bul
-        dominant_cycles = find_dominant_cycles(frequencies, power)
+        # 4. Phase position
+        phase = calculate_phase_position(prices, dominant_freq)
+        phase_deg = phase * 360
+        print(f" 🔄 Phase Position: {phase_deg:.1f}°")
         
-        if len(dominant_cycles) == 0:
-            print("⚠️ No cycles detected")
-            return 50.0
+        # 5. Score calculation
+        score = 50.0
         
-        print(f"   Dominant Cycles Detected: {len(dominant_cycles)}")
-        
-        # 4. Her cycle için phase ve sinyal
-        cycle_signals = []
-        total_power = sum(c[1] for c in dominant_cycles)
-        
-        for period, cycle_power, freq in dominant_cycles:
-            phase = calculate_cycle_phase(prices, period)
-            signal_type, strength = interpret_phase(phase)
+        # Phase-based signal
+        if 0 <= phase <= 0.25:  # 0-90°: Cycle bottom → UP
+            signal = "LONG"
+            strength = phase / 0.25
+            score = 50 + strength * 40
+            print(f" 🟢 Phase 0-90°: Cycle bottom")
             
-            # Weight by power
-            weight = cycle_power / total_power if total_power > 0 else 0
+        elif 0.25 < phase <= 0.5:  # 90-180°: Weak UP
+            signal = "LONG"
+            strength = 1 - (phase - 0.25) / 0.25
+            score = 50 + strength * 30
+            print(f" 🟡 Phase 90-180°: Uptrend weakening")
             
-            print(f"   - Period: {period:.1f} candles | Phase: {phase:.1f}° | Signal: {signal_type} | Weight: {weight:.2f}")
+        elif 0.5 < phase <= 0.75:  # 180-270°: Cycle top → DOWN
+            signal = "SHORT"
+            strength = (phase - 0.5) / 0.25
+            score = 50 - strength * 40
+            print(f" 🔴 Phase 180-270°: Cycle top")
             
-            cycle_signals.append((signal_type, strength, weight))
+        else:  # 270-360°: Weak DOWN
+            signal = "SHORT"
+            strength = 1 - (phase - 0.75) / 0.25
+            score = 50 - strength * 30
+            print(f" 🟠 Phase 270-360°: Downtrend weakening")
         
-        # 5. Weighted score hesapla
-        score = 50.0  # Baseline
+        # Power component (strong signal vs noise)
+        avg_power = np.mean(spectrum['power'][:5]) if len(spectrum['power']) > 0 else 1
+        power_ratio = spectrum['power'][0] / max(avg_power, 1e-10)
         
-        for signal_type, strength, weight in cycle_signals:
-            if signal_type == "STRONG_LONG":
-                contribution = 40 * strength * weight
-            elif signal_type == "LONG":
-                contribution = 20 * strength * weight
-            elif signal_type == "SHORT":
-                contribution = -40 * strength * weight
-            elif signal_type == "WEAK_SHORT":
-                contribution = -20 * strength * weight
-            else:
-                contribution = 0
-            
-            score += contribution
+        if power_ratio > 2:
+            confidence = min(power_ratio / 5, 1.0) * 15
+            score = score * (1 + confidence/100) if signal == "LONG" else score * (1 - confidence/100)
+            print(f" 💪 Strong signal confidence (+{confidence:.1f})")
         
-        # Skor 0-100 aralığına sınırla
-        score = np.clip(score, 0, 100)
-        
+        score = max(0, min(100, score))
         print(f"✅ Fourier Cycle Score: {score:.1f}/100")
         
-        return score
+        return {
+            'available': True,
+            'score': round(score, 2),
+            'signal': signal,
+            'phase': round(phase, 3),
+            'phase_degrees': round(phase_deg, 1),
+            'dominant_frequency': round(dominant_freq, 4),
+            'total_power': round(spectrum['total_power'], 2),
+            'cycles_detected': len(cycles),
+            'timestamp': datetime.now().isoformat(),
+            'data_debug': debug
+        }
         
     except Exception as e:
         print(f"❌ Fourier Cycle error: {e}")
-        return 50.0
+        debug['exception'] = str(e)
+        return {
+            'available': False,
+            'score': 50.0,
+            'signal': 'NEUTRAL',
+            'error_message': str(e),
+            'data_debug': debug
+        }
 
-
-# ============================================================================
-# BACKWARD COMPATIBILITY
-# ============================================================================
-
-def analyze_cycles(symbol, interval='1h'):
-    """
-    Alias for backward compatibility
-    """
-    return get_fourier_cycle_signal(symbol, interval)
-
-
-# ============================================================================
-# TESTING
-# ============================================================================
 
 if __name__ == "__main__":
     print("="*80)
@@ -354,18 +252,7 @@ if __name__ == "__main__":
     print("="*80)
     
     test_symbols = ['BTCUSDT', 'ETHUSDT']
-    
     for symbol in test_symbols:
         print(f"\n📊 Testing {symbol}:")
-        score = get_fourier_cycle_signal(symbol)
-        
-        if score >= 65:
-            signal = "🟢 LONG"
-        elif score <= 35:
-            signal = "🔴 SHORT"
-        else:
-            signal = "⚪ NEUTRAL"
-        
-        print(f"   Signal: {signal}")
-        print(f"   Score: {score:.1f}/100")
-        print("-"*80)
+        result = get_fourier_cycle_signal(symbol)
+        print(f" Score: {result['score']}, Signal: {result['signal']}\n")
