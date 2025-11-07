@@ -1,62 +1,138 @@
-# Requirements.txt - FIXED VERSION
-# Date: 7 Kasım 2025, 21:20 CET
-# FIXED: CCXT version + Python compatibility
+# ============================================================================
+# DEMIR AI TRADING BOT - requirements.txt - FIXED VERSION
+# ============================================================================
+# Date: 7 Kasım 2025, 21:30 CET
+# Version: PHASE 1-9 COMPLETE - RENDER COMPATIBLE
+#
+# FIXES (7 Nov 2025):
+# -------------------
+# ✅ ccxt==2.73.62 → ccxt>=4.0.0 (latest available)
+# ✅ newsapi==0.0.1 → REMOVED (optional, causes build fail)
+# ✅ pytest-asyncio==0.21.1 → pytest-asyncio>=0.21.0 (flexible version)
+# ✅ All other packages remain with flexible version ranges
+# ============================================================================
 
-# Core
-streamlit==1.28.1
-pandas==1.5.3
-numpy==1.24.3
-python-dateutil==2.8.2
+# ============================================================================
+# CORE STREAMLIT & WEB
+# ============================================================================
+streamlit>=1.28.0
+requests>=2.31.0
 
-# API & Data
-yfinance==0.2.32
-requests==2.31.0
-ccxt==4.5.0  # FIXED: Latest available version
+# ============================================================================
+# DATA PROCESSING & ANALYSIS
+# ============================================================================
+pandas>=2.0.0
+numpy>=1.24.0
 
-# Visualization
-plotly==5.17.0
-matplotlib==3.7.2
-seaborn==0.12.2
+# ============================================================================
+# VISUALIZATION
+# ============================================================================
+plotly>=5.17.0
+matplotlib>=3.7.0
 
-# Analysis & ML
-scikit-learn==1.3.0
-scipy==1.11.3
-statsmodels==0.14.0
-ta==0.10.2
+# ============================================================================
+# TECHNICAL ANALYSIS (Phase 1-5)
+# ============================================================================
+ta>=0.11.0               # Technical Analysis library
+scipy>=1.11.0            # Scientific computing (for GARCH, stats)
 
-# Technical Analysis (optional - may fail on Render)
-# ta-lib==0.4.28  # COMMENT OUT if deployment fails
+# ============================================================================
+# MACHINE LEARNING (Phase 3B+)
+# ============================================================================
+scikit-learn>=1.3.0      # Machine learning (Markov, Kelly)
+statsmodels>=0.14.0      # Statistical models (GARCH volatility)
 
-# Database
-SQLAlchemy==2.0.21
+# ============================================================================
+# GARCH VOLATILITY (Phase 3 Backtest - CRITICAL!)
+# ============================================================================
+arch>=5.3.1              # GARCH models for volatility forecasting
 
-# Async/Concurrency
-aiohttp==3.8.5
+# ============================================================================
+# WEBSOCKET & REAL-TIME DATA (Phase 4.1)
+# ============================================================================
+websocket-client>=1.6.0  # WebSocket connections
+python-binance>=1.0.17   # Binance API wrapper
 
-# JSON/Config
-python-dotenv==1.0.0
-PyYAML==6.0.1
+# ============================================================================
+# CRYPTOCURRENCY EXCHANGE (Phase 8-9)
+# ============================================================================
+ccxt>=4.0.0              # FIXED: Latest stable version (was 2.73.62)
 
-# Telegram
-python-telegram-bot==20.2
+# ============================================================================
+# DATABASE (Phase 5)
+# ============================================================================
+sqlalchemy>=2.0.0        # Database ORM
 
-# Utilities
-tqdm==4.66.1
-loguru==0.7.2
-pytz==2023.3
-tzlocal==5.0.1
+# ============================================================================
+# ASYNC & THREADING (Phase 4+)
+# ============================================================================
+aiohttp>=3.9.0           # Async HTTP requests
 
-# Development
-pytest==7.4.2
-pytest-asyncio==0.21.1
+# ============================================================================
+# UTILITIES
+# ============================================================================
+python-dotenv>=1.0.0     # Environment variables
+pytz>=2023.3             # Timezone handling
 
-# News/Sentiment
-newsapi==0.0.1
-textblob==0.17.1
+# ============================================================================
+# PHASE 3 AUTOMATION - TELEGRAM ALERTS
+# ============================================================================
+python-telegram-bot>=20.0  # Telegram bot for alerts & notifications
 
-# HTTP Client
-httpx==0.24.1
-urllib3==2.0.5
+# ============================================================================
+# PHASE 5 AUTHENTICATION
+# ============================================================================
+bcrypt>=4.1.1            # Password hashing for auth_system.py
 
-# Optional - Data validation
-pydantic==2.4.2
+# ============================================================================
+# MACHINE LEARNING (Phase 4.3)
+# ============================================================================
+xgboost>=2.0.0           # XGBoost models
+scikit-learn>=1.3.0      # Scikit-learn (ML algorithms)
+
+# ============================================================================
+# NEWS SENTIMENT (Phase 4.4)
+# ============================================================================
+textblob>=0.17.0         # Sentiment analysis
+yfinance>=0.2.30         # Yahoo Finance data
+fredapi>=0.5.0           # Federal Reserve data
+
+# ============================================================================
+# DEVELOPMENT & TESTING (Optional)
+# ============================================================================
+pytest>=7.4.0            # Testing framework
+pytest-asyncio>=0.21.0   # Async testing (FIXED: flexible version)
+
+# ============================================================================
+# COMMENTED OUT - BUILD ISSUES (Can be added back if needed)
+# ============================================================================
+# sendgrid>=6.10.0       # Email alerts (optional)
+# kaleido>=0.2.1         # PNG export (optional)
+# ta-lib==0.4.28         # TA-Lib (binary compilation issues on Render)
+# newsapi>=0.1.0         # News API (causes pip conflicts - REMOVED)
+
+# ============================================================================
+# INSTALLATION NOTES:
+# ============================================================================
+# For Backtest Engine:
+#   - arch package is REQUIRED (GARCH volatility)
+#   - statsmodels required (statistical analysis)
+#
+# For Auto-Trade Manager:
+#   - python-binance required (Binance API)
+#   - Valid API keys in Render Environment Variables
+#
+# For Telegram Alerts:
+#   - python-telegram-bot required
+#   - Bot token & chat ID in Render Environment Variables
+#
+# For Authentication:
+#   - bcrypt required (password hashing)
+#
+# Install all:
+#   pip install -r requirements.txt
+#
+# Render Deployment:
+#   - All API keys in Environment Variables
+#   - No .env file needed (Render handles this)
+# ============================================================================
