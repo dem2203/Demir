@@ -1,11 +1,11 @@
 """
-🔮 MARKET REGIME ANALYZER v1.0
+ğŸ”® MARKET REGIME ANALYZER v1.0
 ==============================
 
-Date: 7 Kasım 2025, 14:52 CET
+Date: 7 KasÄ±m 2025, 14:52 CET
 Phase: 8.1 - Adaptive Weighting System
 
-AMAÇ:
+AMAÃ‡:
 -----
 VIX + Volatility kombinasyonu ile market rejimini tespit et
 ve layer weight'lerini dinamik olarak adjust et.
@@ -177,7 +177,7 @@ def get_regime_weights():
 
 
 if __name__ == "__main__":
-    print("🔮 MARKET REGIME ANALYZER TEST")
+    print("ğŸ”® MARKET REGIME ANALYZER TEST")
     print("="*50)
     
     regime_data = detect_market_regime()
