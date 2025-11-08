@@ -8,24 +8,27 @@ import os
 import sys
 import warnings
 
-# Suppress Warnings
+# Suppress ALL Warnings
 warnings.filterwarnings('ignore')
+os.environ['PYTHONWARNINGS'] = 'ignore'
 
-# Streamlit Configuration
+# Streamlit Configuration (MUST BE BEFORE IMPORT)
 os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['STREAMLIT_SERVER_PORT'] = '8000'
 os.environ['STREAMLIT_SERVER_ENABLEXSRFPROTECTION'] = 'false'
 os.environ['STREAMLIT_SERVER_ENABLECORS'] = 'false'
+os.environ['STREAMLIT_CLIENT_SHOWSTREAMLITWATERMARK'] = 'false'
 
-import streamlit as st
+try:
+    import streamlit as st
+    if 'st_initialized' not in st.session_state:
+        st.session_state.st_initialized = True
+except Exception as e:
+    print(f"ERROR: Streamlit import failed: {e}", file=sys.stderr)
+    sys.exit(1)
 
-# Initialize session state
-if 'initialized' not in st.session_state:
-    st.session_state.initialized = True
 import logging
 import requests
-import os
-import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 import pandas as pd
