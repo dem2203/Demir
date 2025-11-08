@@ -1,7 +1,4 @@
-# syntax=docker/dockerfile:1
 FROM python:3.11-slim
-
-ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -12,12 +9,13 @@ WORKDIR /app
 
 COPY requirements.txt ./
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
 EXPOSE 8501
 
-ENTRYPOINT ["python", "-m", "streamlit", "run"]
-CMD ["streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# CRITICAL FIX: Use entrypoint form with shell
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["python -m streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0"]
