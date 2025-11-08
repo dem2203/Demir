@@ -22,8 +22,6 @@ import streamlit as st
 # Initialize session state
 if 'initialized' not in st.session_state:
     st.session_state.initialized = True
-
-import streamlit as st
 import logging
 import requests
 import os
