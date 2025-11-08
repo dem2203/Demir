@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
-import subprocess
-import sys
+# app.py
+import streamlit as st
 
-if __name__ == '__main__':
-    subprocess.run([sys.executable, '-m', 'streamlit', 'run', 'streamlit_app.py', 
-                   '--server.port=8000', 
-                   '--server.enableCORS=false', 
-                   '--server.enableXsrfProtection=false',
-                   '--logger.level=error'], 
-                  cwd='/app')
+st.set_page_config(page_title="DEMIR AI", page_icon="🔱")
+
+st.title("🔱 DEMIR AI v23.0")
+st.markdown("Advanced Trading Intelligence")
+
+with st.columns(4)[0]:
+    st.metric("BTC", "$47,500", "+2.5%")
+
+st.success("✅ Application is running!")
