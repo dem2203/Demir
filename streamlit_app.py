@@ -4,6 +4,18 @@ Complete Streamlit Application - Phase 1-24 COMPLETE
 November 8, 2025
 ZERO MOCK DATA - 100% REAL APIs - 7/24 LIVE DAEMON
 """
+import os
+import sys
+import warnings
+
+# Suppress Warnings
+warnings.filterwarnings('ignore')
+
+# Streamlit Configuration
+os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_SERVER_PORT'] = '8000'
+os.environ['STREAMLIT_SERVER_ENABLEXSRFPROTECTION'] = 'false'
+os.environ['STREAMLIT_SERVER_ENABLECORS'] = 'false'
 
 import streamlit as st
 import logging
