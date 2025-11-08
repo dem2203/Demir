@@ -17,7 +17,6 @@ os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
 os.environ['STREAMLIT_SERVER_PORT'] = '8000'
 os.environ['STREAMLIT_SERVER_ENABLEXSRFPROTECTION'] = 'false'
 os.environ['STREAMLIT_SERVER_ENABLECORS'] = 'false'
-os.environ['STREAMLIT_CLIENT_SHOWSTREAMLITWATERMARK'] = 'false'
 
 try:
     import streamlit as st
