@@ -1,8 +1,8 @@
 # ============================================================================
-# DEMIR AI TRADING BOT - requirements.txt
+# DEMIR AI TRADING BOT - requirements.txt (Updated November 8, 2025)
 # ============================================================================
-# Date: 7 Kasım 2025, 21:53 CET
-# Version: PHASE 1-9 FINAL - RENDER PRODUCTION READY
+# Version: PHASE 1-24 FINAL - RENDER PRODUCTION READY
+# Phase 18-24 INTEGRATION COMPLETE
 #
 # FIXED (7 Nov 2025):
 # ✅ Removed talib-binary==0.4.19 (NOT available on PyPI)
@@ -14,6 +14,7 @@
 #
 # UPDATED (8 Nov 2025):
 # ✅ Added Phase 13-16 Production Systems (NO BREAKING CHANGES)
+# ✅ Added Phase 18-24 Integration (External Factors, Gann, Anomalies, Backtest)
 # ============================================================================
 
 # ============================================================================
@@ -106,20 +107,30 @@ hmmlearn>=0.3.0          # Hidden Markov Models (regime detection)
 pykalman>=0.9.5          # Kalman Filter (smoothing)
 
 # ============================================================================
-# PHASE 13-16: PRODUCTION SYSTEMS (NEW ADDITIONS - 8 Nov 2025)
+# PHASE 13-16: PRODUCTION SYSTEMS
 # ============================================================================
-# System Monitoring (Phase 14: Watchdog)
 psutil>=5.9.0            # System resource monitoring & health checks
-
-# Configuration Management (Phase 15-16)
 PyYAML>=6.0              # Config files (integration_config.yaml)
-
-# Testing & Performance (Phase 15)
 pytest>=7.4.0            # Unit testing framework
 pytest-asyncio>=0.21.0   # Async testing support
-
-# Distributed Caching (Phase 14: Daemon state sharing - OPTIONAL)
 redis>=5.0.0             # Redis client (optional for multi-instance)
+
+# ============================================================================
+# PHASE 18-24: NEW INTEGRATION PACKAGES (8 Nov 2025)
+# ============================================================================
+# Phase 18: External Factors & Stock Market Integration
+# (Already covered by yfinance, fredapi - no new packages needed)
+
+# Phase 19: Gann Levels & Advanced Technical Analysis
+# (Already covered by scipy, numpy - no new packages needed)
+
+# Phase 20-22: Anomaly Detection & Liquidations
+# (Already covered by scikit-learn, statsmodels - no new packages needed)
+
+# Phase 24: Backtesting Engine
+# (Optional - uncomment if full backtest needed)
+# backtrader>=1.9.78     # Backtesting framework
+# pyfolio>=0.9.2         # Portfolio analysis
 
 # ============================================================================
 # PHASE 9: OPTIONAL ALERT CHANNELS
@@ -141,7 +152,7 @@ redis>=5.0.0             # Redis client (optional for multi-instance)
 # ============================================================================
 # 1. Python Version: 3.10 (Render default)
 # 2. Build Command: pip install -r requirements.txt
-# 3. Start Command: . ./.venv/bin/activate && python main.py & streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+# 3. Start Command: streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
 #
 # IF BUILD STILL FAILS:
 # - Remove 'twilio' line (if not using SMS)
@@ -157,4 +168,10 @@ redis>=5.0.0             # Redis client (optional for multi-instance)
 # - PyYAML: Config management (Phase 15-16)
 # - pytest: Testing framework (Phase 15)
 # - redis: Optional distributed caching (Phase 14)
+#
+# PHASE 18-24 STATUS (8 Nov 2025):
+# - All Phase 18-24 dependencies already included in existing packages
+# - No NEW required packages needed
+# - Full backward compatibility maintained
+# - Python 3.10 and Render compatible
 # ============================================================================
