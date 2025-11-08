@@ -1,12 +1,11 @@
-[logger]
-level = "error"
+[client]
+# Removed deprecated options
 
 [server]
 port = 8000
-headless = true
 enableCORS = false
 enableXsrfProtection = false
-runOnSave = false
+headless = true
 
 [theme]
 primaryColor = "#FF6B35"
