@@ -1,21 +1,19 @@
-[client]
-# NO deprecated options
+[theme]
+primaryColor = "#2196F3"
+backgroundColor = "#0E0E0E"
+secondaryBackgroundColor = "#1a1a1a"
+textColor = "#FFFFFF"
+font = "sans serif"
 
-[logger]
-level = "warning"
+[client]
+showStreamlitWatermark = false
+toolbarMode = "minimal"
 
 [server]
-port = 8000
 headless = true
-enableCORS = false
-enableXsrfProtection = false
-runOnSave = false
+port = 8501
+enableXsrfProtection = true
+maxUploadSize = 200
 
-[browser]
-# Clean browser settings
-
-[theme]
-primaryColor = "#FF6B35"
-backgroundColor = "#1a1a1a"
-secondaryBackgroundColor = "#262730"
-textColor = "#FFFFFF"
+[logger]
+level = "info"
