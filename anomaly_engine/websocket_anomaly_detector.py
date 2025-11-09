@@ -1,10 +1,8 @@
 """
 =============================================================================
-DEMIR AI v26 - REAL-TIME ANOMALY DETECTION (WebSocket)
+DEMIR AI v26 - WEBSOCKET ANOMALY DETECTOR (REAL DATA ONLY)
 =============================================================================
-Purpose: WebSocket ile gerçek zamanlı pump/dump, flash crash, liquidation tespiti
-Location: /anomaly_engine/ klasörü
-Phase: 26 (Real-time Anomaly)
+NO MOCK - Sadece Binance WebSocket gerçek-zaman verisi
 =============================================================================
 """
 
@@ -15,24 +13,18 @@ from typing import Dict, List, Optional, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from collections import deque
-import json
+import aiohttp
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-try:
-    import aiohttp
-    AIOHTTP_AVAILABLE = True
-except ImportError:
-    AIOHTTP_AVAILABLE = False
-
 
 @dataclass
 class AnomalyAlert:
-    """Anomali uyarısı"""
+    """Gerçek anomali uyarısı"""
     symbol: str
-    anomaly_type: str  # "PUMP", "DUMP", "FLASH_CRASH", "LIQUIDATION", "VOLUME_SPIKE"
-    severity: str  # "LOW", "MEDIUM", "HIGH", "CRITICAL"
+    anomaly_type: str
+    severity: str
     price: float
     volume: float
     timestamp: str = None
@@ -43,16 +35,14 @@ class AnomalyAlert:
             self.timestamp = datetime.now().isoformat()
 
 
-class WebSocketMonitor:
+class BinanceWebSocketMonitorReal:
     """
-    WebSocket Gerçek-Zaman Monitor
+    Binance WebSocket ile GERÇEK-ZAMAN Anomali Tespiti
     
-    Features:
-    - Binance WebSocket streams
-    - Sub-second latency (< 100ms)
-    - Pump/dump detection
-    - Flash crash detection
-    - Liquidation cascade detection
+    REAL DATA ONLY:
+    - Binance WebSocket streams (< 100ms latency)
+    - Live price ticks
+    - NO mock data, NO synthetic
     """
     
     def __init__(self, symbols: List[str] = None):
@@ -61,52 +51,43 @@ class WebSocketMonitor:
         self.volume_buffer = {sym: deque(maxlen=100) for sym in self.symbols}
         self.anomalies = []
         self.callbacks: List[Callable] = []
+        self.ws_url = "wss://stream.binance.com:9443/ws"
         
-        # Anomaly thresholds
-        self.pump_threshold = 2.0  # % price increase in 5 seconds
-        self.dump_threshold = 2.0  # % price decrease in 5 seconds
-        self.volume_spike_threshold = 3.0  # 3x volume
-        self.flash_crash_threshold = 5.0  # > 5% in < 1 sec
-        
-        logger.info(f"✅ WebSocket Monitor initialized for {len(self.symbols)} symbols")
+        logger.info(f"✅ WebSocket monitor initialized for {len(self.symbols)} symbols (REAL)")
     
-    # ========================================================================
-    # ANOMALY DETECTION RULES
-    # ========================================================================
-    
-    def detect_pump(self, symbol: str) -> Optional[AnomalyAlert]:
-        """Pump (ani fiyat artışı) tespit et"""
+    def detect_pump_real(self, symbol: str) -> Optional[AnomalyAlert]:
+        """Gerçek pump tespit - REAL data"""
         if len(self.price_buffer[symbol]) < 10:
             return None
         
         prices = list(self.price_buffer[symbol])
         price_change = ((prices[-1] - prices[0]) / prices[0] * 100)
         
-        if price_change > self.pump_threshold:
-            volume_increase = np.mean(list(self.volume_buffer[symbol])[-5:]) / np.mean(list(self.volume_buffer[symbol])[0:5]) if len(self.volume_buffer[symbol]) >= 10 else 1
+        if price_change > 2.0:  # 2% increase in 5 sec = pump
+            volume_avg = np.mean(list(self.volume_buffer[symbol])[-5:])
             
             alert = AnomalyAlert(
                 symbol=symbol,
                 anomaly_type="PUMP",
                 severity="HIGH" if price_change > 3 else "MEDIUM",
                 price=prices[-1],
-                volume=volume_increase,
-                details=f"Price up {price_change:.2f}% in 5s | Volume {volume_increase:.1f}x"
+                volume=volume_avg,
+                details=f"Price up {price_change:.2f}% in 5s | Volume: {volume_avg:.0f}"
             )
-            logger.warning(f"🔴 PUMP DETECTED: {alert.details}")
+            logger.warning(f"🔴 REAL PUMP: {alert.details}")
             return alert
         
         return None
     
-    def detect_dump(self, symbol: str) -> Optional[AnomalyAlert]:
-        """Dump (ani fiyat düşüşü) tespit et"""
+    def detect_dump_real(self, symbol: str) -> Optional[AnomalyAlert]:
+        """Gerçek dump tespit - REAL data"""
         if len(self.price_buffer[symbol]) < 10:
             return None
         
         prices = list(self.price_buffer[symbol])
         price_change = ((prices[-1] - prices[0]) / prices[0] * 100)
         
-        if price_change < -self.dump_threshold:
+        if price_change < -2.0:  # 2% decrease = dump
             alert = AnomalyAlert(
                 symbol=symbol,
                 anomaly_type="DUMP",
@@ -115,111 +96,110 @@ class WebSocketMonitor:
                 volume=np.mean(list(self.volume_buffer[symbol])[-5:]),
                 details=f"Price down {abs(price_change):.2f}% in 5s"
             )
-            logger.warning(f"🔴 DUMP DETECTED: {alert.details}")
+            logger.warning(f"🔴 REAL DUMP: {alert.details}")
             return alert
         
         return None
     
-    def detect_flash_crash(self, symbol: str) -> Optional[AnomalyAlert]:
-        """Flash crash (< 1 saniye) tespit et"""
+    def detect_flash_crash_real(self, symbol: str) -> Optional[AnomalyAlert]:
+        """Gerçek flash crash - < 1 saniye"""
         if len(self.price_buffer[symbol]) < 5:
             return None
         
-        prices = list(self.price_buffer[symbol])[-5:]  # Last 5 ticks (~1 sec)
+        prices = list(self.price_buffer[symbol])[-5:]
         max_price = max(prices)
         min_price = min(prices)
         
         crash_percent = ((max_price - min_price) / max_price * 100)
         
-        if crash_percent > self.flash_crash_threshold:
+        if crash_percent > 5.0:  # > 5% in < 1 sec
             alert = AnomalyAlert(
                 symbol=symbol,
                 anomaly_type="FLASH_CRASH",
                 severity="CRITICAL",
                 price=prices[-1],
                 volume=np.mean(list(self.volume_buffer[symbol])[-5:]),
-                details=f"Flash crash {crash_percent:.2f}% in < 1 second!"
+                details=f"FLASH CRASH {crash_percent:.2f}% in < 1 second!"
             )
-            logger.error(f"🚨 FLASH CRASH: {alert.details}")
+            logger.error(f"🚨 REAL FLASH CRASH: {alert.details}")
             return alert
         
         return None
     
-    def detect_volume_spike(self, symbol: str) -> Optional[AnomalyAlert]:
-        """Hacim spikeı tespit et"""
+    def detect_volume_spike_real(self, symbol: str) -> Optional[AnomalyAlert]:
+        """Gerçek hacim spikeı"""
         if len(self.volume_buffer[symbol]) < 20:
             return None
         
         volumes = list(self.volume_buffer[symbol])
-        avg_volume = np.mean(volumes[:-5])
-        current_volume = np.mean(volumes[-5:])
+        avg_vol = np.mean(volumes[:-5])
+        current_vol = np.mean(volumes[-5:])
         
-        spike_ratio = current_volume / avg_volume if avg_volume > 0 else 0
+        spike = current_vol / avg_vol if avg_vol > 0 else 0
         
-        if spike_ratio > self.volume_spike_threshold:
+        if spike > 3.0:  # 3x volume increase
             alert = AnomalyAlert(
                 symbol=symbol,
                 anomaly_type="VOLUME_SPIKE",
                 severity="MEDIUM",
-                price=0,  # Not price-related
-                volume=current_volume,
-                details=f"Volume spike {spike_ratio:.1f}x above average"
+                price=0,
+                volume=current_vol,
+                details=f"Volume spike {spike:.1f}x above average"
             )
-            logger.warning(f"📊 VOLUME SPIKE: {alert.details}")
+            logger.warning(f"📊 REAL VOLUME SPIKE: {alert.details}")
             return alert
         
         return None
     
-    def detect_liquidation_cascade(self, symbol: str) -> Optional[AnomalyAlert]:
-        """Liquidation cascade (hızlı yüksek hacim satış) tespit et"""
-        if len(self.volume_buffer[symbol]) < 10:
-            return None
+    async def connect_websocket_real(self):
+        """Binance WebSocket'e gerçek bağlantı kur"""
+        try:
+            # Build stream URL for all symbols
+            streams = [f"{sym.lower()}@trade" for sym in self.symbols]
+            stream_url = self.ws_url + "/" + "/".join(streams)
+            
+            logger.info(f"🔗 Connecting to Binance WebSocket...")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.ws_connect(stream_url) as ws:
+                    logger.info("✅ Connected to Binance WebSocket (REAL)")
+                    
+                    async for msg in ws:
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            data = msg.json()
+                            
+                            if 'p' in data and 'q' in data:  # Price & Quantity
+                                symbol = data['s']
+                                price = float(data['p'])
+                                qty = float(data['q'])
+                                
+                                # Process tick
+                                await self.process_tick_real(symbol, price, qty)
         
-        volumes = list(self.volume_buffer[symbol])
-        prices = list(self.price_buffer[symbol])
-        
-        # Cascade: düşen fiyat + yüksek hacim
-        price_trend = prices[-1] < prices[-5]
-        volume_avg = np.mean(volumes[-5:])
-        historical_avg = np.mean(volumes[:-5])
-        
-        if price_trend and volume_avg > historical_avg * 2:
-            alert = AnomalyAlert(
-                symbol=symbol,
-                anomaly_type="LIQUIDATION",
-                severity="HIGH",
-                price=prices[-1],
-                volume=volume_avg,
-                details=f"Potential liquidation cascade detected"
-            )
-            logger.error(f"💥 LIQUIDATION CASCADE: {alert.details}")
-            return alert
-        
-        return None
+        except Exception as e:
+            logger.error(f"❌ WebSocket error: {e}")
     
-    # ========================================================================
-    # WEBSOCKET STREAM
-    # ========================================================================
-    
-    async def process_tick(self, symbol: str, price: float, volume: float):
-        """Tek bir fiyat verisini işle ve anomali kontrol et"""
+    async def process_tick_real(self, symbol: str, price: float, volume: float):
+        """Gerçek tick işle"""
+        if symbol not in self.symbols:
+            return
+        
         self.price_buffer[symbol].append(price)
         self.volume_buffer[symbol].append(volume)
         
         # Check all anomalies
-        anomalies_to_check = [
-            self.detect_pump(symbol),
-            self.detect_dump(symbol),
-            self.detect_flash_crash(symbol),
-            self.detect_volume_spike(symbol),
-            self.detect_liquidation_cascade(symbol)
+        alerts = [
+            self.detect_pump_real(symbol),
+            self.detect_dump_real(symbol),
+            self.detect_flash_crash_real(symbol),
+            self.detect_volume_spike_real(symbol)
         ]
         
-        for alert in anomalies_to_check:
+        for alert in alerts:
             if alert:
                 self.anomalies.append(alert)
                 
-                # Trigger callbacks (für Telegram alerts vb.)
+                # Trigger callbacks
                 for callback in self.callbacks:
                     if asyncio.iscoroutinefunction(callback):
                         await callback(alert)
@@ -227,71 +207,49 @@ class WebSocketMonitor:
                         callback(alert)
     
     def register_callback(self, callback: Callable):
-        """Anomali callback'i kaydet (örn: Telegram bildirimleri)"""
+        """Callback kaydet"""
         self.callbacks.append(callback)
         logger.info(f"✅ Callback registered: {callback.__name__}")
     
-    async def mock_stream(self, duration: int = 60):
-        """Test için mock stream"""
-        logger.info(f"📡 Starting mock WebSocket stream for {duration}s...")
-        
-        start_time = datetime.now()
-        while (datetime.now() - start_time).total_seconds() < duration:
-            for symbol in self.symbols:
-                # Simulate price movement with occasional anomalies
-                price = np.random.uniform(50000, 55000)
-                volume = np.random.uniform(100, 1000)
-                
-                # 5% chance of pump
-                if np.random.random() < 0.05:
-                    price *= 1.025
-                
-                await self.process_tick(symbol, price, volume)
-            
-            await asyncio.sleep(0.1)  # 100ms updates
-        
-        logger.info(f"📊 Stream finished. {len(self.anomalies)} anomalies detected")
+    async def start_real_monitoring(self):
+        """Gerçek monitoring başla"""
+        logger.info("🚀 Starting REAL-TIME WebSocket monitoring...")
+        await self.connect_websocket_real()
     
-    def get_anomalies_summary(self) -> Dict:
-        """Anomali özeti al"""
-        summary = {
+    def get_anomalies_realtime(self) -> Dict:
+        """Gerçek anomali özeti"""
+        return {
             "total": len(self.anomalies),
-            "by_type": {},
-            "by_severity": {},
+            "by_type": {
+                atype: sum(1 for a in self.anomalies if a.anomaly_type == atype)
+                for atype in ["PUMP", "DUMP", "FLASH_CRASH", "VOLUME_SPIKE"]
+            },
             "recent": self.anomalies[-10:] if self.anomalies else []
         }
-        
-        for anomaly in self.anomalies:
-            summary["by_type"][anomaly.anomaly_type] = summary["by_type"].get(anomaly.anomaly_type, 0) + 1
-            summary["by_severity"][anomaly.severity] = summary["by_severity"].get(anomaly.severity, 0) + 1
-        
-        return summary
 
 
 # ============================================================================
-# TEST
+# TEST - GERÇEK BINANCE WS
 # ============================================================================
 
 if __name__ == "__main__":
     async def test_callback(alert: AnomalyAlert):
-        print(f"🔔 CALLBACK: {alert.anomaly_type} on {alert.symbol} - {alert.severity}")
+        print(f"🔔 REAL ALERT: {alert.anomaly_type} on {alert.symbol} - {alert.severity}")
     
     async def main():
-        monitor = WebSocketMonitor(["BTCUSDT"])
+        monitor = BinanceWebSocketMonitorReal(["BTCUSDT", "ETHUSDT"])
         monitor.register_callback(test_callback)
         
-        # Run mock stream
-        await monitor.mock_stream(duration=30)
+        # Başla gerçek monitoringe
+        try:
+            await asyncio.wait_for(monitor.start_real_monitoring(), timeout=300)  # 5 min test
+        except asyncio.TimeoutError:
+            logger.info("Test completed")
         
-        # Print summary
-        summary = monitor.get_anomalies_summary()
-        print(f"\n📊 Anomaly Summary:")
+        # Özet
+        summary = monitor.get_anomalies_realtime()
+        print(f"\n📊 Anomaly Summary (REAL):")
         print(f"   Total: {summary['total']}")
         print(f"   By type: {summary['by_type']}")
-        print(f"   By severity: {summary['by_severity']}")
     
-    # Run async test
-    try:
-        asyncio.run(main())
-    except Exception as e:
-        print(f"❌ Test error: {e}")
+    asyncio.run(main())
