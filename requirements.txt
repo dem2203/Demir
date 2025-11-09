@@ -1,135 +1,78 @@
 # ============================================================================
-# UPDATED requirements.txt - Phase 17-19 Support
+# REQUIREMENTS.TXT - DEMIR AI v29 PRODUCTION
+# Python 3.13 Compatible - Railway Ready
 # ============================================================================
 
-# Core Framework
-streamlit>=1.28.0
-requests>=2.31.0
-gunicorn>=21.0.0
+# CORE FRAMEWORK
+streamlit==1.31.1
+requests==2.31.0
+gunicorn==21.2.0
 
-# Data Processing (Python 3.13 compatible)
-pandas>=2.2.0
-polars>=0.19.0
-numpy>=1.26.0
-scipy>=1.11.0
+# DATA PROCESSING
+pandas==2.2.0
+numpy==1.26.0
+scipy==1.11.0
 
-# Visualization
-plotly>=5.17.0
-matplotlib>=3.7.0
-altair>=5.0.0
+# VISUALIZATION
+plotly==5.18.0
+matplotlib==3.8.0
+altair==5.0.0
 
-# Technical Analysis
-ta>=0.11.0
+# TECHNICAL ANALYSIS
+ta==0.11.0
 
-# Machine Learning
-scikit-learn>=1.3.0
-statsmodels>=0.14.0
-xgboost>=2.0.0
+# MACHINE LEARNING
+scikit-learn==1.3.0
+xgboost==2.0.0
+statsmodels==0.14.0
 
-# Websocket & Real-time
-websocket-client>=1.6.0
-python-binance>=1.0.17
-ccxt>=4.0.0
-aiohttp>=3.9.0
+# WEBSOCKETS & REAL-TIME
+websocket-client==1.7.0
+python-binance==1.0.17
+ccxt==4.0.0
+aiohttp==3.9.0
 
-# Database
-sqlalchemy>=2.0.0
+# DATABASE
+sqlalchemy==2.0.0
 
-# Utilities
-python-dotenv>=1.0.0
-pytz>=2023.3
-psutil>=5.9.6
-PyYAML>=6.0
+# UTILITIES
+python-dotenv==1.0.0
+pytz==2023.3
+PyYAML==6.0
 
-# Automation & Alerts
-python-telegram-bot>=20.0
-APScheduler>=3.10.0
+# MARKET DATA APIs
+fredapi==0.5.1
+pycoingecko==3.1.0
+yfinance==0.2.36
 
-# Auth
-bcrypt>=4.1.1
-
-# Market Data APIs
-fredapi>=0.5.1
-pycoingecko>=3.1.0
-yfinance>=0.2.36
-
-# PHASE 17: Regulatory News & Sentiment
-newsapi-python>=0.1
-transformers>=4.30.0
-torch>=2.0.0
-
-# PHASE 18: Whale Tracking
-alchemy-sdk>=0.3.0
-web3>=6.0.0
-
-# PHASE 19: Micro-cap Scanning (already have binance)
-
-# Testing
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
+# ALERTS & AUTOMATION
+python-telegram-bot==20.0
+APScheduler==3.10.0
 
 # ============================================================================
-# DEPLOYMENT GUIDE
+# PHASE 17-19: NEWS + WHALES + OPPORTUNITIES
 # ============================================================================
 
-"""
-STEP 1: Copy Files to Repository
+newsapi-python==0.1
+transformers==4.35.0
+torch==2.1.0
 
-[152] intelligence_layers/regulatory_news_parser.py
-[152] intelligence_layers/whale_tracker.py
-[152] intelligence_layers/micro_cap_scanner.py
+alchemy-sdk==0.3.0
+web3==6.11.0
 
-[153] streamlit_app.py (replace existing)
+# ============================================================================
+# PHASE 20-26: ADVANCED AI
+# ============================================================================
 
-STEP 2: Update requirements.txt
-- Add Phase 17-19 packages (see above)
+anthropic==0.7.0
+dowhy==0.10.0
+tensorflow==2.15.0
+keras==2.15.0
+networkx==3.2
 
-STEP 3: Environment Variables (Railway)
+# ============================================================================
+# ADDITIONAL
+# ============================================================================
 
-PHASE 17 - Regulatory News:
-NEWSAPI_KEY=<get from newsapi.org - free tier OK>
-
-PHASE 18 - Whale Tracking:
-ALCHEMY_API_KEY=<get from alchemy.com - free tier OK>
-
-PHASE 19 - Micro Cap Scanner:
-# Already have BINANCE_API_KEY
-
-All existing env vars still needed:
-BINANCE_API_KEY
-BINANCE_API_SECRET
-FRED_API_KEY
-TELEGRAM_TOKEN
-TELEGRAM_CHAT_ID
-
-STEP 4: Git Deploy
-
-git add intelligence_layers/regulatory_news_parser.py
-git add intelligence_layers/whale_tracker.py
-git add intelligence_layers/micro_cap_scanner.py
-git add streamlit_app.py
-git add requirements.txt
-
-git commit -m "Phase 17-19: Regulatory News + Whale Tracker + Micro Cap Scanner"
-git push origin main
-
-# Railway auto-deploys in 2-3 minutes
-
-STEP 5: Test
-
-Visit your Railway URL
-- Check dashboard → should show Phase 17-19 tabs
-- Click each tab:
-  - Phase 17: Should show regulatory news
-  - Phase 18: Should show whale activity
-  - Phase 19: Should show micro-cap opportunities
-
-STEP 6: Troubleshooting
-
-If modules not loading:
-- Check Railway logs: https://railway.app/projects/YOUR_PROJECT/deployments
-- Common issue: FinBERT downloads on first run (takes 1-2 min)
-- Alchemy API needs account: https://www.alchemy.com/
-- NewsAPI free tier: 100 calls/day (enough for monitoring)
-
-"""
+pytest==7.4.0
+pytest-asyncio==0.21.0
