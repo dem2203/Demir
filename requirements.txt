@@ -1,154 +1,135 @@
 # ============================================================================
-# DEMIR AI - requirements.txt (PYTHON 3.13 COMPATIBLE - FİXED)
-# ============================================================================
-# Version: PHASE 1-28 FINAL - RAILWAY PYTHON 3.13 FULLY COMPATIBLE
-# 
-# ✅ FIXES:
-#    - pandas 2.2.0+ (Python 3.13 native support)
-#    - numpy pre-built wheels
-#    - Removed problematic build dependencies
-#    - All packages have Python 3.13 wheels
-#
-# Status: 100% PRODUCTION READY
+# UPDATED requirements.txt - Phase 17-19 Support
 # ============================================================================
 
-# ============================================================================
-# CORE FRAMEWORK
-# ============================================================================
+# Core Framework
 streamlit>=1.28.0
 requests>=2.31.0
 gunicorn>=21.0.0
 
-# ============================================================================
-# DATA PROCESSING (Python 3.13 WHEELS - NO COMPILATION)
-# ============================================================================
-# CRITICAL FIX: Use pandas>=2.2.0 for Python 3.13 support
-pandas>=2.2.0          # Python 3.13 native - NO BUILD ERRORS
-polars>=0.19.0         # Alternative (even faster, native 3.13)
-numpy>=1.26.0          # Pre-built wheels for Python 3.13
-scipy>=1.11.0          # Pre-built for Python 3.13
+# Data Processing (Python 3.13 compatible)
+pandas>=2.2.0
+polars>=0.19.0
+numpy>=1.26.0
+scipy>=1.11.0
 
-# ============================================================================
-# VISUALIZATION
-# ============================================================================
+# Visualization
 plotly>=5.17.0
 matplotlib>=3.7.0
 altair>=5.0.0
 
-# ============================================================================
-# TECHNICAL ANALYSIS
-# ============================================================================
-ta>=0.11.0             # Technical Analysis library
+# Technical Analysis
+ta>=0.11.0
 
-# ============================================================================
-# MACHINE LEARNING (Phase 25-28)
-# ============================================================================
-scikit-learn>=1.3.0    # Machine learning
-statsmodels>=0.14.0    # Statistical models (GARCH)
-xgboost>=2.0.0         # XGBoost ensemble
-lightgbm>=4.0.0        # LightGBM (optional)
+# Machine Learning
+scikit-learn>=1.3.0
+statsmodels>=0.14.0
+xgboost>=2.0.0
 
-# ============================================================================
-# DEEP LEARNING
-# ============================================================================
-tensorflow>=2.13.0     # TensorFlow (if needed)
-torch>=2.0.0           # PyTorch (optional)
-
-# ============================================================================
-# VOLATILITY MODELING (Phase 3)
-# ============================================================================
-# arch>=5.3.1          # GARCH - OPTIONAL (skip if build issues)
-
-# ============================================================================
-# WEBSOCKET & REAL-TIME DATA (Phase 4.1)
-# ============================================================================
+# Websocket & Real-time
 websocket-client>=1.6.0
 python-binance>=1.0.17
 ccxt>=4.0.0
 aiohttp>=3.9.0
 
-# ============================================================================
-# DATABASE (Phase 5)
-# ============================================================================
+# Database
 sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0  # PostgreSQL (optional)
 
-# ============================================================================
-# UTILITIES
-# ============================================================================
+# Utilities
 python-dotenv>=1.0.0
 pytz>=2023.3
 psutil>=5.9.6
 PyYAML>=6.0
 
-# ============================================================================
-# AUTOMATION & ALERTS (Phase 3+)
-# ============================================================================
+# Automation & Alerts
 python-telegram-bot>=20.0
 APScheduler>=3.10.0
 
-# ============================================================================
-# AUTHENTICATION
-# ============================================================================
+# Auth
 bcrypt>=4.1.1
 
-# ============================================================================
-# MARKET DATA & NEWS (Phase 7) - FREE APIS ONLY
-# ============================================================================
-textblob>=0.18.0
-yfinance>=0.2.36
+# Market Data APIs
 fredapi>=0.5.1
 pycoingecko>=3.1.0
+yfinance>=0.2.36
 
-# ============================================================================
-# SENTIMENT & SOCIAL (Phase 21)
-# ============================================================================
-tweepy>=4.14.0
-praw>=7.7.0
+# PHASE 17: Regulatory News & Sentiment
+newsapi-python>=0.1
+transformers>=4.30.0
+torch>=2.0.0
 
-# ============================================================================
-# HMM & KALMAN (Phase 10-12 Consciousness)
-# ============================================================================
-hmmlearn>=0.3.0
-pykalman>=0.9.5
+# PHASE 18: Whale Tracking
+alchemy-sdk>=0.3.0
+web3>=6.0.0
 
-# ============================================================================
-# TESTING
-# ============================================================================
+# PHASE 19: Micro-cap Scanning (already have binance)
+
+# Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 
 # ============================================================================
-# RAILWAY ENVIRONMENT CONFIGURATION
+# DEPLOYMENT GUIDE
 # ============================================================================
-# Python: 3.13.x (Railway default)
-# Build: pip install -r requirements.txt
-# Start: streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
-#
-# Environment Variables (Railway):
-# PYTHONUNBUFFERED=1
-# TZ=UTC
-# PYTHON_VERSION=3.13
 
-# ============================================================================
-# OPTIONAL PACKAGES (SKIP IF BUILD ISSUES)
-# ============================================================================
-# arch>=5.3.1            # GARCH volatility
-# lightgbm>=4.0.0        # LightGBM ensemble
-# prophet>=1.1.5         # Facebook Prophet
-# nltk>=3.9              # NLP processing
-# bokeh>=3.2.0           # Visualization
+"""
+STEP 1: Copy Files to Repository
 
-# ============================================================================
-# TROUBLESHOOTING
-# ============================================================================
-# ERROR: "pandas wheel not found for Python 3.13"
-# SOLUTION: Use pandas>=2.2.0 (has native 3.13 wheels on PyPI)
-#
-# ERROR: "too few arguments to function '_PyLong_AsByteArray'"
-# SOLUTION: Don't use pandas<2.2.0 with Python 3.13
-#
-# If still build errors:
-# 1. Comment out optional packages
-# 2. Use core-only: streamlit, polars, plotly, requests
-# 3. Add packages one-by-one after successful initial deploy
+[152] intelligence_layers/regulatory_news_parser.py
+[152] intelligence_layers/whale_tracker.py
+[152] intelligence_layers/micro_cap_scanner.py
+
+[153] streamlit_app.py (replace existing)
+
+STEP 2: Update requirements.txt
+- Add Phase 17-19 packages (see above)
+
+STEP 3: Environment Variables (Railway)
+
+PHASE 17 - Regulatory News:
+NEWSAPI_KEY=<get from newsapi.org - free tier OK>
+
+PHASE 18 - Whale Tracking:
+ALCHEMY_API_KEY=<get from alchemy.com - free tier OK>
+
+PHASE 19 - Micro Cap Scanner:
+# Already have BINANCE_API_KEY
+
+All existing env vars still needed:
+BINANCE_API_KEY
+BINANCE_API_SECRET
+FRED_API_KEY
+TELEGRAM_TOKEN
+TELEGRAM_CHAT_ID
+
+STEP 4: Git Deploy
+
+git add intelligence_layers/regulatory_news_parser.py
+git add intelligence_layers/whale_tracker.py
+git add intelligence_layers/micro_cap_scanner.py
+git add streamlit_app.py
+git add requirements.txt
+
+git commit -m "Phase 17-19: Regulatory News + Whale Tracker + Micro Cap Scanner"
+git push origin main
+
+# Railway auto-deploys in 2-3 minutes
+
+STEP 5: Test
+
+Visit your Railway URL
+- Check dashboard → should show Phase 17-19 tabs
+- Click each tab:
+  - Phase 17: Should show regulatory news
+  - Phase 18: Should show whale activity
+  - Phase 19: Should show micro-cap opportunities
+
+STEP 6: Troubleshooting
+
+If modules not loading:
+- Check Railway logs: https://railway.app/projects/YOUR_PROJECT/deployments
+- Common issue: FinBERT downloads on first run (takes 1-2 min)
+- Alchemy API needs account: https://www.alchemy.com/
+- NewsAPI free tier: 100 calls/day (enough for monitoring)
+
+"""
