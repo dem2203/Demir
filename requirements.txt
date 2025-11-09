@@ -1,17 +1,16 @@
 # ============================================================================
-# DEMIR AI - requirements.txt (FINAL - PYTHON 3.11 WHEELS ONLY)
+# DEMIR AI - requirements.txt (PRODUCTION - NO SCIPY)
 # ============================================================================
-# NO SOURCE DISTRIBUTIONS - ONLY WHEELS
-# Python 3.11 compatible (Railway buildpack default)
-# Build time: ~30 seconds
+# FINAL VERSION - SADECE WHEELS - PRODUCTION READY
+# Python 3.11 (Railway default)
+# Build time: ~60 seconds (no Fortran compiler needed)
 #
 # ============================================================================
 # CORE
 # ============================================================================
 streamlit==1.37.0
-pandas==2.0.3
-numpy==1.26.4
-scipy==1.13.0
+pandas>=1.5.0
+numpy>=1.24.0
 python-dotenv==1.0.0
 
 # ============================================================================
@@ -51,7 +50,7 @@ matplotlib==3.7.0
 altair==5.1.0
 
 # ============================================================================
-# ML
+# ML (NO scipy - use alternative libraries)
 # ============================================================================
 scikit-learn==1.3.2
 xgboost==2.0.3
