@@ -1,69 +1,101 @@
-# ============================================================================
-# DEMIR AI - requirements.txt (BALANCED - ALL WHEELS, NO BUILD)
-# ============================================================================
-# FINAL - PRODUCTION READY
-# Only pre-compiled wheels (no .tar.gz source builds)
-# Python 3.11 compatible
-# Build time: ~60 seconds
-#
-# ============================================================================
-# CORE
-# ============================================================================
+# DEMIR AI v25-28 - COMPLETE REQUIREMENTS.TXT
+
+# Core
 streamlit==1.37.0
-pandas>=2.0.0
-numpy>=1.26.0
+streamlit-option-menu==0.3.6
+pandas==2.1.0
+numpy==1.24.3
 python-dotenv==1.0.0
 
-# ============================================================================
-# DATA APIS  
-# ============================================================================
+# ML & AI
+tensorflow==2.14.0
+keras==2.14.0
+scikit-learn==1.3.0
+xgboost==2.0.0
+lightgbm==4.1.0
+
+# Data Collection & APIs
+python-binance==1.0.17
+ccxt==4.0.0
 requests==2.31.0
-aiohttp>=3.8.0
-yfinance>=0.2.0
-python-binance>=1.0.0
-ccxt>=4.0.0
-pycoingecko>=3.0.0
+aiohttp==3.9.0
+websockets==12.0
+pycoingecko==3.1.0
+newsapi==1.0
 
-# ============================================================================
-# SENTIMENT
-# ============================================================================
-tweepy>=4.0.0
-praw>=7.0.0
-vaderSentiment>=3.3.0
+# Data Processing
+beautifulsoup4==4.12.2
+lxml==4.9.3
+ta==0.11.0
+ta-lib==0.4.28
+yfinance==0.2.32
 
-# ============================================================================
-# DATABASE
-# ============================================================================
-redis>=5.0.0
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
+# NLP & Sentiment
+tweepy==4.14.0
+praw==7.7.0
+nltk==3.8.1
+textblob==0.17.1
+transformers==4.33.0
 
-# ============================================================================
-# NOTIFICATIONS
-# ============================================================================
-python-telegram-bot>=20.0
+# Visualization
+plotly==5.17.0
+matplotlib==3.8.1
+seaborn==0.13.0
+altair==5.1.2
 
-# ============================================================================
-# VISUALIZATION
-# ============================================================================
-plotly>=5.0.0
-altair>=5.0.0
+# Database
+sqlite3  # Built-in
+sqlalchemy==2.0.23
+pymongo==4.5.0
 
-# ============================================================================
-# ML (MINIMAL - wheels only)
-# ============================================================================
-scikit-learn>=1.0.0
+# Utilities
+psutil==5.9.6
+python-telegram-bot==20.2
+APScheduler==3.10.4
+pytz==2023.3
+tqdm==4.66.1
+joblib==1.3.2
+pickle5==0.0.12
+dill==0.3.7
+cloudpickle==3.0.0
 
-# ============================================================================
-# WEB
-# ============================================================================
-fastapi>=0.100.0
-uvicorn>=0.20.0
-gunicorn>=21.0.0
+# Development & Testing
+pytest==7.4.2
+pytest-cov==4.1.0
+black==23.11.0
+flake8==6.1.0
 
-# ============================================================================
-# UTILITIES
-# ============================================================================
-pydantic>=2.0.0
-click>=8.0.0
-tqdm>=4.60.0
+# Async & Concurrency
+asyncio==3.4.3
+concurrent-futures==3.1.1
+gevent==23.9.1
+
+# Configuration
+python-yaml==6.0
+tomli==2.0.1
+configparser==6.0.0
+
+# System & Monitoring
+psutil==5.9.6
+GPUtil==1.4.0
+py-cpuinfo==9.0.0
+
+# Crypto specific
+pycryptodome==3.18.0
+web3==6.11.0
+eth-keys==0.4.0
+
+# Time series
+statsmodels==0.14.0
+pmdarima==2.0.4
+prophet==1.1.5
+tbats==1.1.3
+
+# Optional ML extras
+optuna==3.14.0  # Hyperparameter tuning
+hyperopt==0.2.7
+ray==2.9.0  # Distributed ML
+
+# Note:
+# tensorflow==2.14.0 - May require: pip install tensorflow[and-cuda]
+# ta-lib - May require system dependency: brew install ta-lib (macOS) or apt-get install ta-lib (Linux)
