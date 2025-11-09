@@ -1,7 +1,7 @@
 # ============================================================================
-# DEMIR AI TRADING BOT - STREAMLIT DASHBOARD v20.1 FIXED
+# DEMIR AI TRADING BOT - STREAMLIT DASHBOARD v20.2 FINAL
 # ============================================================================
-# FIX: Binance API hatası + Error handling + Perplexity UI complete
+# FIX: Syntax error - Turkish characters + string quotes
 # Date: November 10, 2025
 # ============================================================================
 
@@ -300,7 +300,7 @@ def main():
         )
         st.markdown(
             f'<p style="text-align: center; color: {PERPLEXITY_COLORS["text_secondary"]}; margin-top: -10px;">'
-            f'Professional AI Trading Dashboard v20.1</p>',
+            f'Professional AI Trading Dashboard v20.2</p>',
             unsafe_allow_html=True
         )
     
@@ -322,7 +322,7 @@ def main():
         st.markdown("## ⚙️ Ayarlar")
         
         selected_symbol = st.selectbox(
-            'Sembol Seç',
+            "Sembol Seç",
             ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'XRPUSDT', 'ADAUSDT'],
             index=0
         )
@@ -344,33 +344,33 @@ def main():
         
         st.divider()
         
-        if st.button('🧪 Test Telegram', use_container_width=True):
+        if st.button("🧪 Test Telegram", use_container_width=True):
             if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
                 try:
                     url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
-                    msg = f'✅ DEMIR AI Test - Sistema Çalışıyor!\nTime: {datetime.now().strftime("%H:%M:%S")}'
+                    msg = f"✅ DEMIR AI Test - Sistem Çalışıyor!\nTime: {datetime.now().strftime('%H:%M:%S')}"
                     params = {'chat_id': TELEGRAM_CHAT_ID, 'text': msg}
                     resp = requests.post(url, params=params, timeout=5)
                     
                     if resp.status_code == 200:
-                        st.success('✅ Telegram mesajı gönderildi!')
+                        st.success("✅ Telegram mesajı gönderildi!")
                     else:
-                        st.error('❌ Telegram gönderme hatası')
+                        st.error("❌ Telegram gönderme hatası")
                 except Exception as e:
-                    st.error(f'Telegram error: {e}')
+                    st.error(f"Telegram error: {e}")
             else:
-                st.error('Telegram anahtarları yapılandırılmamış')
+                st.error("Telegram anahtarları yapılandırılmamış")
     
     # ====================================================================
     # MAIN TABS
     # ====================================================================
     
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        '📊 Dashboard',
-        '🤖 AI Analysis',
-        '📈 Charts',
-        '💰 Portfolio',
-        '⚙️ Settings'
+        "📊 Dashboard",
+        "🤖 AI Analysis",
+        "📈 Charts",
+        "💰 Portfolio",
+        "⚙️ Settings"
     ])
     
     # ====================================================================
@@ -378,7 +378,7 @@ def main():
     # ====================================================================
     
     with tab1:
-        st.markdown('## 📊 Piyasa Özeti (Market Overview)')
+        st.markdown("## 📊 Piyasa Özeti (Market Overview)")
         
         # Fetch real data with error handling
         price, change_24h, volume_24h = data_manager.get_btc_price_real()
@@ -443,18 +443,18 @@ def main():
                     )
             
             st.divider()
-            st.success('✅ Real-time data loaded from Binance Futures')
+            st.success("✅ Real-time data loaded from Binance Futures")
         
         else:
-            st.error('❌ Gerçek veriler alınamadı - Binance API kontrol et')
-            st.info('💡 Binance API key'ini Railway environment variables'a ekle')
+            st.error("❌ Gerçek veriler alınamadı - Binance API kontrol et")
+            st.info("💡 Binance API key degiskenlerini Railway environment variables")
     
     # ====================================================================
     # TAB 2: AI ANALYSIS
     # ====================================================================
     
     with tab2:
-        st.markdown('## 🤖 AI Trading Signals')
+        st.markdown("## 🤖 AI Trading Signals")
         
         df = data_manager.get_market_data_real(selected_symbol, limit=100)
         
@@ -503,23 +503,23 @@ def main():
             
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric('Current Price', f'${closes[-1]:,.2f}')
+                st.metric("Current Price", f"${closes[-1]:,.2f}")
             with col2:
-                st.metric('SMA 20', f'${sma20:,.2f}')
+                st.metric("SMA 20", f"${sma20:,.2f}")
             with col3:
-                st.metric('SMA 50', f'${sma50:,.2f}')
+                st.metric("SMA 50", f"${sma50:,.2f}")
             with col4:
-                st.metric('Momentum', f'{momentum:+.2f}%')
+                st.metric("Momentum", f"{momentum:+.2f}%")
         
         else:
-            st.error('❌ Market verisi alınamadı')
+            st.error("❌ Market verisi alınamadı")
     
     # ====================================================================
     # TAB 3: CHARTS
     # ====================================================================
     
     with tab3:
-        st.markdown('## 📈 Fiyat Grafikleri')
+        st.markdown("## 📈 Fiyat Grafikleri")
         
         df = data_manager.get_market_data_real(selected_symbol, limit=100)
         
@@ -548,37 +548,37 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
         
         else:
-            st.error('❌ Chart data not available')
+            st.error("❌ Chart data not available")
     
     # ====================================================================
     # TAB 4: PORTFOLIO
     # ====================================================================
     
     with tab4:
-        st.markdown('## 💰 Portföy Yönetimi')
-        st.info('Portfolio yönetimi yakında eklenecek...')
+        st.markdown("## 💰 Portföy Yönetimi")
+        st.info("Portfolio yönetimi yakında eklenecek...")
     
     # ====================================================================
     # TAB 5: SETTINGS
     # ====================================================================
     
     with tab5:
-        st.markdown('## ⚙️ Sistem Ayarları')
+        st.markdown("## ⚙️ Sistem Ayarları")
         
         st.markdown("### API Yapılandırması")
         col1, col2 = st.columns(2)
         
         with col1:
             if BINANCE_API_KEY:
-                st.success(f'✅ Binance API: {BINANCE_API_KEY[:10]}...')
+                st.success(f"✅ Binance API: {BINANCE_API_KEY[:10]}...")
             else:
-                st.warning('⚠️ Binance API key bulunamadı')
+                st.warning("⚠️ Binance API key bulunamadı")
         
         with col2:
             if TELEGRAM_TOKEN:
-                st.success('✅ Telegram: Configured')
+                st.success("✅ Telegram: Configured")
             else:
-                st.warning('⚠️ Telegram not configured')
+                st.warning("⚠️ Telegram not configured")
         
         st.divider()
         
@@ -586,11 +586,11 @@ def main():
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric('Version', 'v20.1 Fixed')
+            st.metric("Version", "v20.2 Final")
         with col2:
-            st.metric('Theme', 'Perplexity Pro')
+            st.metric("Theme", "Perplexity Pro")
         with col3:
-            st.metric('Data', 'Real-time')
+            st.metric("Data", "Real-time")
 
 if __name__ == '__main__':
     main()
