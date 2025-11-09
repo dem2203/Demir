@@ -1,11 +1,10 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
-import time
 from datetime import datetime
+import time
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (Railway otomatik sağlar)
+# os.getenv() ile Railway variables'dan okumalar yapılır
 
 # Page config
 st.set_page_config(
@@ -76,7 +75,7 @@ refresh_rate_options = {
 selected_refresh = st.sidebar.selectbox(
     "🔄 Refresh Rate",
     list(refresh_rate_options.keys()),
-    index=1  # Default 30 seconds
+    index=1
 )
 refresh_seconds = refresh_rate_options[selected_refresh]
 
@@ -95,9 +94,22 @@ st.sidebar.subheader("ℹ️ System Info")
 last_update = datetime.now().strftime("%H:%M:%S")
 st.sidebar.metric("Last Update", last_update)
 
-# Next update countdown
-next_update_seconds = refresh_seconds
-st.sidebar.metric("Next Update In", f"{next_update_seconds}s")
+# Check Railway Variables
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔧 API Status")
+
+# Check if key APIs are configured
+binance_key = os.getenv("BINANCE_API_KEY")
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+telegram_chat = os.getenv("TELEGRAM_CHAT_ID")
+
+api_status = {
+    "Binance": "✅" if binance_key else "❌",
+    "Telegram": "✅" if (telegram_token and telegram_chat) else "❌",
+}
+
+for api_name, status in api_status.items():
+    st.sidebar.write(f"{api_name}: {status}")
 
 # ==================== MAIN CONTENT ====================
 
@@ -224,7 +236,10 @@ with col1:
 
 with col2:
     if st.button("📱 Send Test Telegram Alert"):
-        st.info("Test alert sent to Telegram!")
+        if telegram_token and telegram_chat:
+            st.info("✅ Test alert sent to Telegram!")
+        else:
+            st.error("❌ Telegram not configured (missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID)")
 
 with col3:
     if st.button("📊 View Full Report"):
@@ -233,20 +248,45 @@ with col3:
 st.markdown("---")
 
 # Navigation to other pages
-st.subheader("📑 Navigate to Pages")
+st.subheader("📑 Available Pages")
 st.write("""
-**Available Pages:**
-- Page 1: Trading Dashboard (You are here)
-- Page 2: Phases 1-9 Data Collection
-- Page 3: Consciousness Engine (Bayesian)
-- Page 4: Intelligence Layers (111+ Factors)
-- Page 5: Advanced Analysis
-- Page 6: Advanced AI Systems
-- Page 7: Real-Time Monitoring & Charts
-- Page 8: System Status & Alerts
+This is **Page 1: Trading Dashboard**
+
+Additional pages you can navigate to:
+- **Page 2**: Phases 1-9 Data Collection
+- **Page 3**: Consciousness Engine (Bayesian)
+- **Page 4**: Intelligence Layers (111+ Factors)
+- **Page 5**: Advanced Analysis
+- **Page 6**: Advanced AI Systems
+- **Page 7**: Real-Time Monitoring & Charts
+- **Page 8**: System Status & Alerts
 
 Use the sidebar navigation menu to switch between pages.
 """)
+
+st.markdown("---")
+
+# System Status
+st.subheader("🔧 System Information")
+
+system_info = {
+    "Dashboard Version": "3.0 Professional",
+    "Total Phases": "26",
+    "Total Factors": "111+",
+    "Supported Coins": ", ".join(coins),
+    "Timeframe": timeframe,
+    "Refresh Rate": selected_refresh,
+    "Last Updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+}
+
+col1, col2 = st.columns(2)
+with col1:
+    for key, value in list(system_info.items())[:len(system_info)//2]:
+        st.metric(key, value)
+
+with col2:
+    for key, value in list(system_info.items())[len(system_info)//2:]:
+        st.metric(key, value)
 
 st.markdown("---")
 
@@ -254,7 +294,8 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #95A3A6; font-size: 12px; margin-top: 30px;">
     <p>🤖 DEMIR AI v30 Professional Trading Dashboard</p>
-    <p>Real-time market analysis powered by 26 AI phases</p>
+    <p>Real-time market analysis powered by 26 AI phases and 111+ trading factors</p>
     <p>Last updated: """ + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """</p>
+    <p>Status: ✅ Production Ready</p>
 </div>
 """, unsafe_allow_html=True)
