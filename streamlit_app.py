@@ -365,23 +365,28 @@ elif page == "📈 Live Signals":
     signal = analysis['signal']
     confidence = analysis['confidence']
     
-    if signal == "LONG":
-        color = "🟢"
-        signal_text = "UZUN (LONG) - YUKARIŞ"
-    elif signal == "SHORT":
-        color = "🔴"
-        signal_text = "KISA (SHORT) - DÜŞÜŞ"
-    else:
-        color = "🟡"
-        signal_text = "TARAFSIZ - BEKLEMESİ ÖNERILIR"
-    
-    st.markdown(f"""
-    ### {color} Mevcut Sinyal: **{signal_text}**
-    
-    **Güven Oranı:** {confidence:.1f}%
-    **AI Skoru:** {analysis['score']}/100
-    **Durum:** {'⏳ ENTRY'ye HAZIR' if signal != 'NEUTRAL' else '⏸️ BEKLEMEDE'}
-    """)
+   # Signal durumunu belirle
+if signal == "LONG":
+    color = "🟢"
+    signal_text = "UZUN (LONG) - YUKARIŞ"
+    durum = "⏳ ENTRY'ye HAZIR"
+elif signal == "SHORT":
+    color = "🔴"
+    signal_text = "KISA (SHORT) - DÜŞÜŞ"
+    durum = "⏳ ENTRY'ye HAZIR"
+else:
+    color = "🟡"
+    signal_text = "TARAFSIZ - BEKLEMESİ ÖNERILIR"
+    durum = "⏸️ BEKLEMEDE"
+
+# Markdown'da göster
+st.markdown(f"""
+### {color} Mevcut Sinyal: **{signal_text}**
+
+**Güven Oranı:** {confidence:.1f}%
+**AI Skoru:** {analysis['score']}/100
+**Durum:** {durum}
+""")
 
 # ============================================================================
 # PAGE: TRADE TAKIP
