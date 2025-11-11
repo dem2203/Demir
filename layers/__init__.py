@@ -20,7 +20,7 @@ from .advanced_layers import (
     EnhancedDominanceLayer,
     EnhancedVIXLayer,
     EnhancedRatesLayer,
-    LAYERS
+    LAYERS,
 )
 
 # PHASE 3E - ML LAYERS (NEW IMPORTS)
@@ -65,7 +65,6 @@ __all__ = [
     'EnhancedVIXLayer',
     'EnhancedRatesLayer',
     'LAYERS',
-    
     # Phase 3E - ML Layers
     'lstm_layer',
     'transformer_layer',
@@ -73,7 +72,6 @@ __all__ = [
     'portfolio_layer',
     'quantum_layer',
     'meta_layer',
-    
     # Phase 3F - Real-time Crypto Layers
     'realtime_stream',
     'telegram_layer',
@@ -89,4 +87,3 @@ __all__ = [
     'news_aggregator_layer',
     'integration_engine_layer',
 ]
-```
