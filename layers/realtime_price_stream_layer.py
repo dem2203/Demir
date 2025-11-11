@@ -78,4 +78,3 @@ class RealtimePriceStreamLayer:
             return {'error': str(e), 'status': 'error'}
 
 realtime_stream = RealtimePriceStreamLayer()
-```
