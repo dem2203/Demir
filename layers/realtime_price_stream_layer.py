@@ -1,4 +1,3 @@
-```python
 import json
 import threading
 import time
