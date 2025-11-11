@@ -3,4 +3,3 @@ class IntegrationEngineLayer:
     def analyze(self):
         return {'status': '100_PERCENT_COMPLETE'}
 integration_layer = IntegrationEngineLayer()
-```
