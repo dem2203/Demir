@@ -62,4 +62,3 @@ class PortfolioMonitoringLayer:
             return {'error': str(e), 'status': 'error'}
 
 portfolio_layer = PortfolioMonitoringLayer()
-```
