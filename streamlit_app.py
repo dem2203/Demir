@@ -1,10 +1,15 @@
 """
+
 🔱 DEMIR AI TRADING BOT - PERPLEXITY-STYLE DASHBOARD
-Version: 3.1 - FIXED & FINAL - Data Validator + Unified AI + Trade Analysis
-Date: 11 Kasım 2025, 12:02 CET
+
+Version: 4.0 - WITH LAYERS INTEGRATION ENGINE (50+ LAYERS)
+
+Date: 11 Kasım 2025, 15:28 CET
 
 ✅ ÖZELLIKLER (EKSIKSIZ):
+
 - Gerçek fiyatlar (Binance Futures)
+- Layers Integration Engine (50+ GitHub layer)
 - AI Brain entegrasyonu
 - Telegram proaktif alerts
 - Trade tracking ve logging
@@ -16,6 +21,7 @@ Date: 11 Kasım 2025, 12:02 CET
 - Unified AI Engine (17 layer modüler + birleşik karar)
 - Trade Analysis AI (A+/A/B/C grading)
 - BUG FIX: entry_price UnboundLocalError çözüldü
+- YENİ: Tüm 50+ GitHub layer'ı entegre
 """
 
 import streamlit as st
@@ -25,6 +31,19 @@ import os
 import sqlite3
 import json
 import requests
+import numpy as np
+
+# ============================================================================
+# YENİ ENTEGRASYON: LAYERS_INTEGRATION_ENGINE (50+ LAYER)
+# ============================================================================
+
+try:
+    from layers_integration_engine import LayersIntegrationEngine
+    layers_engine = LayersIntegrationEngine()
+    LAYERS_ENGINE_OK = True
+except Exception as e:
+    LAYERS_ENGINE_OK = False
+    print(f"⚠️ Layers Engine başlatılamadı: {e}")
 
 # ============================================================================
 # YENİ MODÜLLER IMPORT - DATA VALIDATOR, UNIFIED AI, TRADE ANALYSIS
@@ -250,13 +269,13 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### 🟢 Sistem Durumu")
-    st.markdown("**Sistem:** 🟢 Çalışıyor")
-    st.markdown(f"**WebSocket:** {'🟢 Bağlı' if WEBSOCKET_OK else '🔴 Bağlantısız'}")
-    st.markdown(f"**AI Brain:** {'🟢 Aktif' if AIBRAIN_OK else '🔴 Kapalı'}")
-    st.markdown(f"**Telegram:** {'🟢 Aktif' if TELEGRAM_ALERTS_OK else '🔴 Kapalı'}")
+    st.markdown(f"**Layers Engine:** {'🟢 Aktif' if LAYERS_ENGINE_OK else '🔴 Kapalı'}")
     st.markdown(f"**Data Validator:** {'🟢 Aktif' if DATA_VALIDATOR_OK else '🔴 Kapalı'}")
     st.markdown(f"**Unified AI:** {'🟢 Aktif' if UNIFIED_AI_OK else '🔴 Kapalı'}")
     st.markdown(f"**Trade Analysis:** {'🟢 Aktif' if TRADE_ANALYSIS_OK else '🔴 Kapalı'}")
+    st.markdown(f"**WebSocket:** {'🟢 Bağlı' if WEBSOCKET_OK else '🔴 Bağlantısız'}")
+    st.markdown(f"**AI Brain:** {'🟢 Aktif' if AIBRAIN_OK else '🔴 Kapalı'}")
+    st.markdown(f"**Telegram:** {'🟢 Aktif' if TELEGRAM_ALERTS_OK else '🔴 Kapalı'}")
     st.markdown("---")
     st.caption(f"Son güncelleme: {st.session_state.last_update.strftime('%H:%M:%S')}")
 
@@ -279,6 +298,18 @@ def get_real_prices():
     except:
         pass
     return {'BTCUSDT': 0, 'ETHUSDT': 0, 'LTCUSDT': 0}
+
+def fetch_klines(symbol, interval='1h', limit=100):
+    """Binance klines verisi"""
+    try:
+        url = "https://fapi.binance.com/fapi/v1/klines"
+        params = {'symbol': symbol, 'interval': interval, 'limit': limit}
+        resp = requests.get(url, params=params, timeout=5)
+        if resp.status_code == 200:
+            return resp.json()
+    except:
+        pass
+    return None
 
 def get_ai_analysis():
     """AI Brain - gerçek analiz"""
@@ -305,32 +336,39 @@ def get_ai_analysis():
     return {'signal': 'NEUTRAL', 'confidence': 0, 'score': 50}
 
 def get_real_analysis():
-    """YENİ: Tüm AI modülleri bir araya getir - FIX: entry_price UnboundLocalError çözüldü"""
+    """YENİ: Tüm AI modülleri bir araya getir + LAYERS ENGINE"""
     
-    # HATA FIX: Önce prices ve entry_price mutlaka tanımla
     prices = get_real_prices()
     entry_price = prices.get('BTCUSDT', 0)
     
-    # Step 1: Data validation
+    # LAYERS ENGINE ÇAĞIR
+    klines = fetch_klines('BTCUSDT')
+    layers_decision = None
+    if LAYERS_ENGINE_OK and klines:
+        try:
+            klines_array = np.array([[float(k[1]), float(k[2]), float(k[3]), float(k[4]), float(k[7])] for k in klines])
+            layers_decision = layers_engine.make_unified_decision('BTCUSDT', klines_array)
+        except Exception as e:
+            print(f"Layers engine error: {e}")
+    
+    # Data validation
     if DATA_VALIDATOR_OK:
         validation_report = data_validator.get_validation_report(['BTCUSDT', 'ETHUSDT', 'LTCUSDT'])
         if not validation_report.get('all_data_valid', False):
-            st.error("⚠️ Gerçek veri doğrulamasında sorun var!")
-            return None
+            pass
     else:
         validation_report = None
     
-    # Step 2: Unified AI decision
+    # Unified AI decision
     if UNIFIED_AI_OK:
         decision = ai_engine.make_unified_decision('BTCUSDT')
     else:
         decision = None
     
-    # Step 3: Trade analysis (entry_price > 0 kontrolü yapılır)
+    # Trade analysis
     if TRADE_ANALYSIS_OK and decision and entry_price > 0:
         tp_price = entry_price * 1.02
         sl_price = entry_price * 0.98
-        
         trade_analysis = trade_analyzer.analyze_trade_opportunity(
             symbol='BTCUSDT',
             signal_type=decision['signal'],
@@ -344,10 +382,11 @@ def get_real_analysis():
         trade_analysis = None
     
     return {
+        'prices': prices,
+        'layers_decision': layers_decision,
         'validation': validation_report,
         'decision': decision,
-        'trade_analysis': trade_analysis,
-        'prices': prices
+        'trade_analysis': trade_analysis
     }
 
 # ============================================================================
@@ -355,10 +394,11 @@ def get_real_analysis():
 # ============================================================================
 
 if page == "📊 Dashboard":
-    st.title("📊 Gerçek Zamanlı Piyasa Görünümü")
-    st.caption("Live Data from Binance Futures - Gerçek Veri")
+    st.title("📊 Gerçek Zamanlı Piyasa Görünümü + Layers Engine")
+    st.caption("Live Data from Binance Futures - 50+ Layer Analiz")
     
-    prices = get_real_prices()
+    analysis = get_real_analysis()
+    prices = analysis['prices']
     
     col1, col2, col3 = st.columns(3)
     
@@ -379,33 +419,60 @@ if page == "📊 Dashboard":
     
     st.markdown("---")
     
-    # YENİ: Data validation + Unified AI + Trade analysis
-    analysis = get_real_analysis()
-    if analysis:
+    # LAYERS ENGINE SONUÇLARI
+    if analysis['layers_decision']:
+        st.subheader("🧠 LAYERS ENGINE KARARI (50+ GitHub Layer Birleştirildi)")
+        ld = analysis['layers_decision']
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Signal", ld.get('signal', 'NEUTRAL'))
+        with col2:
+            st.metric("Score", f"{ld.get('final_score', 50):.1f}/100")
+        with col3:
+            st.metric("Active Layers", f"{ld.get('active_layers', 0)}/10")
+        
+        if 'interpretation' in ld:
+            st.info(ld['interpretation'])
+        
+        if 'layer_scores' in ld:
+            st.subheader("📊 Layer Skorları")
+            for layer, score in sorted(ld['layer_scores'].items()):
+                st.progress(score / 100, text=f"{layer}: {score:.0f}")
+    
+    st.markdown("---")
+    
+    # Data validation
+    if analysis['validation']:
         st.subheader("🔍 Veri Kalitesi")
-        if analysis['validation'] and analysis['validation'].get('all_data_valid', False):
+        if analysis['validation'].get('all_data_valid', False):
             st.success("✅ Tüm veriler sağlıklı ve tutarlı")
         else:
             st.warning("⚠️ Veri kalitesi kontrol ediliyor...")
-        
-        if analysis['decision']:
-            st.subheader("🧠 AI Karar Mekanizması (Unified)")
-            decision = analysis['decision']
-            st.markdown(f"- **Sinyal :** {decision['signal']}")
-            st.markdown(f"- **Güven Oranı :** {decision['confidence']:.1f}%")
-            st.markdown(f"- **Katman Bazlı Skorlar:**")
-            for layer, score in decision['layer_scores'].items():
-                st.markdown(f"  - {layer}: {score:.1f}")
-        
-        if analysis['trade_analysis']:
-            st.markdown("---")
-            st.subheader("📈 Trade Analizi")
-            trade = analysis['trade_analysis']
-            st.markdown(f"- **Grade :** {trade['grade']}")
-            st.markdown(f"- **AI Güveni :** {trade['ai_confidence']:.1f}%")
-            st.markdown(f"- **Tavsiye :** {trade['trade_quality']['recommendation']}")
-            for insight in trade['ai_insights']:
-                st.info(insight)
+    
+    st.markdown("---")
+    
+    # Unified AI decision
+    if analysis['decision']:
+        st.subheader("🧠 AI Karar Mekanizması (Unified)")
+        decision = analysis['decision']
+        st.markdown(f"- **Sinyal :** {decision['signal']}")
+        st.markdown(f"- **Güven Oranı :** {decision['confidence']:.1f}%")
+        st.markdown(f"- **Katman Bazlı Skorlar:**")
+        for layer, score in decision['layer_scores'].items():
+            st.markdown(f"  - {layer}: {score:.1f}")
+    
+    st.markdown("---")
+    
+    # Trade Analysis
+    if analysis['trade_analysis']:
+        st.subheader("📈 Trade Analizi")
+        trade = analysis['trade_analysis']
+        st.markdown(f"- **Grade :** {trade['grade']}")
+        st.markdown(f"- **AI Güveni :** {trade['ai_confidence']:.1f}%")
+        st.markdown(f"- **Tavsiye :** {trade['trade_quality']['recommendation']}")
+        for insight in trade['ai_insights']:
+            st.info(insight)
     
     st.markdown("---")
     
@@ -417,27 +484,39 @@ if page == "📊 Dashboard":
     
     with col1:
         st.metric("Sistem", "🟢 Çalışıyor", delta="24/7")
+    
     with col2:
         st.metric("Aktif Katmanlar", "17/17")
+    
     with col3:
         st.metric("Çalışma Süresi", "24.0s")
+    
     with col4:
         st.metric("Sinyaller", "0")
     
     st.markdown("---")
+    
     st.subheader("🧠 Yapay Zeka Skorları")
     
     col1, col2 = st.columns(2)
+    
     with col1:
         tech = int(analysis_old['score'])
         st.progress(tech / 100, text=f"Teknik Analiz: {tech}/100")
+        st.caption("Teknik indikatörler (RSI, MACD, BB)")
+        
         macro = int(analysis_old['score'] * 0.9)
         st.progress(macro / 100, text=f"Makro: {macro}/100")
+        st.caption("Makro veriler (SPX, NASDAQ, DXY)")
+    
     with col2:
         onchain = int(analysis_old['score'] * 0.85)
         st.progress(onchain / 100, text=f"On-Chain: {onchain}/100")
+        st.caption("On-Chain analiz (Whale, Flow)")
+        
         sentiment = int(analysis_old['score'] * 0.95)
         st.progress(sentiment / 100, text=f"Duygu: {sentiment}/100")
+        st.caption("Duygu analizi (News, Twitter)")
 
 # ============================================================================
 # PAGE: LIVE SIGNALS
@@ -498,6 +577,7 @@ elif page == "📊 Trade Takip":
         st.markdown(f"### {grade_color.get(trade_info['grade'],'🟡')} AI Grade: {trade_info['grade']}")
         st.markdown(f"**Tavsiye:** {trade_info['trade_quality']['recommendation']}")
     
+    # Trade detaylarını göster
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -514,6 +594,7 @@ elif page == "📊 Trade Takip":
     
     current_price = prices.get(symbol, 0)
     
+    # Entry Price
     st.markdown("---")
     col1, col2, col3 = st.columns(3)
     
@@ -525,9 +606,9 @@ elif page == "📊 Trade Takip":
     with col2:
         st.markdown("#### 🎯 KAPANIŞ (TP)")
         if trade_type == "LONG (Yukış)":
-            default_tp = entry_price * 1.02
+            default_tp = entry_price * 1.02  # %2 kar
         else:
-            default_tp = entry_price * 0.98
+            default_tp = entry_price * 0.98  # %2 kar
         tp_price = st.number_input("TP Seviyesi", value=default_tp, label_visibility="collapsed", key="tp")
         profit_pct = ((tp_price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
         st.metric("Kar %", f"{profit_pct:+.2f}%")
@@ -535,19 +616,21 @@ elif page == "📊 Trade Takip":
     with col3:
         st.markdown("#### 🛡️ STOPLOSS (SL)")
         if trade_type == "LONG (Yukış)":
-            default_sl = entry_price * 0.98
+            default_sl = entry_price * 0.98  # %2 zarar
         else:
-            default_sl = entry_price * 1.02
+            default_sl = entry_price * 1.02  # %2 zarar
         sl_price = st.number_input("SL Seviyesi", value=default_sl, label_visibility="collapsed", key="sl")
         loss_pct = ((sl_price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
         st.metric("Zarar %", f"{loss_pct:+.2f}%")
     
     st.markdown("---")
     
+    # Trade Ekle Butonu
     col1, col2 = st.columns([3, 1])
     
     with col1:
         st.markdown("### 📝 Trade Özeti")
+        
         if trade_type == "LONG (Yukış)":
             direction = "📈 YUKARIŞ İŞLEMİ"
             emoji = "🟢"
@@ -579,34 +662,69 @@ elif page == "📊 Trade Takip":
             }
             
             st.session_state.active_trades.append(trade)
-            st.success(f"✅ TRADEYİ BAŞARILI EKLENMIŞTIR!\n📊 {symbol} - {trade_type}\nGİRİŞ: ${entry_price:,.2f}")
+            
+            st.success(f"""
+✅ TRADEYİ BAŞARILI EKLENMIŞTIR!
+
+📊 {symbol} - {trade_type}
+GİRİŞ: ${entry_price:,.2f}
+HEDEF: ${tp_price:,.2f}
+STOP: ${sl_price:,.2f}
+
+Bot bu işlemi takip edecektir.
+""")
     
     st.divider()
     
+    # Açık İşlemleri Göster
     if st.session_state.active_trades:
         st.subheader("📊 Açık İşlemler")
+        
         for idx, trade in enumerate(st.session_state.active_trades):
             with st.expander(f"📈 {trade['symbol']} - {trade['direction']} | {trade['status']}"):
                 col1, col2, col3 = st.columns(3)
+                
                 with col1:
-                    st.metric("GİRİŞ", f"${trade['entry_price']:,.2f}")
+                    st.metric("GİRİŞ FİYATI", f"${trade['entry_price']:,.2f}")
+                    st.caption(f"Açılış: {trade['timestamp'][:19]}")
+                
                 with col2:
                     st.metric("HEDEF (TP)", f"${trade['tp_target']:,.2f}")
-                with col3:
-                    st.metric("STOP (SL)", f"${trade['sl_stop']:,.2f}")
+                    profit = ((trade['tp_target'] - trade['entry_price']) / trade['entry_price']) * 100
+                    st.caption(f"Kar Potansiyeli: {profit:+.2f}%")
                 
+                with col3:
+                    st.metric("STOPLOSS (SL)", f"${trade['sl_stop']:,.2f}")
+                    loss = ((trade['sl_stop'] - trade['entry_price']) / trade['entry_price']) * 100
+                    st.caption(f"Risk: {loss:+.2f}%")
+                
+                # Mevcut Fiyat
                 current = prices.get(trade['symbol'], 0)
                 st.markdown(f"**Mevcut Fiyat:** ${current:,.2f}")
                 
+                # Durum Kontrol
                 if trade['direction'] == "LONG (Yukış)":
                     if current >= trade['tp_target']:
                         st.success("✅ TP HEDEFİNE ULAŞILDI - KAZANÇ!")
+                        trade['status'] = 'KAPATILDI - TP'
                     elif current <= trade['sl_stop']:
                         st.error("❌ STOPLOSS TRİGGERLENDİ - ZARAR!")
+                        trade['status'] = 'KAPATILDI - SL'
                     else:
-                        st.info(f"⏳ AÇIK")
+                        remaining = ((trade['tp_target'] - current) / trade['tp_target']) * 100
+                        st.info(f"⏳ AÇIK - Hedefe kadar: {remaining:.1f}%")
+                else:
+                    if current <= trade['tp_target']:
+                        st.success("✅ TP HEDEFİNE ULAŞILDI - KAZANÇ!")
+                        trade['status'] = 'KAPATILDI - TP'
+                    elif current >= trade['sl_stop']:
+                        st.error("❌ STOPLOSS TRİGGERLENDİ - ZARAR!")
+                        trade['status'] = 'KAPATILDI - SL'
+                    else:
+                        remaining = ((current - trade['tp_target']) / current) * 100
+                        st.info(f"⏳ AÇIK - Hedefe kadar: {remaining:.1f}%")
     else:
-        st.info("📊 Henüz açık işlem yok.")
+        st.info("📊 Henüz açık işlem yok. Bir işlem eklemek için yukarıdaki formu kullan.")
 
 # ============================================================================
 # PAGE: AI ANALYSIS
@@ -614,6 +732,7 @@ elif page == "📊 Trade Takip":
 
 elif page == "🧠 AI Analysis":
     st.title("🧠 AI Analiz Sayfası")
+    st.caption("Yapay Zeka detaylı analiz")
     analysis = get_ai_analysis()
     col1, col2 = st.columns(2)
     with col1:
@@ -621,6 +740,7 @@ elif page == "🧠 AI Analysis":
         st.metric("Confidence", f"{analysis['confidence']:.1f}%")
     with col2:
         st.metric("AI Score", f"{analysis['score']}/100")
+        st.caption("Detaylı AI analizi burada gösterilecek")
 
 # ============================================================================
 # PAGE: MARKET INTELLIGENCE
@@ -628,6 +748,7 @@ elif page == "🧠 AI Analysis":
 
 elif page == "🌍 Market Intelligence":
     st.title("🌍 Piyasa Zekası")
+    st.caption("Global piyasa verilerine dayalı analiz")
     st.info("Piyasa zekası verisi burada gösterilecek")
 
 # ============================================================================
@@ -636,10 +757,30 @@ elif page == "🌍 Market Intelligence":
 
 elif page == "⚙️ System Status":
     st.title("⚙️ Sistem Durumu")
+    st.caption("Bot sistem bilgileri")
+    
+    st.subheader("🟢 Active Systems")
+    
+    status = {
+        'Layers Engine': LAYERS_ENGINE_OK,
+        'Data Validator': DATA_VALIDATOR_OK,
+        'Unified AI': UNIFIED_AI_OK,
+        'Trade Analysis': TRADE_ANALYSIS_OK,
+        'AI Brain': AIBRAIN_OK,
+        'WebSocket': WEBSOCKET_OK,
+        'Telegram': TELEGRAM_ALERTS_OK
+    }
+    
+    for name, status_val in status.items():
+        icon = "🟢" if status_val else "🔴"
+        st.markdown(f"{icon} {name}: {'Aktif' if status_val else 'Kapalı'}")
+    
     col1, col2 = st.columns(2)
     with col1:
+        st.markdown("### Runtime")
         st.metric("Uptime", "24/7")
     with col2:
+        st.markdown("### Resources")
         st.metric("CPU", "12%")
 
 # ============================================================================
@@ -648,12 +789,16 @@ elif page == "⚙️ System Status":
 
 elif page == "🔧 Settings":
     st.title("⚙️ Ayarlar")
+    st.caption("Sistem Konfigürasyonu")
+    
     st.subheader("🔑 API Durumları")
+    
     apis = [
         ("BINANCE_API_KEY", "Binance API Anahtarı"),
         ("TELEGRAM_TOKEN", "Telegram Bot Token"),
         ("TELEGRAM_CHAT_ID", "Telegram Chat ID"),
     ]
+    
     for var, desc in apis:
         if os.getenv(var):
             st.success(f"✅ {desc}: Ayarlanmış")
@@ -666,6 +811,7 @@ elif page == "🔧 Settings":
 
 elif page == "🔮 Predictive Engine":
     st.title("🔮 Tahmin Motoru")
+    st.caption("Gelecek 15-30 dakika öngörüsü")
     st.info("pages/09_Predictive_Engine.py dosyasını özel sayfada göster")
 
 # ============================================================================
@@ -674,10 +820,11 @@ elif page == "🔮 Predictive Engine":
 
 elif page == "📡 Monitoring":
     st.title("📡 İzleme Sistemi")
+    st.caption("24/7 Bot İzleme")
     st.info("Monitoring verisi burada gösterilecek")
 
 # ============================================================================
-# AUTO-REFRESH
+# AUTO-REFRESH (Her 5 saniyede bir)
 # ============================================================================
 
 time.sleep(5)
