@@ -125,4 +125,3 @@ class QuantumAlgorithmLayer:
 
 # Global instance
 quantum_layer = QuantumAlgorithmLayer()
-```
