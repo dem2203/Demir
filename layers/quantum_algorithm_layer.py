@@ -1,4 +1,3 @@
-```python
 import numpy as np
 import os
 from binance.client import Client
