@@ -9,4 +9,3 @@ class AltcoinSeasonLayer:
             return {'season': 'unknown'}
 
 altcoin_season = AltcoinSeasonLayer()
-```
