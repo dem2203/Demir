@@ -1,9 +1,10 @@
-# requirements.txt - FIXED FOR PYTHON 3.13 + RAILWAY
-# DEMIR AI Trading Bot - Fixed: 11 November 2025, 22:27 CET
-# Removed problematic packages, optimized for Railway deployment
+# requirements.txt - FINAL WORKING VERSION
+# DEMIR AI Trading Bot - Production Ready
+# Date: 11 November 2025, 22:34 CET
+# Python 3.13 Compatible + Railway Optimized
 
 # ============================================================================
-# CORE DATA PROCESSING
+# CORE DATA PROCESSING - REQUIRED
 # ============================================================================
 pandas>=2.0.0
 numpy>=1.24.0
@@ -11,26 +12,22 @@ scipy>=1.10.0
 scikit-learn>=1.3.0
 
 # ============================================================================
-# MACHINE LEARNING - PHASE 3E (Optimized for Railway)
+# MACHINE LEARNING - PHASE 3E
 # ============================================================================
 xgboost>=1.7.0
-# tensorflow - Too heavy for Railway, using torch instead
-# TensorFlow requires significant RAM - use PyTorch on Railway
 torch>=2.0.0
 transformers>=4.30.0
 
 # ============================================================================
-# FINANCIAL DATA & TRADING
+# FINANCIAL DATA & TRADING - REQUIRED
 # ============================================================================
 yfinance>=0.2.32
 requests>=2.31.0
 ccxt>=2.90.0
 python-binance>=1.0.17
-# ta-lib removed - requires complex compilation, use pandas_ta instead
-pandas-ta>=0.3.14
 
 # ============================================================================
-# WEB & API FRAMEWORKS
+# WEB & API FRAMEWORKS - REQUIRED
 # ============================================================================
 streamlit>=1.28.0
 flask>=3.0.0
@@ -46,11 +43,10 @@ aiohttp>=3.9.0
 python-telegram-bot>=20.0
 
 # ============================================================================
-# DATABASE (SQLite3 is built-in with Python, no need to install)
+# DATABASE
 # ============================================================================
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
-# sqlite3 is built-in with Python - removed
 
 # ============================================================================
 # UTILITIES & CONFIGURATION
@@ -74,8 +70,7 @@ numba>=0.57.0
 joblib>=1.3.0
 
 # ============================================================================
-# ADDITIONAL DEPENDENCIES FOR LAYERS
+# ADDITIONAL DEPENDENCIES
 # ============================================================================
 lxml>=4.9.0
 beautifulsoup4>=4.12.0
-python-dateutil>=2.8.2
