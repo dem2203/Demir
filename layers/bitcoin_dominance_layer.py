@@ -11,4 +11,3 @@ class BitcoinDominanceLayer:
             return {'error': 'API error'}
 
 btc_dominance = BitcoinDominanceLayer()
-```
