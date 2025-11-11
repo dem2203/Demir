@@ -107,4 +107,3 @@ class TransformerLayer:
 
 # Global instance
 transformer_layer = TransformerLayer()
-```
