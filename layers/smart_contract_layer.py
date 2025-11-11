@@ -1,4 +1,3 @@
-```python
 # LAYER 9: Smart Contract Layer
 class SmartContractLayer:
     def analyze(self):
