@@ -115,4 +115,3 @@ class LSTMNeuralLayer:
 
 # Global instance
 lstm_layer = LSTMNeuralLayer()
-```
