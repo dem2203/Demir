@@ -96,4 +96,3 @@ class RiskManagementLayer:
 
 # Global instance
 risk_layer = RiskManagementLayer()
-```
