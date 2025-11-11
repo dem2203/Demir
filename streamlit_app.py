@@ -1,7 +1,7 @@
 """
 🔱 DEMIR AI TRADING BOT - PERPLEXITY-STYLE DASHBOARD
-Version: 3.0 - Telegram Entegre + Trade Tracking + FULL CODE
-Date: 11 Kasım 2025, 08:05 CET
+Version: 3.0 - Telegram Entegre + Trade Tracking + AI Unified Engine
+Date: 11 Kasım 2025, 11:50 CET
 
 ✅ ÖZELLIKLER (EKSIKSIZ):
 - Gerçek fiyatlar (Binance Futures)
@@ -12,6 +12,9 @@ Date: 11 Kasım 2025, 08:05 CET
 - 10 sayfa (Dashboard + 9 Pages)
 - Türkçe interface
 - Trade takip sistemi
+- Data Validator (Gerçek veri doğrulaması)
+- Unified AI Engine (Birleşik karar mekanizması)
+- Trade Analysis AI (AI tabanlı trade puanlaması)
 """
 
 import streamlit as st
@@ -21,6 +24,34 @@ import os
 import sqlite3
 import json
 import requests
+
+# ============================================================================
+# YENİ MODÜLLER IMPORT - DATA VALIDATOR, UNIFIED AI, TRADE ANALYSIS
+# ============================================================================
+
+try:
+    from data_validator import DataValidator
+    data_validator = DataValidator()
+    DATA_VALIDATOR_OK = True
+except Exception as e:
+    DATA_VALIDATOR_OK = False
+    print(f"⚠️ Data Validator başlatılamadı: {e}")
+
+try:
+    from unified_ai_engine import UnifiedAIEngine
+    ai_engine = UnifiedAIEngine()
+    UNIFIED_AI_OK = True
+except Exception as e:
+    UNIFIED_AI_OK = False
+    print(f"⚠️ Unified AI Engine başlatılamadı: {e}")
+
+try:
+    from trade_analysis_ai import TradeAnalysisAI
+    trade_analyzer = TradeAnalysisAI()
+    TRADE_ANALYSIS_OK = True
+except Exception as e:
+    TRADE_ANALYSIS_OK = False
+    print(f"⚠️ Trade Analysis AI başlatılamadı: {e}")
 
 # ============================================================================
 # PAGE CONFIGURATION - İLK KOMUT OLMALI
@@ -110,12 +141,10 @@ st.markdown("""
     .stApp {
         background: linear-gradient(135deg, #0B0F19 0%, #1A1F2E 100%);
     }
-    
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0B0F19 0%, #1A1F2E 100%);
         border-right: 1px solid rgba(99, 102, 241, 0.2);
     }
-    
     [data-testid="stSidebar"] h1 {
         color: #6366F1 !important;
         font-size: 28px !important;
@@ -125,12 +154,10 @@ st.markdown("""
         border-bottom: 2px solid rgba(99, 102, 241, 0.3);
         margin-bottom: 20px;
     }
-    
     h1, h2, h3 {
         color: #F9FAFB !important;
         font-weight: 700 !important;
     }
-    
     [data-testid="stMetric"] {
         background: rgba(26, 31, 46, 0.8);
         border: 1px solid rgba(99, 102, 241, 0.3);
@@ -139,19 +166,16 @@ st.markdown("""
         backdrop-filter: blur(10px);
         transition: all 0.3s ease;
     }
-    
     [data-testid="stMetric"]:hover {
         border-color: rgba(99, 102, 241, 0.6);
         transform: translateY(-2px);
         box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
     }
-    
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
         color: #F9FAFB !important;
         font-size: 28px !important;
         font-weight: 700 !important;
     }
-    
     .stButton > button {
         background: linear-gradient(135deg, #6366F1 0%, #3B82F6 100%);
         color: white;
@@ -162,17 +186,14 @@ st.markdown("""
         transition: all 0.3s ease;
         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
-    
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
     }
-    
     hr {
         border-color: rgba(99, 102, 241, 0.2);
         margin: 24px 0;
     }
-    
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
@@ -233,8 +254,10 @@ with st.sidebar:
     st.markdown(f"**WebSocket:** {'🟢 Bağlı' if WEBSOCKET_OK else '🔴 Bağlantısız'}")
     st.markdown(f"**AI Brain:** {'🟢 Aktif' if AIBRAIN_OK else '🔴 Kapalı'}")
     st.markdown(f"**Telegram:** {'🟢 Aktif' if TELEGRAM_ALERTS_OK else '🔴 Kapalı'}")
-    
+    st.markdown(f"**Data Validator:** {'🟢 Aktif' if DATA_VALIDATOR_OK else '🔴 Kapalı'}")
+    st.markdown(f"**Unified AI:** {'🟢 Aktif' if UNIFIED_AI_OK else '🔴 Kapalı'}")
     st.markdown("---")
+    
     st.caption(f"Son güncelleme: {st.session_state.last_update.strftime('%H:%M:%S')}")
 
 # ============================================================================
@@ -281,6 +304,50 @@ def get_ai_analysis():
             pass
     return {'signal': 'NEUTRAL', 'confidence': 0, 'score': 50}
 
+def get_real_analysis():
+    """YENİ: Tüm AI modülleri bir araya getir"""
+    
+    # Step 1: Data validation
+    if DATA_VALIDATOR_OK:
+        validation_report = data_validator.get_validation_report(['BTCUSDT', 'ETHUSDT', 'LTCUSDT'])
+        if not validation_report.get('all_data_valid', False):
+            st.error("⚠️ Gerçek veri doğrulamasında sorun var!")
+            return None
+    else:
+        validation_report = None
+    
+    # Step 2: Unified AI decision
+    if UNIFIED_AI_OK:
+        decision = ai_engine.make_unified_decision('BTCUSDT')
+    else:
+        decision = None
+    
+    # Step 3: Trade analysis
+    if TRADE_ANALYSIS_OK and decision:
+        prices = get_real_prices()
+        entry_price = prices.get('BTCUSDT', 0)
+        tp_price = entry_price * 1.02
+        sl_price = entry_price * 0.98
+        
+        trade_analysis = trade_analyzer.analyze_trade_opportunity(
+            symbol='BTCUSDT',
+            signal_type=decision['signal'],
+            entry_price=entry_price,
+            tp_price=tp_price,
+            sl_price=sl_price,
+            ai_confidence=decision['confidence'],
+            layer_scores=decision['layer_scores']
+        )
+    else:
+        trade_analysis = None
+    
+    return {
+        'validation': validation_report,
+        'decision': decision,
+        'trade_analysis': trade_analysis,
+        'prices': prices if entry_price else get_real_prices()
+    }
+
 # ============================================================================
 # PAGE: DASHBOARD
 # ============================================================================
@@ -310,9 +377,41 @@ if page == "📊 Dashboard":
     
     st.markdown("---")
     
+    # YENİ: Data validation report
+    analysis = get_real_analysis()
+    if analysis:
+        st.subheader("🔍 Veri Kalitesi")
+        if analysis['validation'] and analysis['validation'].get('all_data_valid', False):
+            st.success("✅ Tüm veriler sağlıklı ve tutarlı")
+        else:
+            st.warning("⚠️ Veri kalitesi kontrol ediliyor...")
+        
+        # YENİ: Unified AI decision
+        if analysis['decision']:
+            st.subheader("🧠 AI Karar Mekanizması (Unified)")
+            decision = analysis['decision']
+            st.markdown(f"- **Sinyal :** {decision['signal']}")
+            st.markdown(f"- **Güven Oranı :** {decision['confidence']:.1f}%")
+            st.markdown(f"- **Katman Bazlı Skorlar:**")
+            for layer, score in decision['layer_scores'].items():
+                st.markdown(f"  - {layer}: {score:.1f}")
+        
+        # YENİ: Trade analysis
+        if analysis['trade_analysis']:
+            st.markdown("---")
+            st.subheader("📈 Trade Analizi")
+            trade = analysis['trade_analysis']
+            st.markdown(f"- **Grade :** {trade['grade']}")
+            st.markdown(f"- **AI Güveni :** {trade['ai_confidence']:.1f}%")
+            st.markdown(f"- **Tavsiye :** {trade['trade_quality']['recommendation']}")
+            for insight in trade['ai_insights']:
+                st.info(insight)
+    
+    st.markdown("---")
+    
     st.subheader("🤖 AI Sistemi Durumu")
     
-    analysis = get_ai_analysis()
+    analysis_old = get_ai_analysis()
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -339,20 +438,20 @@ if page == "📊 Dashboard":
     col1, col2 = st.columns(2)
     
     with col1:
-        tech = int(analysis['score'])
+        tech = int(analysis_old['score'])
         st.progress(tech / 100, text=f"Teknik Analiz: {tech}/100")
         st.caption("Teknik indikatörler (RSI, MACD, BB)")
         
-        macro = int(analysis['score'] * 0.9)
+        macro = int(analysis_old['score'] * 0.9)
         st.progress(macro / 100, text=f"Makro: {macro}/100")
         st.caption("Makro veriler (SPX, NASDAQ, DXY)")
     
     with col2:
-        onchain = int(analysis['score'] * 0.85)
+        onchain = int(analysis_old['score'] * 0.85)
         st.progress(onchain / 100, text=f"On-Chain: {onchain}/100")
         st.caption("On-Chain analiz (Whale, Flow)")
         
-        sentiment = int(analysis['score'] * 0.95)
+        sentiment = int(analysis_old['score'] * 0.95)
         st.progress(sentiment / 100, text=f"Duygu: {sentiment}/100")
         st.caption("Duygu analizi (News, Twitter)")
 
@@ -401,6 +500,19 @@ elif page == "📊 Trade Takip":
     
     analysis = get_ai_analysis()
     prices = get_real_prices()
+    
+    # YENİ: Unified analysis kullan
+    real_analysis = get_real_analysis()
+    if real_analysis and real_analysis['trade_analysis']:
+        trade_info = real_analysis['trade_analysis']
+        grade_color = {
+            'A+': '🟢',
+            'A': '🟢',
+            'B': '🟡',
+            'C': '🔴'
+        }
+        st.markdown(f"### {grade_color.get(trade_info['grade'],'🟡')} AI Grade: {trade_info['grade']}")
+        st.markdown(f"**Tavsiye:** {trade_info['trade_quality']['recommendation']}")
     
     # Trade detaylarını göster
     col1, col2, col3 = st.columns(3)
