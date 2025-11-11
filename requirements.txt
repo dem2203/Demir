@@ -2,9 +2,6 @@
 # Version: 5.0 - Production Ready
 # Date: 11 November 2025
 
-# Core Dependencies
-python>=3.11
-
 # Data & Analysis
 pandas>=2.0.0
 numpy>=1.24.0
