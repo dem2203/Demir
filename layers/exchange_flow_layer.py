@@ -1,4 +1,3 @@
-```python
 class ExchangeFlowLayer:
     def analyze(self):
         return {
