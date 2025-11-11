@@ -54,4 +54,3 @@ class TelegramAlertLayer:
         return self.send_signal(signal, symbol, price, confidence)
 
 telegram_layer = TelegramAlertLayer()
-```
