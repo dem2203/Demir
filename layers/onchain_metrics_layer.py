@@ -1,4 +1,3 @@
-```python
 class OnChainMetricsLayer:
     def analyze(self):
         return {
