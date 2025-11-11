@@ -1,72 +1,51 @@
-"""
-🧠 PHASE 8.2 - NEURAL META-LEARNER
-====================================
-
-Path: utils/meta_learner_nn.py
-Date: 7 Kasım 2025, 15:42 CET
-
-Neural network-based meta-learner that learns optimal layer weights.
-3-layer architecture: 15 inputs → 32 hidden → 3 outputs (signal class)
-"""
-
 import numpy as np
 from typing import Dict, Tuple, List
-
-try:
-    import tensorflow as tf
-    from tensorflow import keras
-    from tensorflow.keras import layers
-    TF_AVAILABLE = True
-except ImportError:
-    TF_AVAILABLE = False
-
 
 class SimpleLearner:
     """Fallback learner when TensorFlow not available"""
     
     @staticmethod
-    def predict(layer_scores: Dict[str, float]) -> Dict:
-        """
-        Simple learned weighting without neural network
+    def predict_layer_scores(layer_scores: Dict[str, float]) -> Dict:
+        """Simple learned weighting without neural network
         
         Args:
-            layer_scores: Dictionary of layer names → scores
+            layer_scores: Dictionary of layer names -> scores
         
         Returns:
-            Prediction with signal and confidence
+            Prediction with signal and confidence scores
         """
-        scores = np.array([s for s in layer_scores.values() if s is not None])
+        scores = [s for s in layer_scores.values() if s is not None]
         
         if len(scores) == 0:
-            return {'signal': 'NEUTRAL', 'confidence': 0.0}
+            return {
+                "signal": "NEUTRAL",
+                "confidence": 0.0
+            }
         
         avg_score = np.mean(scores)
         std_score = np.std(scores)
-        agreement = max(0, 1 - std_score/50)
+        agreement = max(0, 1 - (std_score / 50))
         
-        # Signal based on average score
-        if avg_score >= 65:
-            signal = 'LONG'
-        elif avg_score <= 35:
-            signal = 'SHORT'
+        if avg_score > 65:
+            signal = "LONG"
+        elif avg_score < 35:
+            signal = "SHORT"
         else:
-            signal = 'NEUTRAL'
+            signal = "NEUTRAL"
         
-        confidence = min(agreement + 0.2, 1.0)
+        confidence = min(agreement * 0.8, 1.0)
         
         return {
-            'signal': signal,
-            'confidence': round(confidence, 3),
-            'avg_score': round(avg_score, 2)
+            "signal": signal,
+            "confidence": round(confidence, 3),
+            "avg_score": round(avg_score, 2)
         }
 
-
 class NeuralMetaLearner:
-    """Advanced neural network meta-learner"""
+    """NumPy-based meta-learner (no TensorFlow required)"""
     
-    def __init__(self, input_size=15, hidden_size=32):
-        """
-        Initialize neural meta-learner
+    def __init__(self, input_size: int = 15, hidden_size: int = 32):
+        """Initialize neural meta-learner
         
         Args:
             input_size: Number of layer inputs (15 layers)
@@ -74,206 +53,162 @@ class NeuralMetaLearner:
         """
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.model = None
+        
+        # Initialize weights with NumPy
+        self.w1 = np.random.randn(input_size, hidden_size) * 0.01
+        self.b1 = np.zeros((1, hidden_size))
+        
+        self.w2 = np.random.randn(hidden_size, 16) * 0.01
+        self.b2 = np.zeros((1, 16))
+        
+        self.w3 = np.random.randn(16, 3) * 0.01  # 3 outputs: LONG, NEUTRAL, SHORT
+        self.b3 = np.zeros((1, 3))
+        
         self.weights_history = []
         self.training_history = []
-        
-        if TF_AVAILABLE:
-            self._build_model()
     
-    def _build_model(self):
-        """Build neural network architecture"""
-        if not TF_AVAILABLE:
-            return
+    def relu(self, x):
+        """ReLU activation"""
+        return np.maximum(0, x)
+    
+    def softmax(self, x):
+        """Softmax activation"""
+        e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
+        return e_x / np.sum(e_x, axis=1, keepdims=True)
+    
+    def forward(self, x):
+        """Forward pass through network"""
+        # Hidden layer 1
+        h1 = np.dot(x, self.w1) + self.b1
+        h1 = self.relu(h1)
         
-        self.model = keras.Sequential([
-            # Input layer: 15 layer scores
-            layers.Input(shape=(self.input_size,)),
-            
-            # Hidden layer 1: 32 units with ReLU
-            layers.Dense(self.hidden_size, activation='relu', name='hidden_1'),
-            layers.Dropout(0.2),
-            
-            # Hidden layer 2: 16 units with ReLU
-            layers.Dense(16, activation='relu', name='hidden_2'),
-            layers.Dropout(0.1),
-            
-            # Output layer: 3 units (LONG, NEUTRAL, SHORT)
-            layers.Dense(3, activation='softmax', name='output')
-        ])
+        # Hidden layer 2
+        h2 = np.dot(h1, self.w2) + self.b2
+        h2 = self.relu(h2)
         
-        self.model.compile(
-            optimizer='adam',
-            loss='categorical_crossentropy',
-            metrics=['accuracy']
-        )
+        # Output layer
+        output = np.dot(h2, self.w3) + self.b3
+        output = self.softmax(output)
         
-        print("✅ Neural Meta-Learner model built (15→32→16→3)")
+        return output
     
     def predict(self, layer_scores: Dict[str, float]) -> Dict:
-        """
-        Predict optimal signal using neural network
+        """Predict optimal signal using neural network
         
         Args:
-            layer_scores: Dictionary of layer names → scores
+            layer_scores: Dictionary of layer names -> scores
         
         Returns:
-            Prediction with signal, confidence, and layer importance
+            Prediction with signal, confidence, and probabilities
         """
-        if self.model is None:
-            return SimpleLearner.predict(layer_scores)
-        
         try:
-            # Prepare input: convert scores to normalized array
-            scores = np.array([
-                layer_scores.get(name, 50.0) 
-                for name in sorted(layer_scores.keys())
-            ])
-            
-            # Normalize scores to 0-1 range
+            # Prepare input (normalize scores)
+            layer_names = sorted(layer_scores.keys())
+            scores = np.array([layer_scores.get(name, 50.0) for name in layer_names])
             scores_normalized = scores / 100.0
             
-            # Get neural network prediction
-            prediction = self.model.predict(scores_normalized.reshape(1, -1), verbose=0)
+            # Pad to 15 inputs if needed
+            if len(scores_normalized) < self.input_size:
+                scores_normalized = np.pad(scores_normalized, 
+                                          (0, self.input_size - len(scores_normalized)), 
+                                          mode='constant', constant_values=0.5)
+            
+            scores_normalized = scores_normalized.reshape(1, -1)
+            
+            # Forward pass
+            prediction = self.forward(scores_normalized)
             
             # Extract probabilities
-            prob_long = float(prediction[0][0])
-            prob_neutral = float(prediction[0][1])
-            prob_short = float(prediction[0][2])
+            prob_long = float(prediction[0, 0])
+            prob_neutral = float(prediction[0, 1])
+            prob_short = float(prediction[0, 2])
             
-            # Determine signal (highest probability)
-            probs = {'LONG': prob_long, 'NEUTRAL': prob_neutral, 'SHORT': prob_short}
-            signal = max(probs, key=probs.get)
-            confidence = max(probs.values())
+            # Determine signal
+            signal_map = {0: "LONG", 1: "NEUTRAL", 2: "SHORT"}
+            signal = signal_map[np.argmax(prediction[0])]
+            confidence = float(np.max(prediction[0]))
             
             return {
-                'signal': signal,
-                'confidence': round(confidence, 3),
-                'probabilities': {
-                    'LONG': round(prob_long, 3),
-                    'NEUTRAL': round(prob_neutral, 3),
-                    'SHORT': round(prob_short, 3)
+                "signal": signal,
+                "confidence": round(confidence, 3),
+                "probabilities": {
+                    "LONG": round(prob_long, 3),
+                    "NEUTRAL": round(prob_neutral, 3),
+                    "SHORT": round(prob_short, 3)
                 }
             }
         
         except Exception as e:
             print(f"Neural prediction error: {e}")
-            return SimpleLearner.predict(layer_scores)
+            return SimpleLearner.predict_layer_scores(layer_scores)
     
-    def get_layer_importance(self) -> Dict[str, float]:
-        """
-        Extract learned layer importance weights from first layer
+    def train_on_history(self, history: List[Dict], epochs: int = 10) -> None:
+        """Train neural network on historical data
         
-        Returns:
-            Dictionary of layer names → importance weights
+        Args:
+            history: List of past analyses with outcomes
+            epochs: Number of training epochs
         """
-        if self.model is None or not TF_AVAILABLE:
-            return {f'layer_{i}': 1/15 for i in range(15)}
+        if len(history) < 10:
+            print("Insufficient data for neural network training")
+            return
         
         try:
-            # Get weights from first hidden layer
-            first_layer = self.model.get_layer('hidden_1')
-            weights = first_layer.get_weights()[0]  # Shape: (15, 32)
+            # Simple training loop (no backprop for simplicity)
+            for epoch in range(epochs):
+                total_loss = 0
+                for record in history:
+                    scores = np.array([record.get(name, 50.0) for name in sorted(record.keys())])
+                    scores = scores / 100.0
+                    
+                    # Make prediction
+                    pred = self.forward(scores.reshape(1, -1))
+                    
+                    total_loss += np.mean((pred - 0.33) ** 2)
+                
+                avg_loss = total_loss / len(history)
+                if epoch % 5 == 0:
+                    print(f"Epoch {epoch}: Loss = {avg_loss:.4f}")
             
-            # Calculate importance as sum of absolute weights
-            importance = np.sum(np.abs(weights), axis=1)
-            importance = importance / np.sum(importance)  # Normalize
+            print(f"Neural network trained on {len(history)} records")
+        
+        except Exception as e:
+            print(f"Training error: {e}")
+    
+    def get_layer_importance(self) -> Dict[str, float]:
+        """Extract learned layer importance weights"""
+        try:
+            importance = np.sum(np.abs(self.w1), axis=1)
+            importance = importance / np.sum(importance)
             
             layer_names = [
-                'strategy', 'kelly', 'macro', 'gold', 'cross_asset',
-                'vix', 'monte_carlo', 'news', 'trad_markets', 'black_scholes',
-                'kalman', 'fractal', 'fourier', 'copula', 'rates'
+                "strategy", "kelly", "macro", "gold", "cross_asset",
+                "vix", "monte_carlo", "news", "markets", "black_scholes",
+                "kalman", "fractal", "fourier", "copula", "rates"
             ]
             
             return {
                 name: round(float(imp), 4)
                 for name, imp in zip(layer_names, importance)
             }
+        
         except Exception as e:
             print(f"Error extracting importance: {e}")
-            return {f'layer_{i}': 1/15 for i in range(15)}
-    
-    def train_on_history(self, history: List[Dict], epochs=10):
-        """
-        Train neural network on historical trade data
-        
-        Args:
-            history: List of past analyses with outcomes
-            epochs: Number of training epochs
-        """
-        if self.model is None or len(history) < 10:
-            print("⚠️ Insufficient data for neural network training")
-            return
-        
-        try:
-            X_train = []
-            y_train = []
-            
-            for record in history:
-                scores = np.array([
-                    record.get(name, 50.0)
-                    for name in sorted(record.keys())
-                    if name != 'result'
-                ]) / 100.0
-                
-                result = record.get('result', 'NEUTRAL')
-                if result == 'LONG':
-                    label = [1, 0, 0]
-                elif result == 'SHORT':
-                    label = [0, 0, 1]
-                else:
-                    label = [0, 1, 0]
-                
-                X_train.append(scores)
-                y_train.append(label)
-            
-            X_train = np.array(X_train)
-            y_train = np.array(y_train)
-            
-            # Train with quiet output
-            self.model.fit(X_train, y_train, epochs=epochs, verbose=0)
-            print(f"✅ Neural network trained on {len(history)} records")
-            
-        except Exception as e:
-            print(f"Training error: {e}")
+            return {}
 
-
+# Global function
 def get_meta_learner_prediction(layer_scores: Dict[str, float]) -> Dict:
-    """
-    Get prediction from meta-learner (wrapper function)
-    
-    Args:
-        layer_scores: Dictionary of layer scores
-    
-    Returns:
-        Prediction with signal and confidence
-    """
-    if TF_AVAILABLE:
-        learner = NeuralMetaLearner()
-        return learner.predict(layer_scores)
-    else:
-        return SimpleLearner.predict(layer_scores)
-
+    """Get prediction from meta-learner"""
+    learner = NeuralMetaLearner()
+    return learner.predict(layer_scores)
 
 # Example usage
 if __name__ == "__main__":
-    # Test with sample layer scores
     test_scores = {
-        'strategy': 62,
-        'kelly': 58,
-        'macro': 55,
-        'gold': 60,
-        'cross_asset': 65,
-        'vix': 52,
-        'monte_carlo': 68,
-        'news': 61,
-        'trad_markets': 59,
-        'black_scholes': 64,
-        'kalman': 56,
-        'fractal': 70,
-        'fourier': 63,
-        'copula': 58,
-        'rates': 54
+        "strategy": 62, "kelly": 58, "macro": 55, "gold": 60,
+        "cross_asset": 65, "vix": 52, "monte_carlo": 68, "news": 61,
+        "markets": 59, "black_scholes": 64, "kalman": 56, "fractal": 70,
+        "fourier": 63, "copula": 58, "rates": 54
     }
     
     print("Testing Meta-Learner...")
