@@ -7,4 +7,3 @@ class OnChainMetricsLayer:
         }
 
 onchain_metrics = OnChainMetricsLayer()
-```
