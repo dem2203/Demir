@@ -84,4 +84,3 @@ class LiveOrderExecutionLayer:
         return {'status': 'ready', 'test_mode': self.test_mode}
 
 execution_layer = LiveOrderExecutionLayer()
-```
