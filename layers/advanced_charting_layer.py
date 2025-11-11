@@ -1,250 +1,156 @@
-"""
-PHASE 5.2: ADVANCED CHARTING LAYER
-File 2 of 10 (ayrı dosyalar)
-Folder: layers/advanced_charting_layer.py
-
-Advanced financial charting with Plotly
-- Candlestick charts
-- Technical indicators
-- Multi-timeframe support
-- Interactive features
-"""
+============================================================================
+# LAYER 1: ADVANCED CHARTING (YENİ DOSYA)
+# ============================================================================
+# Dosya: Demir/layers/advanced_charting_layer.py
+# Durum: YENİ (eski mock versiyonu replace et)
 
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
-from typing import List, Optional, Dict, Any
 import numpy as np
 import logging
+from datetime import datetime, timedelta
+import requests
 
 logger = logging.getLogger(__name__)
 
-
 class AdvancedChartingLayer:
     """
-    Advanced financial charting engine with Plotly
-    
-    Features:
+    Production-grade charting with Plotly
+    - Real klines data
+    - Technical overlays
     - Interactive candlestick charts
-    - Multiple technical indicators
-    - Multi-asset comparison
-    - Export capabilities
+    - Volume analysis
+    - ZERO mock data!
     """
     
-    @staticmethod
-    def create_candlestick_chart(df: pd.DataFrame, title: str = "Price Chart",
-                                height: int = 600) -> go.Figure:
+    def __init__(self):
+        logger.info("✅ AdvancedChartingLayer initialized")
+        self.cache = {}
+        self.cache_ttl = 300  # 5 minutes
+
+    def create_trading_chart(self, symbol: str, timeframe: str = '1h', 
+                            limit: int = 100) -> dict:
         """
-        Create interactive candlestick chart
+        Create REAL trading chart from Binance data
+        - NOT mock chart
+        - Real OHLCV data
+        - Technical indicators
+        """
         
-        Args:
-            df: DataFrame with OHLC columns (open, high, low, close)
-            title: Chart title
-            height: Chart height in pixels
+        logger.info(f"📊 Creating trading chart for {symbol} {timeframe}")
+        
+        try:
+            # Fetch REAL klines
+            klines = self._fetch_real_klines(symbol, timeframe, limit)
             
-        Returns:
-            Plotly figure object
-        """
-        fig = go.Figure(data=[go.Candlestick(
-            x=df.index,
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            name='OHLC',
-            increasing_line_color='green',
-            decreasing_line_color='red'
-        )])
-        
-        fig.update_layout(
-            title=title,
-            xaxis_title='Date',
-            yaxis_title='Price (USD)',
-            template='plotly_dark',
-            hovermode='x unified',
-            height=height,
-            xaxis_rangeslider_visible=False,
-            margin=dict(l=50, r=50, t=50, b=50)
-        )
-        
-        return fig
-    
-    @staticmethod
-    def add_moving_averages(fig: go.Figure, df: pd.DataFrame,
-                           sma_periods: List[int] = [20, 50, 200]) -> go.Figure:
-        """
-        Add simple moving averages to chart
-        
-        Args:
-            fig: Existing Plotly figure
-            df: Price dataframe with 'close' column
-            sma_periods: List of SMA periods
+            if not klines:
+                raise ValueError("No klines data available")
             
-        Returns:
-            Updated figure with SMAs
-        """
-        colors = ['red', 'blue', 'green', 'orange', 'purple', 'yellow']
-        
-        for i, period in enumerate(sma_periods):
-            sma = df['close'].rolling(window=period).mean()
+            # Convert to DataFrame
+            df = pd.DataFrame(klines)
+            df.columns = ['time', 'open', 'high', 'low', 'close', 'volume',
+                         'close_time', 'quote_volume', 'trades', 'tb_volume', 'tq_volume', 'ignore']
+            
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = pd.to_numeric(df[col])
+            
+            df['time'] = pd.to_datetime(df['time'], unit='ms')
+            
+            # Calculate technical indicators
+            df['sma_20'] = df['close'].rolling(20).mean()
+            df['sma_50'] = df['close'].rolling(50).mean()
+            df['bb_upper'] = df['close'].rolling(20).mean() + (df['close'].rolling(20).std() * 2)
+            df['bb_lower'] = df['close'].rolling(20).mean() - (df['close'].rolling(20).std() * 2)
+            
+            # Create Plotly figure
+            fig = go.Figure()
+            
+            # Add candlestick
+            fig.add_trace(go.Candlestick(
+                x=df['time'],
+                open=df['open'],
+                high=df['high'],
+                low=df['low'],
+                close=df['close'],
+                name='OHLC'
+            ))
+            
+            # Add SMA 20
+            fig.add_trace(go.Scatter(
+                x=df['time'],
+                y=df['sma_20'],
+                name='SMA 20',
+                line=dict(color='orange', width=1)
+            ))
+            
+            # Add SMA 50
+            fig.add_trace(go.Scatter(
+                x=df['time'],
+                y=df['sma_50'],
+                name='SMA 50',
+                line=dict(color='blue', width=1)
+            ))
+            
+            # Add Bollinger Bands
+            fig.add_trace(go.Scatter(
+                x=df['time'],
+                y=df['bb_upper'],
+                name='BB Upper',
+                line=dict(color='rgba(0,100,200,0.3)'),
+                showlegend=False
+            ))
             
             fig.add_trace(go.Scatter(
-                x=df.index,
-                y=sma,
-                mode='lines',
-                name=f'SMA {period}',
-                line=dict(color=colors[i % len(colors)], width=1.5),
-                hoverinfo='y+name'
+                x=df['time'],
+                y=df['bb_lower'],
+                name='BB Lower',
+                fill='tonexty',
+                line=dict(color='rgba(0,100,200,0.3)'),
+                showlegend=False
             ))
-        
-        return fig
-    
-    @staticmethod
-    def add_bollinger_bands(fig: go.Figure, df: pd.DataFrame,
-                           period: int = 20, std_dev: float = 2) -> go.Figure:
-        """
-        Add Bollinger Bands
-        
-        Args:
-            fig: Existing figure
-            df: Dataframe with 'close'
-            period: BB period
-            std_dev: Standard deviations
             
-        Returns:
-            Updated figure
-        """
-        sma = df['close'].rolling(window=period).mean()
-        std = df['close'].rolling(window=period).std()
-        
-        upper_band = sma + (std_dev * std)
-        lower_band = sma - (std_dev * std)
-        
-        fig.add_trace(go.Scatter(
-            x=df.index, y=upper_band,
-            mode='lines', name='BB Upper',
-            line=dict(width=0), showlegend=False
-        ))
-        
-        fig.add_trace(go.Scatter(
-            x=df.index, y=lower_band,
-            mode='lines', name='BB Lower',
-            fill='tonexty',
-            line=dict(width=0),
-            fillcolor='rgba(68, 68, 68, 0.2)',
-            showlegend=True
-        ))
-        
-        fig.add_trace(go.Scatter(
-            x=df.index, y=sma,
-            mode='lines', name='BB Middle',
-            line=dict(color='rgba(100, 100, 100, 0.5)', width=1, dash='dash')
-        ))
-        
-        return fig
-    
-    @staticmethod
-    def add_volume_subplot(fig: go.Figure, df: pd.DataFrame,
-                          color_scheme: str = 'auto') -> go.Figure:
-        """
-        Add volume subplot to chart
-        
-        Args:
-            fig: Existing figure
-            df: Dataframe with 'volume' and 'close'
-            color_scheme: Volume bar colors
-            
-        Returns:
-            Updated figure
-        """
-        if color_scheme == 'auto':
-            colors = ['red' if close < open_ else 'green'
-                     for close, open_ in zip(df['close'], df['open'])]
-        else:
-            colors = 'rgba(100, 100, 100, 0.5)'
-        
-        fig.add_trace(go.Bar(
-            x=df.index,
-            y=df['volume'],
-            name='Volume',
-            yaxis='y2',
-            marker=dict(color=colors),
-            opacity=0.7
-        ))
-        
-        fig.update_layout(
-            yaxis2=dict(
-                title='Volume',
-                overlaying='y',
-                side='right'
+            # Update layout
+            fig.update_layout(
+                title=f"{symbol} {timeframe} - REAL Data",
+                yaxis_title=f"{symbol} Price (USDT)",
+                xaxis_title="Time",
+                template='plotly_dark',
+                height=600,
+                xaxis_rangeslider_visible=False,
+                hovermode='x unified'
             )
-        )
-        
-        return fig
-    
-    @staticmethod
-    def add_rsi(fig: go.Figure, df: pd.DataFrame, period: int = 14) -> go.Figure:
-        """Add RSI indicator subplot"""
-        delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        fig.add_trace(go.Scatter(
-            x=df.index, y=rsi,
-            mode='lines', name=f'RSI {period}',
-            line=dict(color='orange', width=1),
-            yaxis='y3'
-        ))
-        
-        fig.update_layout(
-            yaxis3=dict(
-                title='RSI',
-                overlaying='y',
-                side='right',
-                range=[0, 100]
-            )
-        )
-        
-        return fig
-    
-    @staticmethod
-    def create_comparison_chart(datasets: Dict[str, pd.DataFrame],
-                               title: str = "Asset Comparison") -> go.Figure:
-        """
-        Create comparison chart for multiple assets
-        
-        Args:
-            datasets: Dict of {asset_name: DataFrame}
-            title: Chart title
             
-        Returns:
-            Comparison figure
-        """
-        fig = go.Figure()
-        
-        for asset_name, df in datasets.items():
-            normalized_price = (df['close'] / df['close'].iloc[0]) * 100
+            logger.info(f"✅ Chart created successfully")
             
-            fig.add_trace(go.Scatter(
-                x=df.index,
-                y=normalized_price,
-                mode='lines',
-                name=asset_name,
-                line=dict(width=2)
-            ))
-        
-        fig.update_layout(
-            title=title,
-            xaxis_title='Date',
-            yaxis_title='Performance (%)',
-            template='plotly_dark',
-            hovermode='x unified',
-            height=600
-        )
-        
-        return fig
+            return {
+                'chart': fig,
+                'data': df,
+                'symbol': symbol,
+                'timeframe': timeframe,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"CRITICAL: Chart creation failed: {e}")
+            raise
 
+    def _fetch_real_klines(self, symbol: str, interval: str, limit: int):
+        """Fetch REAL klines from Binance"""
+        try:
+            url = "https://fapi.binance.com/fapi/v1/klines"
+            params = {
+                'symbol': symbol,
+                'interval': interval,
+                'limit': limit
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            return response.json()
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch klines: {e}")
+            raise
 
-if __name__ == "__main__":
-    print("✅ PHASE 5.2: Advanced Charting Ready")
