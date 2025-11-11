@@ -104,4 +104,3 @@ class PortfolioOptimizerLayer:
 
 # Global instance
 portfolio_layer = PortfolioOptimizerLayer()
-```
