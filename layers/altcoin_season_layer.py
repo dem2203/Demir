@@ -1,4 +1,3 @@
-```python
 class AltcoinSeasonLayer:
     def analyze(self):
         try:
