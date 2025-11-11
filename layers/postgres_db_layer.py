@@ -1,231 +1,226 @@
-"""
-PHASE 5.1: POSTGRESQL DATABASE LAYER
-Cloud database management for trade history and metrics
+# ============================================================================
+# LAYER 6: POSTGRESQL DATABASE LAYER (YENİ DOSYA)
+# ============================================================================
+# Dosya: Demir/layers/postgres_db_layer.py
+# Durum: YENİ (eski mock versiyonunu replace et)
 
-Folder: layers/postgres_db_layer.py
-"""
-
-import logging
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
-from datetime import datetime
-import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
+import logging
+from datetime import datetime
+from typing import Dict, List, Any
+import os
 import json
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class Trade:
-    """Trade record"""
-    trade_id: str
-    symbol: str
-    side: str  # BUY/SELL
-    entry_price: float
-    exit_price: Optional[float]
-    quantity: float
-    entry_time: datetime
-    exit_time: Optional[datetime]
-    profit_loss: Optional[float]
-    status: str  # OPEN/CLOSED
-    strategy: str
-    metadata: Dict[str, Any]
-
-
-class PostgresDBLayer:
+class PostgreSQLDatabaseLayer:
     """
-    PostgreSQL database layer for Render Cloud
-    
-    Features:
-    - Trade history storage
-    - Performance metrics
+    Real PostgreSQL database layer
     - Connection pooling
-    - Auto-migration
+    - Real persistent storage
+    - Trade history tracking
+    - Performance metrics
+    - ZERO mock data!
     """
     
-    def __init__(self, connection_string: Optional[str] = None):
-        """
-        Initialize database connection
+    def __init__(self):
+        """Initialize real PostgreSQL connection pool"""
         
-        Args:
-            connection_string: DATABASE_URL from environment
-        """
-        self.connection_string = connection_string or os.getenv('DATABASE_URL')
-        
-        if not self.connection_string:
-            raise ValueError("DATABASE_URL environment variable not set")
-        
-        self.conn = None
-        self._connect()
-        self._init_tables()
-    
-    def _connect(self) -> None:
-        """Establish database connection"""
         try:
-            self.conn = psycopg2.connect(self.connection_string)
-            logger.info("Connected to PostgreSQL database")
+            # Get DB config from environment
+            db_host = os.getenv('DB_HOST', 'localhost')
+            db_port = int(os.getenv('DB_PORT', 5432))
+            db_name = os.getenv('DB_NAME', 'demir_ai')
+            db_user = os.getenv('DB_USER', 'postgres')
+            db_password = os.getenv('DB_PASSWORD', '')
+            
+            # Create connection pool
+            self.pool = SimpleConnectionPool(
+                1, 20,
+                host=db_host,
+                port=db_port,
+                database=db_name,
+                user=db_user,
+                password=db_password
+            )
+            
+            logger.info(f"✅ PostgreSQL connection pool created: {db_host}:{db_port}/{db_name}")
+            
+            # Initialize tables
+            self._init_tables()
+            
         except Exception as e:
-            logger.error(f"Database connection failed: {e}")
-            raise
+            error = f"CRITICAL: PostgreSQL connection failed: {e}"
+            logger.error(error)
+            raise RuntimeError(error)
     
-    def _init_tables(self) -> None:
-        """Create tables if they don't exist"""
+    def _init_tables(self):
+        """Create tables if not exist - REAL schema"""
+        
+        conn = self.pool.getconn()
         try:
-            cursor = self.conn.cursor()
+            cursor = conn.cursor()
             
             # Trades table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS trades (
-                    trade_id VARCHAR(50) PRIMARY KEY,
+                    id SERIAL PRIMARY KEY,
                     symbol VARCHAR(20) NOT NULL,
                     side VARCHAR(10) NOT NULL,
+                    quantity DECIMAL(18, 8) NOT NULL,
                     entry_price DECIMAL(18, 8) NOT NULL,
                     exit_price DECIMAL(18, 8),
-                    quantity DECIMAL(18, 8) NOT NULL,
-                    entry_time TIMESTAMP NOT NULL,
-                    exit_time TIMESTAMP,
-                    profit_loss DECIMAL(18, 8),
-                    status VARCHAR(20) NOT NULL,
-                    strategy VARCHAR(100),
-                    metadata JSONB,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    tp_target DECIMAL(18, 8),
+                    sl_stop DECIMAL(18, 8),
+                    ai_signal VARCHAR(50),
+                    confidence DECIMAL(5, 2),
+                    status VARCHAR(20),
+                    pnl DECIMAL(18, 8),
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    closed_at TIMESTAMP,
+                    layer_scores JSONB
                 )
             """)
             
-            # Performance metrics table
+            # Layer performance table
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS metrics (
+                CREATE TABLE IF NOT EXISTS layer_performance (
                     id SERIAL PRIMARY KEY,
-                    date DATE NOT NULL,
-                    win_rate DECIMAL(5, 2),
-                    total_trades INT,
-                    profitable_trades INT,
-                    total_profit_loss DECIMAL(18, 8),
-                    max_drawdown DECIMAL(5, 2),
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    layer_name VARCHAR(100) NOT NULL,
+                    prediction VARCHAR(50),
+                    actual_outcome VARCHAR(50),
+                    accuracy DECIMAL(5, 2),
+                    latency_ms DECIMAL(10, 2),
+                    created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
             
-            # Create indices
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(entry_time)")
+            # System metrics table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS system_metrics (
+                    id SERIAL PRIMARY KEY,
+                    timestamp TIMESTAMP DEFAULT NOW(),
+                    active_layers INT,
+                    system_health DECIMAL(5, 2),
+                    memory_usage DECIMAL(10, 2),
+                    cpu_usage DECIMAL(5, 2),
+                    uptime_seconds INT
+                )
+            """)
             
-            self.conn.commit()
-            logger.info("Database tables initialized")
+            conn.commit()
+            logger.info("✅ Database tables initialized")
             
         except Exception as e:
-            logger.error(f"Table initialization failed: {e}")
-            self.conn.rollback()
+            logger.error(f"Table initialization error: {e}")
+            conn.rollback()
+            raise
+        finally:
+            self.pool.putconn(conn)
     
-    def save_trade(self, trade: Trade) -> bool:
+    def save_trade(self, trade_data: Dict[str, Any]) -> int:
         """
-        Save trade to database
+        Save REAL trade to database
+        - NOT mock entry!
+        - Persistent storage
+        """
         
-        Args:
-            trade: Trade object
-            
-        Returns:
-            Success status
-        """
+        conn = self.pool.getconn()
         try:
-            cursor = self.conn.cursor()
+            cursor = conn.cursor()
             
             cursor.execute("""
-                INSERT INTO trades 
-                (trade_id, symbol, side, entry_price, exit_price, quantity, 
-                 entry_time, exit_time, profit_loss, status, strategy, metadata)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (trade_id) DO UPDATE SET
-                exit_price = EXCLUDED.exit_price,
-                exit_time = EXCLUDED.exit_time,
-                profit_loss = EXCLUDED.profit_loss,
-                status = EXCLUDED.status,
-                metadata = EXCLUDED.metadata
+                INSERT INTO trades (
+                    symbol, side, quantity, entry_price, tp_target, 
+                    sl_stop, ai_signal, confidence, status, layer_scores
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             """, (
-                trade.trade_id, trade.symbol, trade.side,
-                trade.entry_price, trade.exit_price, trade.quantity,
-                trade.entry_time, trade.exit_time, trade.profit_loss,
-                trade.status, trade.strategy, json.dumps(trade.metadata)
+                trade_data['symbol'],
+                trade_data['side'],
+                trade_data['quantity'],
+                trade_data['entry_price'],
+                trade_data.get('tp_target'),
+                trade_data.get('sl_stop'),
+                trade_data.get('signal'),
+                trade_data.get('confidence'),
+                'OPEN',
+                json.dumps(trade_data.get('layer_scores', {}))
             ))
             
-            self.conn.commit()
-            return True
+            trade_id = cursor.fetchone()[0]
+            conn.commit()
+            
+            logger.info(f"✅ Trade saved to DB: ID={trade_id}")
+            return trade_id
             
         except Exception as e:
-            logger.error(f"Save trade failed: {e}")
-            self.conn.rollback()
-            return False
+            logger.error(f"Trade save failed: {e}")
+            conn.rollback()
+            raise
+        finally:
+            self.pool.putconn(conn)
     
-    def get_trades(self, symbol: Optional[str] = None, limit: int = 100) -> List[Trade]:
-        """
-        Get trades from database
+    def close_trade(self, trade_id: int, exit_price: float, pnl: float):
+        """Close REAL trade in database"""
         
-        Args:
-            symbol: Filter by symbol
-            limit: Maximum records to return
-            
-        Returns:
-            List of Trade objects
-        """
+        conn = self.pool.getconn()
         try:
-            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                UPDATE trades 
+                SET exit_price = %s, pnl = %s, status = 'CLOSED', closed_at = NOW()
+                WHERE id = %s
+            """, (exit_price, pnl, trade_id))
+            
+            conn.commit()
+            logger.info(f"✅ Trade closed: ID={trade_id}, PnL={pnl}")
+            
+        except Exception as e:
+            logger.error(f"Trade close failed: {e}")
+            conn.rollback()
+            raise
+        finally:
+            self.pool.putconn(conn)
+    
+    def get_trade_history(self, symbol: str = None, limit: int = 100) -> List[Dict]:
+        """Get REAL trade history from database"""
+        
+        conn = self.pool.getconn()
+        try:
+            cursor = conn.cursor()
             
             if symbol:
-                cursor.execute(
-                    "SELECT * FROM trades WHERE symbol = %s ORDER BY entry_time DESC LIMIT %s",
-                    (symbol, limit)
-                )
+                cursor.execute("""
+                    SELECT id, symbol, side, quantity, entry_price, exit_price, 
+                           pnl, status, created_at, closed_at
+                    FROM trades
+                    WHERE symbol = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                """, (symbol, limit))
             else:
-                cursor.execute(
-                    "SELECT * FROM trades ORDER BY entry_time DESC LIMIT %s",
-                    (limit,)
-                )
+                cursor.execute("""
+                    SELECT id, symbol, side, quantity, entry_price, exit_price, 
+                           pnl, status, created_at, closed_at
+                    FROM trades
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                """, (limit,))
             
-            rows = cursor.fetchall()
-            trades = [Trade(**row) for row in rows]
+            columns = ['id', 'symbol', 'side', 'quantity', 'entry_price', 
+                      'exit_price', 'pnl', 'status', 'created_at', 'closed_at']
+            
+            trades = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            logger.info(f"✅ Retrieved {len(trades)} trades from DB")
             
             return trades
             
         except Exception as e:
-            logger.error(f"Get trades failed: {e}")
-            return []
-    
-    def save_metrics(self, date: datetime, metrics: Dict[str, Any]) -> bool:
-        """Save daily performance metrics"""
-        try:
-            cursor = self.conn.cursor()
-            
-            cursor.execute("""
-                INSERT INTO metrics (date, win_rate, total_trades, profitable_trades, 
-                                    total_profit_loss, max_drawdown)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (
-                date.date(),
-                metrics.get('win_rate'),
-                metrics.get('total_trades'),
-                metrics.get('profitable_trades'),
-                metrics.get('total_profit_loss'),
-                metrics.get('max_drawdown')
-            ))
-            
-            self.conn.commit()
-            return True
-            
-        except Exception as e:
-            logger.error(f"Save metrics failed: {e}")
-            self.conn.rollback()
-            return False
-    
-    def close(self) -> None:
-        """Close database connection"""
-        if self.conn:
-            self.conn.close()
-            logger.info("Database connection closed")
+            logger.error(f"Trade history fetch failed: {e}")
+            raise
+        finally:
+            self.pool.putconn(conn)
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    print("PostgreSQL DB Layer initialized")
