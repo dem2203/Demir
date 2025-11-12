@@ -215,3 +215,6 @@ if __name__ == "__main__":
     result = get_meta_learner_prediction(test_scores)
     print(f"Signal: {result['signal']}")
     print(f"Confidence: {result['confidence']}")
+
+    learner = NeuralMetaLearner()
+
