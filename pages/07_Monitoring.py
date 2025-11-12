@@ -9,6 +9,15 @@ FEATURES:
 - Resource usage tracking
 - %100 gerçek sistem metrikleri
 """
+st.markdown("""
+<strong>🔍 Monitoring Nedir?</strong><br>
+
+Sistem 24/7 kontrol ediliyor:
+• API Bağlantıları: Binance, Alpha Vantage, CoinGlass
+• Daemon Status: 24/7 çalışıyor mı?
+• Performans: CPU, Memory, Disk
+• Error Logs: Sorun var mı?
+""")
 
 import streamlit as st
 from datetime import datetime
