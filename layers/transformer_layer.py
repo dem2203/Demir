@@ -17,9 +17,8 @@ class TransformerLayer:
         """Fetch REAL data from Binance"""
         try:
             klines = self.client.get_historical_klines(symbol, interval, limit=limit)
-            data = np.array([[float(k[1]), float(k[2]), float(k[3]), float(k[4]), float(k[7])] 
-                            for k in klines])
-            return data  # [open, high, low, close, volume]
+            data = np.array([[float(k[1]), float(k[2]), float(k[3]), float(k[4]), float(k[7])] for k in klines])
+            return data
         except Exception as e:
             print(f"Transformer Binance error: {e}")
             return None
@@ -29,13 +28,9 @@ class TransformerLayer:
         if len(data) == 0:
             return None
         
-        # Normalize data
         data_normalized = (data - np.mean(data, axis=0)) / (np.std(data, axis=0) + 1e-8)
-        
-        # Calculate attention using correlation
         close_prices = data[:, 3]
         
-        # Simple attention mechanism
         attention = np.zeros(len(close_prices))
         for i in range(len(close_prices)):
             if i > 0:
@@ -48,24 +43,16 @@ class TransformerLayer:
     def analyze(self, symbol="BTCUSDT"):
         """Analyze with transformer attention"""
         try:
-            # Get REAL data
             data = self.get_real_data(symbol)
             if data is None:
-                return {
-                    "signal": "NEUTRAL",
-                    "confidence": 0.0,
-                    "attention": "No data"
-                }
+                return {"signal": "NEUTRAL", "confidence": 0.0, "attention": "No data"}
             
-            # Calculate attention scores
             attention = self.calculate_attention_scores(data)
             
-            # Analyze using attention
             recent_attention = attention[-20:]
             bullish = np.sum(recent_attention > 0) / len(recent_attention)
             bearish = np.sum(recent_attention < 0) / len(recent_attention)
             
-            # Generate signal
             if bullish > 0.6:
                 signal = "BULLISH"
                 confidence = float(bullish)
@@ -84,14 +71,8 @@ class TransformerLayer:
                 "bearish_score": round(float(bearish), 3),
                 "attention": "Transformer attention active"
             }
-        
         except Exception as e:
             print(f"Transformer error: {e}")
-            return {
-                "signal": "NEUTRAL",
-                "confidence": 0.0,
-                "attention": f"Error: {str(e)}"
-            }
+            return {"signal": "NEUTRAL", "confidence": 0.0, "attention": f"Error: {str(e)}"}
 
-# Global instance
 transformer_layer = TransformerLayer()
