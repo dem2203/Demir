@@ -9,6 +9,15 @@ FEATURES:
 - Model accuracy tracking
 - %100 gerçek AI metrikleri
 """
+st.markdown("""
+<strong>⚛️ Advanced AI Nedir?</strong><br>
+
+Quantum-Ready Algoritmaları:
+• Quantum Black-Scholes: Hızlandırılmış fiyatlandırma
+• Kalman Filter: Gerçek zamanlı tahmini
+• Fourier Analysis: Periyodik döngüleri bulma
+• Monte Carlo: Risk simülasyonları
+""")
 
 import streamlit as st
 from datetime import datetime
