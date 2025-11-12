@@ -2,8 +2,6 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# SADECE ŞU 3 FONKSIYON LAZIM
-
 def get_real_prices():
     """Binance'ten GERÇEKten fiyat al"""
     try:
