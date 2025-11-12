@@ -9,6 +9,15 @@ FEATURES:
 - Pattern recognition
 - %100 gerçek teknik analiz
 """
+st.markdown("""
+<strong>📊 Advanced Analysis Nedir?</strong><br>
+
+• LSTM Model: Uzun dönem bağımlılık öğrenmesi
+• Korelasyon: BTC vs Stocks vs Gold
+• Risk/Reward: Kar/Zarar oranı hesabı
+• Monte Carlo: 10,000 simülasyon
+• Black-Scholes: Option pricing modeli
+""")
 
 import streamlit as st
 from datetime import datetime
