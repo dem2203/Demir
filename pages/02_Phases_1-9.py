@@ -9,6 +9,38 @@ FEATURES:
 - Processing pipeline visualization
 - %100 gerçek sistem durumu
 """
+st.markdown("""
+<div style="background: #1A1F2E; padding: 15px; border-radius: 8px;">
+<strong>🔹 Phase Nedir?</strong><br>
+
+<strong>Phase 1: Telegram Alerts</strong><br>
+Saatlik raporlar, fırsat alerts, whale alerts, trade bildirimleri
+
+<strong>Phase 2: Performance Analytics</strong><br>
+Açık/kapalı trades, win rate, P&L hesapları
+
+<strong>Phase 3: Opportunity Scanner</strong><br>
+Pattern recognition (H&S, Double Bottom), whale activity
+
+<strong>Phase 4: Backtesting</strong><br>
+Geçmiş 30 gün analiz, accuracy sonuçları
+
+<strong>Phase 5: Multi-Exchange</strong><br>
+Binance, Bybit, OKX entegrasyonu
+
+<strong>Phase 6: Auto-Trading</strong><br>
+Otomatik order placement (manuel onay ile)
+
+<strong>Phase 7: Advanced Analytics</strong><br>
+ML model improvements, quantum computing ready
+
+<strong>Phase 8: Consciousness</strong><br>
+Bayesian karar motoru, meta-learning
+
+<strong>Phase 9: Intelligence</strong><br>
+Makro analiz, on-chain analiz, sentiment
+</div>
+""", unsafe_allow_html=True)
 
 import streamlit as st
 from datetime import datetime
