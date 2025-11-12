@@ -9,6 +9,15 @@ FEATURES:
 - Live intelligence scoring
 - %100 gerçek market intelligence
 """
+st.markdown("""
+<strong>🤖 Intelligence Nedir?</strong><br>
+Makro ekonomik, on-chain ve sentiment analizini birleştirerek 
+piyasanın genel ruh halini anlar.
+
+• Makro: SPX, DXY, Gold, Rates
+• On-Chain: Exchange flows, Whale activity
+• Sentiment: Twitter, News, Fear&Greed
+""")
 
 import streamlit as st
 from datetime import datetime
