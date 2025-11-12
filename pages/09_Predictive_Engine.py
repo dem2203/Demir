@@ -10,6 +10,24 @@ Date: 11 Kasım 2025, 00:15 CET
 - Otomatik takip ve log
 - 10 matematiksel model
 """
+st.markdown("""
+<strong>🔮 Predictive Engine Nedir?</strong><br>
+
+AI'ın geleceği tahmin etme motoru:
+• 7-Day Forecast: 1 hafta tahmin
+• 30-Day Forecast: 1 ay tahmin
+• Confidence Intervals: Güven aralığı
+• Best Time: En iyi ticaret saati
+""")
+
+# Forecast example
+forecast = {
+    'Coin': ['BTC', 'ETH', 'LTC'],
+    '7-Day': ['+2.5%', '-1.3%', '+1.8%'],
+    '30-Day': ['+5.2%', '+3.1%', '+4.5%'],
+    'Confidence': ['78%', '65%', '72%']
+}
+st.dataframe(forecast)
 
 import streamlit as st
 from datetime import datetime, timedelta
