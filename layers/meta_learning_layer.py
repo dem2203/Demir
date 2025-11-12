@@ -1,3 +1,4 @@
+import numpy as np
 def __init__(self, num_layers: int = 15, hidden_dim: int = 32):
     """Initialize meta-learner
     
