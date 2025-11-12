@@ -1,63 +1,111 @@
-"""
-FILE 7: 11_Opportunity_Scanner.py
-PHASE 3.3 - OPPORTUNITY SCANNER UI
-Streamlit dashboard for patterns & whales
-"""
+# ============================================================================
+# SAFE IMPORTS - with fallback
+# ============================================================================
 
-import streamlit as st
-import pandas as pd
-from pattern_recognition import PatternRecognizer
-from whale_detector import WhaleDetector
-import asyncio
+try:
+    from opportunity_scanner.pattern_recognition import PatternRecognizer
+    patterns_ok = True
+except:
+    patterns_ok = False
 
-def show_opportunity_scanner():
-    st.set_page_config(page_title="Opportunity Scanner", layout="wide")
-    st.title("🎯 Opportunity Scanner")
+try:
+    from opportunity_scanner.whale_detector import WhaleDetector
+    whale_ok = True
+except:
+    whale_ok = False
+
+# ============================================================================
+# PAGE CONFIG
+# ============================================================================
+
+st.set_page_config(
+    page_title="🎯 Opportunity Scanner",
+    layout="wide"
+)
+
+st.title("🎯 Opportunity Scanner")
+
+# ============================================================================
+# UI
+# ============================================================================
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    symbols = st.multiselect(
+        "Select Symbols",
+        ["BTCUSDT", "ETHUSDT", "LTCUSDT"],
+        default=["BTCUSDT"]
+    )
+
+with col2:
+    timeframe = st.selectbox("Timeframe", ["1h", "4h", "1d"])
+
+with col3:
+    if st.button("🔍 Scan Now"):
+        st.info("Scanning patterns and whales...")
+
+st.markdown("---")
+
+# ============================================================================
+# PATTERN RECOGNITION
+# ============================================================================
+
+if patterns_ok:
+    st.markdown("### 📊 Pattern Recognition")
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        symbols = st.multiselect("Select Symbols", ["BTCUSDT", "ETHUSDT", "LTCUSDT"], default=["BTCUSDT"])
-    
-    with col2:
-        timeframe = st.selectbox("Timeframe", ["1h", "4h", "1d"])
-    
-    with col3:
-        refresh = st.slider("Refresh (seconds)", 60, 3600, 300)
-    
-    st.subheader("📊 Pattern Recognition")
     recognizer = PatternRecognizer()
     
     for symbol in symbols:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button(f"Scan {symbol}"):
-                with st.spinner(f"Scanning {symbol}..."):
-                    h_s = asyncio.run(recognizer.detect_head_and_shoulders(symbol, timeframe))
-                    db = asyncio.run(recognizer.detect_double_bottom(symbol, timeframe))
-                    bo = asyncio.run(recognizer.detect_breakout(symbol, timeframe))
+        with st.expander(f"📈 {symbol} Patterns"):
+            try:
+                h_s = asyncio.run(recognizer.detect_head_and_shoulders(symbol, timeframe))
+                
+                if h_s.get('pattern_found'):
+                    st.success(f"✅ H&S Pattern: {h_s.get('confidence', 0):.1f}% confidence")
+                    st.info(f"Entry: ${h_s.get('entry'):.2f} | Target: ${h_s.get('target'):.2f} | SL: ${h_s.get('stop_loss'):.2f}")
+                else:
+                    st.info(f"No H&S pattern in {symbol}")
                     
-                    if h_s.get('pattern_found'):
-                        st.success(f"✅ H&S Pattern: {h_s.get('confidence', 0):.1f}% confidence")
-                    
-                    if db.get('pattern_found'):
-                        st.success(f"✅ Double Bottom: {db.get('confidence', 0):.1f}% confidence")
-                    
-                    if bo.get('breakout'):
-                        st.warning(f"⚡ Breakout {bo.get('direction')}: {bo.get('current_price')}")
+            except Exception as e:
+                st.warning(f"Could not scan {symbol}: {e}")
+else:
+    st.error("⚠️ Pattern Recognition module not available")
+
+st.markdown("---")
+
+# ============================================================================
+# WHALE ACTIVITY
+# ============================================================================
+
+if whale_ok:
+    st.markdown("### 🐋 Whale Activity")
     
-    st.subheader("🐋 Whale Activity")
     detector = WhaleDetector()
     
     for symbol in symbols:
-        if st.button(f"Whale Check {symbol}"):
-            with st.spinner(f"Checking whales for {symbol}..."):
+        with st.expander(f"🐳 {symbol} Whale Activity"):
+            try:
                 whales = asyncio.run(detector.detect_large_transactions(symbol))
                 
                 if whales.get('large_buys', 0) > 0 or whales.get('large_sells', 0) > 0:
-                    st.warning(f"🐋 Detected: {whales.get('large_buys')} buys, {whales.get('large_sells')} sells")
-                    st.dataframe(pd.DataFrame(whales.get('transactions', [])))
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Large Buys", whales.get('large_buys', 0))
+                    with col2:
+                        st.metric("Large Sells", whales.get('large_sells', 0))
+                    with col3:
+                        st.metric("Net Position", f"${whales.get('net_position', 0):,.0f}")
+                    
+                    st.warning(f"🐋 Whale activity detected in {symbol}")
+                else:
+                    st.info(f"No significant whale activity in {symbol}")
+                    
+            except Exception as e:
+                st.warning(f"Could not fetch whale data for {symbol}: {e}")
+else:
+    st.error("⚠️ Whale Detector module not available")
 
-if __name__ == "__main__":
-    show_opportunity_scanner()
+st.markdown("---")
+st.caption("Real-time data from Binance + CoinGlass")
