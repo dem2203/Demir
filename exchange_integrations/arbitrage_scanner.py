@@ -37,22 +37,22 @@ class ArbitrageScanner:
                         prices['binance'] = float(data['price'])
             
             # Bybit
-            url = f"{self.exchanges['bybit']}/market/tickers?category=linear&symbol={symbol}USDT"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get('result', {}).get('list'):
-                            prices['bybit'] = float(data['result']['list'][0]['lastPrice'])
+          #  url = f"{self.exchanges['bybit']}/market/tickers?category=linear&symbol={symbol}USDT"
+           # async with aiohttp.ClientSession() as session:
+            #    async with session.get(url) as response:
+             #       if response.status == 200:
+              #          data = await response.json()
+               #         if data.get('result', {}).get('list'):
+                #            prices['bybit'] = float(data['result']['list'][0]['lastPrice'])
             
             # OKX
-            url = f"{self.exchanges['okx']}/market/tickers?instType=SWAP&instId={symbol}-USDT"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get('data'):
-                            prices['okx'] = float(data['data'][0]['last'])
+            #url = f"{self.exchanges['okx']}/market/tickers?instType=SWAP&instId={symbol}-USDT"
+            #async with aiohttp.ClientSession() as session:
+             #   async with session.get(url) as response:
+              #      if response.status == 200:
+               #         data = await response.json()
+                #        if data.get('data'):
+                 #           prices['okx'] = float(data['data'][0]['last'])
             
             # Calculate spread
             valid_prices = [p for p in prices.values() if p]
