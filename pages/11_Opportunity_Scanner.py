@@ -1,3 +1,23 @@
+st.markdown("""
+<strong>🎯 Opportunity Scanner Nedir?</strong><br>
+
+Fırsat bulmak için taradığımız veriler:
+
+• Pattern Recognition: H&S, Double Bottom, Elliott Waves
+• Support/Resistance: Önemli fiyat seviyeleri
+• Whale Activity: Büyük oyuncu hareketleri
+• Breakouts: Kırılma fırsatları
+""")
+
+# Opportunities
+opps = {
+    'Type': ['Head & Shoulders', 'Whale Buy', 'Breakout'],
+    'Coin': ['BTC', 'ETH', 'LTC'],
+    'Signal': ['🔴 SHORT', '🟢 LONG', '🟢 LONG'],
+    'Confidence': ['68%', '82%', '75%']
+}
+st.dataframe(opps)
+
 import streamlit as st
 import pandas as pd
 import asyncio
