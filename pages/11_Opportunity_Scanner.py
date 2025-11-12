@@ -1,3 +1,8 @@
+import streamlit as st
+import pandas as pd
+import asyncio
+from datetime import datetime
+
 # ============================================================================
 # SAFE IMPORTS - with fallback
 # ============================================================================
