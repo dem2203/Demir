@@ -10,6 +10,18 @@ FEATURES:
 - Phase status monitoring
 - %100 gerçek veri - NO MOCK DATA
 """
+st.markdown("""
+<div style="background: #1A1F2E; padding: 15px; border-radius: 8px;">
+<strong>📊 Ne Demek?</strong><br>
+Bu sayfada:<br>
+• <strong>Açık Trades:</strong> Şu anda işlem gören pozisyonlar<br>
+• <strong>Entry:</strong> Giriş fiyatı (nereden aldığın)<br>
+• <strong>TP:</strong> Hedef fiyat (ne zaman satacağın)<br>
+• <strong>SL:</strong> Zarar durdur (kaybı sınırlamak için)<br>
+• <strong>P&L:</strong> Kar/Zarar (şu anda kaç dolar kazandığın)
+</div>
+""", unsafe_allow_html=True)
+
 
 import streamlit as st
 from datetime import datetime
