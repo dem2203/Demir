@@ -41,34 +41,23 @@ class LSTMNeuralLayer:
     def analyze(self, symbol="BTCUSDT"):
         """Analyze price with NumPy-based LSTM prediction"""
         try:
-            # Get REAL data from Binance
             data = self.get_real_data(symbol)
             if data is None:
-                return {
-                    "signal": "NEUTRAL",
-                    "confidence": 0.0,
-                    "prediction": "No data"
-                }
+                return {"signal": "NEUTRAL", "confidence": 0.0, "prediction": "No data"}
             
-            # Normalize data
             normalized, min_val, max_val = self.normalize_data(data)
             
-            # Simple trend analysis (replacing LSTM)
             recent_prices = normalized[-self.lookback:]
             
-            # Calculate trend using linear regression
             x = np.arange(len(recent_prices))
             z = np.polyfit(x, recent_prices, 1)
             trend = z[0]
             
-            # Predict next value
             next_value = z[0] * len(recent_prices) + z[1]
             current_price = data[-1]
             
-            # Denormalize
             predicted_price = next_value * (max_val - min_val) + min_val
             
-            # Generate signal
             if predicted_price > current_price * 1.01:
                 signal = "LONG"
                 confidence = min((predicted_price - current_price) / current_price, 1.0)
@@ -86,14 +75,8 @@ class LSTMNeuralLayer:
                 "predicted_price": float(predicted_price),
                 "trend": round(float(trend), 4)
             }
-        
         except Exception as e:
             print(f"LSTM analysis error: {e}")
-            return {
-                "signal": "NEUTRAL",
-                "confidence": 0.0,
-                "prediction": f"Error: {str(e)}"
-            }
+            return {"signal": "NEUTRAL", "confidence": 0.0, "prediction": f"Error: {str(e)}"}
 
-# Global instance
 lstm_layer = LSTMNeuralLayer()
