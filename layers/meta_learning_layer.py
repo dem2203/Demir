@@ -197,3 +197,4 @@ def analyze(self, layer_scores: Dict[str, float]) -> Dict:
             "weighted_score": 50.0,
             "error": str(e)
         }
+meta_layer = MetaLearningLayer()
