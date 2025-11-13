@@ -127,63 +127,54 @@ class BaseLayer:
         return await self.get_real_data_fallback()
     
     async def get_real_data_fallback(self) -> Dict:
-        """
-        REAL DATA FALLBACK
+    """
+    REAL DATA FALLBACK
+    ⚠️ ASLA mock data DEĞİL!
+    
+    Uses:
+    1. Binance (Primary)
+    2. Coinbase (Secondary)
+    3. CMC (Tertiary)
+    4. Bybit Futures (if futures)
+    5. ERROR if all fail (not fake!)
+    """
+    
+    try:
+        from utils.multi_api_orchestrator import MultiAPIOrchestrator
         
-        ⚠️ GOLDEN RULE: Fallback ASLA mock data değil!
+        orchestrator = MultiAPIOrchestrator()
         
-        Birinci API fail olursa, second REAL API kaynağından çek:
-        - Binance fail → CoinGecko/Kraken'den real fiyat
-        - CoinGecko fail → Binance'den real fiyat
-        - etc.
+        # Sistemi futures data istiyorsa
+        futures = self.name.lower().find('futures') != -1
         
-        Returns:
-            Dict: REAL veri veya NEUTRAL sinyal (mock DEĞİL!)
-        """
+        # Get real data
+        real_data = await orchestrator.get_price('BTC', futures=futures)
         
-        try:
-            logger.warning(f"⚠️ {self.name}: Primary source failed, switching to secondary REAL API...")
-            
-            # Secondary REAL API'dan veri çek
-            fallback_data = await self._fetch_from_backup_real_source()
-            
-            if fallback_data and self.validate_result(fallback_data):
-                logger.info(f"✅ {self.name}: REAL data retrieved from backup source")
-                self.quality_score = 75.0  # Slightly degraded kalite (birinci API değil)
-                self.status = LayerStatus.DEGRADED
-                return fallback_data
-            else:
-                # İkinci kaynak da başarısız
-                self.quality_score = 0
-                self.status = LayerStatus.FAILED
-                logger.critical(f"🚨 {self.name}: BOTH primary AND backup real sources failed!")
-                
-                # NEUTRAL döndür (mock data DEĞİL!)
-                # System trading yapsın, ama sinyal yok
-                return {
-                    'available': False,
-                    'signal': 'NEUTRAL',
-                    'confidence': 0.0,
-                    'score': 0.0,
-                    'error': 'No real data available from any source',
-                    'layer': self.name,
-                    'quality_score': self.quality_score,
-                    'status': self.status.value,
-                    'timestamp': datetime.now().isoformat()
-                }
-        
-        except Exception as e:
-            logger.critical(f"🚨 {self.name}: Fallback error - {e}")
+        if real_data and real_data.get('valid'):
+            self.quality_score = 75.0
+            self.status = LayerStatus.DEGRADED
+            logger.info(f"✅ Real data from {real_data['source']}")
+            return real_data
+        else:
+            # No real data available - return NEUTRAL (not fake!)
             self.quality_score = 0
             self.status = LayerStatus.FAILED
             
             return {
                 'available': False,
                 'signal': 'NEUTRAL',
-                'error': str(e),
-                'layer': self.name,
-                'status': self.status.value
+                'confidence': 0.0,
+                'error': real_data.get('error', 'No real data available'),
+                'layer': self.name
             }
+    
+    except Exception as e:
+        logger.critical(f"Fallback error: {e}")
+        return {
+            'available': False,
+            'signal': 'NEUTRAL',
+            'error': str(e)
+        }
     
     async def _fetch_from_backup_real_source(self) -> Optional[Dict]:
         """
