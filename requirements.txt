@@ -1,48 +1,35 @@
-# Production Requirements for Railway
-# Lightweight, stable, high-performance packages ONLY
+# Core
+asyncio>=3.8
+aiohttp>=3.8.0
+requests>=2.28.0
 
-# ========== CORE DEPENDENCIES ==========
-python-dotenv==1.2.1
-pyyaml==6.0.3
+# Data
+pandas>=1.4.0
+numpy>=1.23.0
+SQLAlchemy>=2.0.0
 
-# ========== DATABASE ==========
-sqlalchemy==2.0.44
-psycopg2-binary==2.9.11
+# AI/ML
+scikit-learn>=1.1.0
+statsmodels>=0.13.0
+qiskit>=0.39.0
+qiskit-aer>=0.12.0
 
-# ========== API & NETWORKING ==========
-requests==2.32.5
-aiohttp==3.13.2
-websockets==15.0.1
-websocket-client==1.9.0
+# APIs
+python-binance>=1.0.0
+websockets>=10.0
 
-# ========== DATA PROCESSING ==========
-pandas==2.3.3
-numpy==2.3.4
-scipy==1.16.3
+# Telegram
+python-telegram-bot>=20.0
 
-# ========== TELEGRAM ==========
-python-telegram-bot==22.5
+# Database
+psycopg2-binary>=2.9.0
+redis>=4.5.0
 
-# ========== CRYPTO & TRADING ==========
-python-binance==1.0.32
-ccxt==4.5.18
-pycryptodome==3.23.0
+# Utils
+python-dotenv>=0.20.0
+pydantic>=1.10.0
+PyJWT>=2.6.0
+cryptography>=38.0.0
 
-# ========== DATA SOURCES ==========
-yfinance==0.2.66
-requests==2.32.5
-
-# ========== WEB FRAMEWORK ==========
-streamlit==1.51.0
-flask==3.1.2
-fastapi==0.121.1
-uvicorn==0.38.0
-pydantic==2.12.4
-
-# ========== UTILITIES ==========
-PyJWT==2.10.1
-python-dateutil==2.9.0.post0
-pytz==2025.2
-psutil==7.1.3
-joblib==1.5.2
-python-json-logger==4.0.0
+# Monitoring
+prometheus-client>=0.14.0
