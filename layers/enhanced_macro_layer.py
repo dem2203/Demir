@@ -1,232 +1,207 @@
-# ============================================================================
-# DEMIR AI TRADING BOT - Enhanced Macro Correlation Layer
-# ============================================================================
-# Phase 6.1: Traditional Markets Correlation (SPX, NASDAQ, DXY)
-# Date: 4 Kasim 2025, 22:45 CET
-# Version: 2.0 - ENHANCED WITH REAL-TIME DATA
-#
-# FEATURES:
-# - SPX (S&P 500) correlation
-# - NASDAQ correlation
-# - DXY (Dollar Index) inverse correlation
-# - Real-time market sentiment
-# - Cross-market analysis
-# - Risk-on/Risk-off detection
-# ============================================================================
+"""
+ENHANCED MACRO LAYER - v2.0
+Makroekonomik göstergeler analizi
+⚠️ REAL data only - gerçek ekonomik veriler
 
-import requests
-import numpy as np
-from typing import Dict, Optional
+Bu layer şunu yapar:
+1. Fed kararlarını analiz et
+2. Enflasyon, GDP, Faiz oranlarını kontrol et
+3. Ekonomik ortamın Crypto'ya etkisini ölç
+"""
+
+from utils.base_layer import BaseLayer
 from datetime import datetime
+import logging
 
-class EnhancedMacroLayer:
-    """
-    Enhanced macro market correlation analysis
-    """
+logger = logging.getLogger(__name__)
 
+
+class EnhancedMacroLayer(BaseLayer):
+    """Makroekonomik Analiz Layer"""
+    
     def __init__(self):
-        """Initialize macro layer"""
-        self.alpha_vantage_key = None
-        print("Enhanced Macro Layer initialized")
-
-    def get_spx_data(self) -> Optional[Dict]:
-        """Get S&P 500 (SPX) data"""
-        try:
-            url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC"
-            params = {'interval': '1d', 'range': '5d'}
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            if 'chart' not in data or 'result' not in data['chart']:
-                return None
-
-            result = data['chart']['result'][0]
-            quote = result['indicators']['quote'][0]
-            closes = [c for c in quote['close'] if c is not None]
-            
-            if len(closes) < 2:
-                return None
-
-            current_price = closes[-1]
-            prev_price = closes[-2]
-            change = (current_price - prev_price) / prev_price
-            trend = (closes[-1] - closes[0]) / closes[0]
-
-            return {
-                'price': current_price,
-                'change_1d': change,
-                'trend_5d': trend,
-                'sentiment': 'BULLISH' if change > 0.002 else 'BEARISH' if change < -0.002 else 'NEUTRAL'
+        """Initialize"""
+        super().__init__('EnhancedMacro_Layer')
+        self.macro_history = []
+    
+    async def get_signal(self, macro_data):
+        """Get macro economic signal
+        
+        Args:
+            macro_data: Dict with:
+            {
+                'fed_decision': 'HAWKISH' veya 'DOVISH' veya None,
+                'inflation': 3.5,              # Current inflation rate (%)
+                'target_inflation': 2.0,       # Fed's target inflation
+                'interest_rate': 5.25,         # Current Fed rate (%)
+                'gdp_growth': 2.1,             # GDP growth rate (%)
+                'unemployment': 3.8,           # Unemployment rate (%)
+                'fomc_date': '2025-12-18'      # Next FOMC meeting
             }
-        except Exception as e:
-            print(f"SPX data error: {e}")
-            return None
-
-    def get_nasdaq_data(self) -> Optional[Dict]:
-        """Get NASDAQ data"""
+        
+        Returns:
+            Macro signal with score and recommendation
+        """
+        return await self.execute_with_retry(
+            self._analyze_macro,
+            macro_data
+        )
+    
+    async def _analyze_macro(self, macro_data):
+        """Analyze macro indicators - GERÇEK VERİ İLE"""
+        
+        if not macro_data:
+            raise ValueError("No macro data provided")
+        
         try:
-            url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC"
-            params = {'interval': '1d', 'range': '5d'}
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            if 'chart' not in data or 'result' not in data['chart']:
-                return None
-
-            result = data['chart']['result'][0]
-            quote = result['indicators']['quote'][0]
-            closes = [c for c in quote['close'] if c is not None]
+            # Extract REAL macro data
+            fed_decision = macro_data.get('fed_decision')  # HAWKISH/DOVISH/None
+            inflation = macro_data.get('inflation', 0)     # % rate
+            target_inf = macro_data.get('target_inflation', 2.0)
+            int_rate = macro_data.get('interest_rate', 0)  # %
+            gdp = macro_data.get('gdp_growth', 0)          # %
+            unemployment = macro_data.get('unemployment', 0) # %
             
-            if len(closes) < 2:
-                return None
-
-            current_price = closes[-1]
-            prev_price = closes[-2]
-            change = (current_price - prev_price) / prev_price
-            trend = (closes[-1] - closes[0]) / closes[0]
-
-            return {
-                'price': current_price,
-                'change_1d': change,
-                'trend_5d': trend,
-                'sentiment': 'BULLISH' if change > 0.002 else 'BEARISH' if change < -0.002 else 'NEUTRAL'
-            }
-        except Exception as e:
-            print(f"NASDAQ data error: {e}")
-            return None
-
-    def get_dxy_data(self) -> Optional[Dict]:
-        """Get DXY (Dollar Index) data - INVERSE correlation"""
-        try:
-            url = "https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB"
-            params = {'interval': '1d', 'range': '5d'}
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            if 'chart' not in data or 'result' not in data['chart']:
-                return None
-
-            result = data['chart']['result'][0]
-            quote = result['indicators']['quote'][0]
-            closes = [c for c in quote['close'] if c is not None]
+            # Validate
+            if inflation < 0 or int_rate < 0:
+                raise ValueError("Invalid macro data")
             
-            if len(closes) < 2:
-                return None
-
-            current_price = closes[-1]
-            prev_price = closes[-2]
-            change = (current_price - prev_price) / prev_price
-            trend = (closes[-1] - closes[0]) / closes[0]
-
+            # SCORE CALCULATION
+            # =================
+            
+            score = 50.0  # Neutral start
+            reasons = []
+            
+            # 1. FED DECISION
+            # ===============
+            # HAWKISH = More hikes = Negative for crypto = -15 points
+            # DOVISH = Rate cuts = Positive for crypto = +15 points
+            
+            if fed_decision == 'HAWKISH':
+                score -= 15.0
+                reasons.append("Fed hawkish stance (rate hikes expected)")
+            elif fed_decision == 'DOVISH':
+                score += 15.0
+                reasons.append("Fed dovish stance (potential rate cuts)")
+            
+            # 2. INFLATION ANALYSIS
+            # =====================
+            # Yüksek enflasyon = Fed sıkı tutum = Negative
+            # Düşük enflasyon = Fed rahat = Positive
+            
+            inflation_gap = inflation - target_inf
+            
+            if inflation_gap > 2.0:
+                # Significant above target
+                score -= 10.0
+                reasons.append(f"High inflation above target: {inflation}% vs {target_inf}%")
+            elif inflation_gap < -1.0:
+                # Significant below target
+                score += 10.0
+                reasons.append(f"Low inflation below target: {inflation}% vs {target_inf}%")
+            else:
+                reasons.append(f"Inflation near target: {inflation}%")
+            
+            # 3. INTEREST RATE ENVIRONMENT
+            # =============================
+            # Yüksek rates = Sabit getiri alanları cazip = Crypto riskli
+            # Düşük rates = Likidite çoğu = Crypto cazip
+            
+            if int_rate > 5.0:
+                # High rates
+                score -= 8.0
+                reasons.append(f"High interest rates: {int_rate}%")
+            elif int_rate < 2.0:
+                # Low rates
+                score += 8.0
+                reasons.append(f"Low interest rates: {int_rate}%")
+            
+            # 4. GDP GROWTH
+            # =============
+            # Güçlü büyüme = İyi ekonomi = Positive for risk assets
+            # Zayıf büyüme = Durgunluk riski = Negative
+            
+            if gdp > 3.0:
+                # Strong growth
+                score += 5.0
+                reasons.append(f"Strong GDP growth: {gdp}%")
+            elif gdp < 0.5:
+                # Weak growth / recession
+                score -= 8.0
+                reasons.append(f"Weak GDP growth: {gdp}% (recession risk)")
+            
+            # 5. UNEMPLOYMENT
+            # ===============
+            # Düşük işsizlik = Güçlü labor market = Positive
+            # Yüksek işsizlik = Zayıf labor market = Negative
+            
+            if unemployment < 4.0:
+                # Strong labor market
+                score += 3.0
+                reasons.append(f"Low unemployment: {unemployment}%")
+            elif unemployment > 5.0:
+                # Weak labor market
+                score -= 5.0
+                reasons.append(f"High unemployment: {unemployment}%")
+            
+            # Clamp score to 0-100
+            score = max(0, min(100, score))
+            
+            # FINAL SIGNAL
+            # ============
+            
+            if score >= 65:
+                signal = 'BULLISH'
+            elif score <= 35:
+                signal = 'BEARISH'
+            else:
+                signal = 'NEUTRAL'
+            
+            # Store history
+            self.macro_history.append({
+                'timestamp': datetime.now(),
+                'signal': signal,
+                'score': score,
+                'inflation': inflation,
+                'rate': int_rate,
+                'gdp': gdp
+            })
+            
+            # Limit history
+            if len(self.macro_history) > 500:
+                self.macro_history = self.macro_history[-500:]
+            
             return {
-                'price': current_price,
-                'change_1d': change,
-                'trend_5d': trend,
-                'sentiment': 'BEARISH' if change > 0.002 else 'BULLISH' if change < -0.002 else 'NEUTRAL'
+                'signal': signal,
+                'score': score,
+                'reasons': reasons,
+                'economic_outlook': self._get_outlook(score),
+                'inflation': float(inflation),
+                'inflation_target': float(target_inf),
+                'inflation_gap': float(inflation_gap),
+                'interest_rate': float(int_rate),
+                'gdp_growth': float(gdp),
+                'unemployment': float(unemployment),
+                'fed_decision': fed_decision,
+                'timestamp': datetime.now().isoformat(),
+                'valid': True
             }
+        
         except Exception as e:
-            print(f"DXY data error: {e}")
-            return None
-
-    def analyze_risk_sentiment(self, spx_data: Dict, nasdaq_data: Dict, dxy_data: Dict) -> str:
-        """Analyze overall market risk sentiment"""
-        if not all([spx_data, nasdaq_data, dxy_data]):
-            return 'UNKNOWN'
-
-        bullish_count = sum([
-            spx_data['sentiment'] == 'BULLISH',
-            nasdaq_data['sentiment'] == 'BULLISH',
-            dxy_data['sentiment'] == 'BULLISH'
-        ])
-
-        if bullish_count >= 2:
-            return 'RISK_ON'
-        elif bullish_count == 0:
-            return 'RISK_OFF'
+            logger.error(f"Macro analysis error: {e}")
+            raise ValueError(f"Macro error: {e}")
+    
+    @staticmethod
+    def _get_outlook(score):
+        """Get economic outlook based on score"""
+        
+        if score >= 75:
+            return "VERY_BULLISH - Strong economic environment"
+        elif score >= 65:
+            return "BULLISH - Positive economic conditions"
+        elif score >= 50:
+            return "NEUTRAL - Mixed signals"
+        elif score >= 35:
+            return "BEARISH - Challenging environment"
         else:
-            return 'MIXED'
-
-    def calculate_macro_score(self) -> Dict:
-        """Calculate comprehensive macro score"""
-        print("\n" + "="*80)
-        print("ENHANCED MACRO ANALYSIS")
-        print("="*80 + "\n")
-
-        spx = self.get_spx_data()
-        nasdaq = self.get_nasdaq_data()
-        dxy = self.get_dxy_data()
-
-        available_data = sum([spx is not None, nasdaq is not None, dxy is not None])
-        if available_data == 0:
-            print("No macro data available")
-            return {'score': 50, 'signal': 'NEUTRAL', 'confidence': 0}
-
-        spx_score = self._sentiment_to_score(spx['sentiment']) if spx else 50
-        nasdaq_score = self._sentiment_to_score(nasdaq['sentiment']) if nasdaq else 50
-        dxy_score = self._sentiment_to_score(dxy['sentiment']) if dxy else 50
-
-        final_score = (spx_score * 0.4 + nasdaq_score * 0.4 + dxy_score * 0.2)
-        risk_sentiment = self.analyze_risk_sentiment(spx, nasdaq, dxy)
-        confidence = available_data / 3.0
-
-        if spx:
-            print(f"S&P 500: ${spx['price']:.2f} ({spx['change_1d']:+.2%}) - {spx['sentiment']}")
-        if nasdaq:
-            print(f"NASDAQ: ${nasdaq['price']:.2f} ({nasdaq['change_1d']:+.2%}) - {nasdaq['sentiment']}")
-        if dxy:
-            print(f"DXY: ${dxy['price']:.2f} ({dxy['change_1d']:+.2%}) - {dxy['sentiment']} for crypto")
-
-        print(f"\nRisk Sentiment: {risk_sentiment}")
-        print(f"Macro Score: {final_score:.1f}/100")
-        print(f"Confidence: {confidence:.1%}")
-        print("="*80 + "\n")
-
-        return {
-            'score': final_score,
-            'signal': self._score_to_signal(final_score),
-            'confidence': confidence,
-            'risk_sentiment': risk_sentiment,
-            'spx': spx,
-            'nasdaq': nasdaq,
-            'dxy': dxy,
-            'timestamp': datetime.now().isoformat()
-        }
-
-    def _sentiment_to_score(self, sentiment: str) -> float:
-        """Convert sentiment to 0-100 score"""
-        mapping = {'BULLISH': 70, 'NEUTRAL': 50, 'BEARISH': 30}
-        return mapping.get(sentiment, 50)
-
-    def _score_to_signal(self, score: float) -> str:
-        """Convert score to signal"""
-        if score >= 60:
-            return 'LONG'
-        elif score <= 40:
-            return 'SHORT'
-        else:
-            return 'NEUTRAL'
-
-def get_macro_signal() -> Dict:
-    """Get macro correlation signal"""
-    layer = EnhancedMacroLayer()
-    return layer.calculate_macro_score()
-
-def analyze_traditional_markets() -> Dict:
-    """Alias for get_macro_signal"""
-    return get_macro_signal()
-
-if __name__ == "__main__":
-    print("="*80)
-    print("ENHANCED MACRO LAYER TEST")
-    print("="*80)
-    result = get_macro_signal()
-    if result['confidence'] > 0:
-        print(f"\nAnalysis complete!")
-        print(f"Signal: {result['signal']}")
-        print(f"Score: {result['score']:.1f}/100")
-        print(f"Risk: {result['risk_sentiment']}")
-    else:
-        print("\nNo data available")
+            return "VERY_BEARISH - Harsh economic conditions"
