@@ -1,19 +1,13 @@
+# .streamlit/config.toml'ı güncelle
+mkdir -p .streamlit
+
+cat > .streamlit/config.toml << 'EOF'
 [theme]
-primaryColor = "#2196F3"
-backgroundColor = "#0E0E0E"
+primaryColor = "#00FF00"
+backgroundColor = "#0a0a0a"
 secondaryBackgroundColor = "#1a1a1a"
-textColor = "#FFFFFF"
-font = "sans serif"
+textColor = "#ffffff"
 
 [client]
-showStreamlitWatermark = false
-toolbarMode = "minimal"
-
-[server]
-headless = true
-port = 8501
-enableXsrfProtection = true
-maxUploadSize = 200
-
-[logger]
-level = "info"
+showErrorDetails = false
+EOF
