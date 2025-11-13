@@ -1,82 +1,88 @@
+"""
+LSTM NEURAL LAYER - v2.0
+Deep learning LSTM predictions
+⚠️ Real price data training only
+"""
+
+from utils.base_layer import BaseLayer
+from datetime import datetime
 import numpy as np
 import pandas as pd
-import os
-from binance.client import Client
-from datetime import datetime, timedelta
+from sklearn.preprocessing import MinMaxScaler
+import logging
 
-class LSTMNeuralLayer:
-    """LSTM Neural Layer for time-series price prediction (NumPy-based)"""
+logger = logging.getLogger(__name__)
+
+try:
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import LSTM, Dense, Dropout
+    HAS_TF = True
+except ImportError:
+    HAS_TF = False
+
+
+class LSTMNeuralLayer(BaseLayer):
+    """LSTM Neural Network Layer"""
     
-    def __init__(self):
-        self.lookback = 60
-        self.api_key = os.getenv("BINANCE_API_KEY")
-        self.api_secret = os.getenv("BINANCE_API_SECRET")
-        self.client = Client(self.api_key, self.api_secret)
+    def __init__(self, lookback=60):
+        """Initialize"""
+        super().__init__('LSTM_Layer')
+        self.lookback = lookback
+        self.scaler = MinMaxScaler(feature_range=(0, 1))
+        self.model = None
+        self.is_trained = False
     
-    def get_real_data(self, symbol="BTCUSDT", interval="1h", limit=500):
-        """Fetch REAL data from Binance"""
+    async def get_signal(self, prices):
+        """Get LSTM prediction"""
+        return await self.execute_with_retry(
+            self._predict_lstm,
+            prices
+        )
+    
+    async def _predict_lstm(self, prices):
+        """LSTM prediction on REAL prices"""
+        
+        if not HAS_TF:
+            raise ValueError("TensorFlow not installed")
+        
+        if not self.is_trained:
+            raise ValueError("LSTM model not trained")
+        
         try:
-            klines = self.client.get_historical_klines(symbol, interval, limit=limit)
-            closes = np.array([float(k[4]) for k in klines])
-            return closes
-        except Exception as e:
-            print(f"LSTM Binance API error: {e}")
-            return None
-    
-    def normalize_data(self, data):
-        """Normalize prices to 0-1 range"""
-        min_val = np.min(data)
-        max_val = np.max(data)
-        normalized = (data - min_val) / (max_val - min_val + 1e-8)
-        return normalized, min_val, max_val
-    
-    def prepare_sequences(self, data):
-        """Create sequences for LSTM-like analysis"""
-        X, y = [], []
-        for i in range(len(data) - self.lookback):
-            X.append(data[i:i+self.lookback])
-            y.append(data[i+self.lookback])
-        return np.array(X), np.array(y)
-    
-    def analyze(self, symbol="BTCUSDT"):
-        """Analyze price with NumPy-based LSTM prediction"""
-        try:
-            data = self.get_real_data(symbol)
-            if data is None:
-                return {"signal": "NEUTRAL", "confidence": 0.0, "prediction": "No data"}
+            if len(prices) < self.lookback:
+                raise ValueError("Insufficient price history")
             
-            normalized, min_val, max_val = self.normalize_data(data)
+            # Normalize REAL prices
+            scaled = self.scaler.fit_transform(np.array(prices).reshape(-1, 1))
             
-            recent_prices = normalized[-self.lookback:]
+            # Prepare input
+            X = scaled[-self.lookback:].reshape(1, self.lookback, 1)
             
-            x = np.arange(len(recent_prices))
-            z = np.polyfit(x, recent_prices, 1)
-            trend = z[0]
+            # Predict
+            pred = self.model.predict(X, verbose=0)
+            predicted_price = self.scaler.inverse_transform([[pred]])
+            current_price = prices[-1]
             
-            next_value = z[0] * len(recent_prices) + z[1]
-            current_price = data[-1]
-            
-            predicted_price = next_value * (max_val - min_val) + min_val
-            
+            # Signal
             if predicted_price > current_price * 1.01:
-                signal = "LONG"
-                confidence = min((predicted_price - current_price) / current_price, 1.0)
+                signal = 'LONG'
+                score = 70.0
             elif predicted_price < current_price * 0.99:
-                signal = "SHORT"
-                confidence = min((current_price - predicted_price) / current_price, 1.0)
+                signal = 'SHORT'
+                score = 30.0
             else:
-                signal = "NEUTRAL"
-                confidence = 0.5
+                signal = 'NEUTRAL'
+                score = 50.0
             
             return {
-                "signal": signal,
-                "confidence": round(float(confidence), 3),
-                "current_price": float(current_price),
-                "predicted_price": float(predicted_price),
-                "trend": round(float(trend), 4)
+                'signal': signal,
+                'score': score,
+                'predicted_price': float(predicted_price),
+                'current_price': float(current_price),
+                'timestamp': datetime.now().isoformat(),
+                'valid': True
             }
+        
         except Exception as e:
-            print(f"LSTM analysis error: {e}")
-            return {"signal": "NEUTRAL", "confidence": 0.0, "prediction": f"Error: {str(e)}"}
-
-lstm_layer = LSTMNeuralLayer()
+            logger.error(f"LSTM error: {e}")
+            raise ValueError(f"LSTM error: {e}")
