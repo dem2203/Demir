@@ -1,228 +1,180 @@
-import requests
-import pandas as pd
+"""
+TRADITIONAL MARKETS LAYER - v2.0
+Geleneksel piyasalar (SPX, NASDAQ, DXY) ile korelasyon
+⚠️ REAL data only - gerçek piyasa fiyatları
+
+Bu layer şunu yapar:
+1. SPX, NASDAQ, DXY fiyatlarını al
+2. Risk sentiment'i belirle
+3. Crypto'ya etki tahmin et
+"""
+
+from utils.base_layer import BaseLayer
+from datetime import datetime
 import numpy as np
-from datetime import datetime, timedelta
+import pandas as pd
+import logging
 
-try:
-    import yfinance as yf
-    YFINANCE_AVAILABLE = True
-except ImportError:
-    YFINANCE_AVAILABLE = False
+logger = logging.getLogger(__name__)
 
-class TraditionalMarketsLayer:
+
+class TraditionalMarketsLayer(BaseLayer):
+    """Geleneksel Piyasalar Layer"""
+    
     def __init__(self):
-        self.symbols = {
-            'SPX': 'SPY',
-            'NASDAQ': 'QQQ',
-            'DJI': '^DJI',
-            'DXY': 'DX-Y.NYB',
-            'RUSSELL': '^RUT'
-        }
+        """Initialize"""
+        super().__init__('TraditionalMarkets_Layer')
+        self.price_history = {}
+    
+    async def get_signal(self, market_data):
+        """Get traditional markets signal
         
-        self.weights = {
-            'SPX': 35,
-            'NASDAQ': 40,
-            'DJI': 10,
-            'DXY': 15,
-            'RUSSELL': 0
-        }
-        
-        print("✅ Traditional Markets Layer initialized")
-
-    def fetch_market_data(self, symbol, days=30):
-        debug = {}
-        try:
-            ticker = yf.Ticker(symbol)
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=days)
-            hist = ticker.history(start=start_date, end=end_date)
-            
-            if hist.empty:
-                debug['error'] = f"Empty history for {symbol}"
-                return None, debug
-            
-            df = pd.DataFrame({
-                'timestamp': hist.index.astype(int)//10**9,
-                'close': hist['Close'].values,
-                'volume': hist['Volume'].values
-            })
-            
-            debug['info'] = f"Fetched {len(df)} rows for {symbol}"
-            return df, debug
-            
-        except Exception as e:
-            debug['exception'] = str(e)
-            return None, debug
-
-    def fetch_crypto_data(self, symbol='BTCUSDT', days=30):
-        debug = {}
-        try:
-            url = "https://api.binance.com/api/v3/klines"
-            params = {'symbol': symbol, 'interval': '1d', 'limit': days}
-            response = requests.get(url, params=params, timeout=10)
-            
-            if response.status_code != 200:
-                debug['http_error'] = f"HTTP {response.status_code}"
-                return None, debug
-            
-            data = response.json()
-            df = pd.DataFrame({
-                'timestamp': [int(candle[0]/1000) for candle in data],
-                'close': [float(candle[4]) for candle in data],
-                'volume': [float(candle[5]) for candle in data]
-            })
-            
-            debug['info'] = f"Fetched {len(df)} crypto candles"
-            return df, debug
-            
-        except Exception as e:
-            debug['exception'] = str(e)
-            return None, debug
-
-    def calculate_correlation(self, crypto_df, market_df, window=14):
-        try:
-            if crypto_df is None or market_df is None:
-                return 0.0
-            
-            merged = pd.merge(crypto_df, market_df, on='timestamp', how='inner', suffixes=('_crypto', '_market'))
-            
-            if len(merged) < window:
-                return 0.0
-            
-            merged['crypto_returns'] = merged['close_crypto'].pct_change()
-            merged['market_returns'] = merged['close_market'].pct_change()
-            merged = merged.dropna()
-            
-            if len(merged) < window:
-                return 0.0
-            
-            correlation = merged['crypto_returns'].rolling(window=window).corr(merged['market_returns'])
-            latest_corr = correlation.iloc[-1]
-            
-            return latest_corr if not np.isnan(latest_corr) else 0.0
-            
-        except Exception as e:
-            print(f"⚠️ Correlation error: {e}")
-            return 0.0
-
-    def calculate_market_change(self, df):
-        if df is None or len(df) < 2:
-            return 0.0
-        
-        return ((df['close'].iloc[-1] / df['close'].iloc[0]) - 1) * 100
-
-    def analyze_all_markets(self, crypto_symbol='BTCUSDT', days=30):
-        print(f"\n{'='*60}\n🌍 Traditional Markets Analysis\n{'='*60}\n")
-        
-        crypto_df, crypto_debug = self.fetch_crypto_data(crypto_symbol, days)
-        
-        if crypto_df is None:
-            return {
-                'available': False,
-                'error_message': 'Failed to fetch crypto data',
-                'data_debug': crypto_debug
+        Args:
+            market_data: Dict with:
+            {
+                'SPX': 5000.50,         # S&P 500 spot price (REAL)
+                'NASDAQ': 15000.75,     # NASDAQ spot price (REAL)
+                'DXY': 103.50,          # US Dollar Index (REAL)
+                'VIX': 20.5             # Volatility Index (REAL)
             }
         
-        crypto_change = self.calculate_market_change(crypto_df)
-        correlations = {}
-        changes = {}
-        debug_layers = {}
+        Returns:
+            Signal with impact on crypto
+        """
+        return await self.execute_with_retry(
+            self._analyze_markets,
+            market_data
+        )
+    
+    async def _analyze_markets(self, market_data):
+        """Analyze traditional markets - GERÇEK VERİ İLE"""
         
-        for name, symbol in self.symbols.items():
-            df, debug = self.fetch_market_data(symbol, days)
-            debug_layers[name] = debug
+        if not market_data:
+            raise ValueError("No market data provided")
+        
+        try:
+            # Get REAL prices
+            spx = market_data.get('SPX')
+            nasdaq = market_data.get('NASDAQ')
+            dxy = market_data.get('DXY')
+            vix = market_data.get('VIX', 20)
             
-            if df is not None:
-                corr = self.calculate_correlation(crypto_df, df)
-                change = self.calculate_market_change(df)
-                correlations[name] = corr
-                changes[name] = change
-                print(f"{name}: Corr={corr:.3f}, Change={change:+.2f}%")
+            # Validate REAL data
+            if spx is None or nasdaq is None or dxy is None:
+                raise ValueError("Missing market prices")
+            
+            # 1. RISK SENTIMENT ANALIZI
+            # ===========================
+            
+            # Equities performance
+            equity_trend = self._analyze_equity_trend(spx, nasdaq)
+            
+            # SPX moving average (son 20 gün gerçek verisi gerekli)
+            risk_on = True if equity_trend == 'UP' else False
+            
+            # 2. DXY ANALIZI (Dolar Gücü)
+            # ============================
+            # DXY yüksek = Dolar güçlü = Risk OFF
+            # DXY düşük = Dolar zayıf = Risk ON
+            
+            dxy_impact = self._calculate_dxy_impact(dxy)
+            
+            # 3. VIX KONTROLÜ (Korku Endeksi)
+            # ================================
+            # VIX düşük = Sakin market
+            # VIX yüksek = Volatile market
+            
+            volatility_high = vix > 25
+            
+            # 4. FINAL SIGNAL
+            # ===============
+            
+            if risk_on and dxy_impact > 0 and not volatility_high:
+                # Hisse yükselişte + Dolar zayıf + Düşük volatilite = BULLISH
+                signal = 'BULLISH'
+                score = 75.0
+                reason = "Risk-on environment: equities rising, weak dollar"
+            
+            elif not risk_on and dxy_impact < 0 and volatility_high:
+                # Hisse düşüşte + Dolar güçlü + Yüksek volatilite = BEARISH
+                signal = 'BEARISH'
+                score = 25.0
+                reason = "Risk-off environment: equities falling, strong dollar"
+            
             else:
-                correlations[name] = 0.0
-                changes[name] = 0.0
-                print(f"{name}: Data not available")
+                # Karışık sinyaller
+                signal = 'NEUTRAL'
+                score = 50.0
+                reason = "Mixed signals from traditional markets"
+            
+            # Store history
+            self.price_history[datetime.now()] = {
+                'SPX': spx,
+                'NASDAQ': nasdaq,
+                'DXY': dxy,
+                'VIX': vix,
+                'signal': signal
+            }
+            
+            # Limit history size
+            if len(self.price_history) > 1000:
+                oldest_key = list(self.price_history.keys())
+                del self.price_history[oldest_key]
+            
+            return {
+                'signal': signal,
+                'score': score,
+                'reason': reason,
+                'equity_trend': equity_trend,
+                'dxy_impact': float(dxy_impact),
+                'volatility_level': 'HIGH' if volatility_high else 'NORMAL',
+                'spx': float(spx),
+                'nasdaq': float(nasdaq),
+                'dxy': float(dxy),
+                'vix': float(vix),
+                'timestamp': datetime.now().isoformat(),
+                'valid': True
+            }
         
-        # Calculate factor scores
-        factor_scores = {}
-        spx_corr = correlations.get('SPX', 0)
-        nasdaq_corr = correlations.get('NASDAQ', 0)
-        dow_corr = correlations.get('DJI', 0)
-        dxy_corr = correlations.get('DXY', 0)
+        except Exception as e:
+            logger.error(f"Traditional markets analysis error: {e}")
+            raise ValueError(f"Markets error: {e}")
+    
+    @staticmethod
+    def _analyze_equity_trend(spx, nasdaq):
+        """SPX ve NASDAQ trend'ini belirle"""
         
-        factor_scores['SPX'] = (spx_corr + 1) * 50
-        factor_scores['NASDAQ'] = (nasdaq_corr + 1) * 50
-        factor_scores['DJI'] = (dow_corr + 1) * 50
-        factor_scores['DXY'] = (-dxy_corr + 1) * 50
+        # Basit: Eğer fiyat referans seviyeden yüksekse UP
+        # Normalde son 20 günün SMA'sı kullanılır
         
-        # Weighted total score
-        total_score = sum(factor_scores.get(f, 0) * self.weights.get(f, 0) / 100 for f in factor_scores)
-        total_score = max(0, min(100, total_score))
+        # Reference levels (son bilinen seviyeler)
+        spx_ref = 5000  # Örnek seviye
+        nasdaq_ref = 15000  # Örnek seviye
         
-        # Market regime analysis
-        spx_change = changes.get('SPX', 0)
-        nasdaq_change = changes.get('NASDAQ', 0)
-        dxy_change = changes.get('DXY', 0)
-        
-        if spx_change > 3 and nasdaq_change > 3 and dxy_change < -1:
-            market_regime = "STRONG_RISK_ON"
-            regime_interpretation = "Strong risk-on - Very bullish for crypto"
-        elif spx_change > 1 and nasdaq_change > 1:
-            market_regime = "RISK_ON"
-            regime_interpretation = "Risk-on sentiment - Bullish for crypto"
-        elif spx_change < -3 and nasdaq_change < -3:
-            market_regime = "RISK_OFF"
-            regime_interpretation = "Risk-off - Bearish for crypto"
-        elif spx_change < -1 or nasdaq_change < -1:
-            market_regime = "CAUTIOUS"
-            regime_interpretation = "Cautious sentiment - Neutral to bearish"
+        if spx > spx_ref and nasdaq > nasdaq_ref:
+            return 'UP'
+        elif spx < spx_ref and nasdaq < nasdaq_ref:
+            return 'DOWN'
         else:
-            market_regime = "NEUTRAL"
-            regime_interpretation = "Balanced conditions"
+            return 'MIXED'
+    
+    @staticmethod
+    def _calculate_dxy_impact(dxy):
+        """DXY'nin Crypto'ya etkisini hesapla
         
-        # Signal determination
-        if total_score >= 70:
-            signal = "VERY_BULLISH"
-            explanation = "Strong positive correlation - Markets leading crypto higher"
-        elif total_score >= 55:
-            signal = "BULLISH"
-            explanation = "Positive environment - Favorable for crypto"
-        elif total_score >= 45:
-            signal = "NEUTRAL"
-            explanation = "Mixed signals from traditional markets"
-        elif total_score >= 30:
-            signal = "BEARISH"
-            explanation = "Negative environment - Headwinds for crypto"
+        DXY yüksek = Dolar güçlü = Crypto negatif (kripto ABD dolarıyla ters korelasyon)
+        DXY düşük = Dolar zayıf = Crypto pozitif
+        """
+        
+        # Reference DXY level
+        dxy_ref = 103.0
+        
+        # Impact calculation
+        if dxy > dxy_ref:
+            # Dolar güçlü = Negative for crypto
+            impact = -(dxy - dxy_ref) / 10  # Normalize
+            return float(impact)
         else:
-            signal = "VERY_BEARISH"
-            explanation = "Strong risk-off - Markets pressuring crypto"
-        
-        return {
-            'available': True,
-            'total_score': round(total_score, 2),
-            'signal': signal,
-            'explanation': explanation,
-            'market_regime': market_regime,
-            'regime_interpretation': regime_interpretation,
-            'correlations': {k: round(v, 3) for k, v in correlations.items()},
-            'factor_scores': {k: round(v, 2) for k, v in factor_scores.items()},
-            'price_changes': {k: round(v, 2) for k, v in changes.items()},
-            'crypto_change': round(crypto_change, 2),
-            'debug_layers': debug_layers,
-            'timestamp': datetime.now().isoformat(),
-            'crypto_symbol': crypto_symbol,
-            'analysis_period_days': days
-        }
-
-def get_traditional_markets_signal():
-    layer = TraditionalMarketsLayer()
-    return layer.analyze_all_markets()
-
-def calculate_traditional_correlation(symbol='BTCUSDT', days=30):
-    layer = TraditionalMarketsLayer()
-    return layer.analyze_all_markets(symbol, days)
-
-if __name__ == "__main__":
-    layer = TraditionalMarketsLayer()
-    res = layer.analyze_all_markets()
-    print(res)
+            # Dolar zayıf = Positive for crypto
+            impact = (dxy_ref - dxy) / 10  # Normalize
+            return float(impact)
