@@ -1,263 +1,194 @@
 """
-🔱 DEMIR AI TRADING BOT - ML Feature Engineer (Phase 4.3)
-==========================================================
-Date: 2 Kasım 2025, 20:20 CET
-Version: 1.0 - Feature Engineering for ML Models
-
-PURPOSE:
---------
-Extract 20+ technical features from price data
-Feed into XGBoost and Random Forest models
-
-FEATURES EXTRACTED:
--------------------
-• Price-based: Returns, log returns, momentum
-• Volatility: Rolling std, ATR, Bollinger width
-• Volume: Volume MA, OBV, volume ratio
-• Trend: SMA crossovers, EMA slopes, ADX
-• Oscillators: RSI, MACD, Stochastic
-• Pattern: Higher highs, lower lows, consolidation
+ML FEATURE ENGINEER - v2.0 FIXED
+⚠️ REAL Binance data ONLY
+NO MOCK DATA - Real prices or Error
 """
 
+import os
+import logging
+from datetime import datetime
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional
-from datetime import datetime
+import asyncio
+from typing import Tuple, Optional
+
+logger = logging.getLogger(__name__)
 
 try:
-    import ccxt
-    CCXT_AVAILABLE = True
-except:
-    CCXT_AVAILABLE = False
+    from binance.client import Client
+    HAS_BINANCE = True
+except ImportError:
+    HAS_BINANCE = False
 
 
 class MLFeatureEngineer:
-    """
-    Extract technical features for machine learning models
-    """
+    """ML Feature Engineering - REAL data only"""
     
     def __init__(self):
-        self.feature_names = []
+        """Initialize"""
+        self.binance_key = os.getenv('BINANCE_API_KEY')
+        self.binance_secret = os.getenv('BINANCE_API_SECRET')
+        
+        if HAS_BINANCE and self.binance_key:
+            self.client = Client(self.binance_key, self.binance_secret)
+        else:
+            self.client = None
+            logger.warning("Binance not configured - ML features will fail")
+        
+        self.scaler = None
+        self.is_trained = False
     
-    def extract_features(
+    async def fetch_real_data(
         self, 
-        symbol: str = 'BTC/USDT',
-        timeframe: str = '1h',
-        lookback: int = 200
+        symbol: str, 
+        timeframe: str = '1h', 
+        lookback: int = 500
     ) -> Optional[pd.DataFrame]:
-        """
-        Extract all features from price data
+        """Fetch REAL Binance data - NO MOCK
         
         Args:
-            symbol: Trading pair
-            timeframe: Candlestick interval
+            symbol: 'BTCUSDT'
+            timeframe: '1h', '4h', '1d'
             lookback: Number of candles
         
         Returns:
-            DataFrame with all features
+            Real OHLCV data from BINANCE or ERROR
         """
         
-        # Fetch OHLCV data
-        df = self._fetch_data(symbol, timeframe, lookback)
-        
-        if df is None or df.empty:
-            print(f"❌ ML Feature Engineer: No data for {symbol}")
+        if not self.client:
+            logger.error("Binance client not initialized")
             return None
         
-        print(f"✅ ML Feature Engineer: Processing {len(df)} candles")
+        try:
+            # Get REAL klines from Binance
+            klines = self.client.get_historical_klines(
+                symbol,
+                timeframe,
+                limit=lookback
+            )
+            
+            if not klines:
+                logger.error(f"No data from Binance for {symbol}")
+                return None
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(klines, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_volume', 'trades', 'taker_buy_base',
+                'taker_buy_quote', 'ignore'
+            ])
+            
+            # Convert to numeric (REAL data)
+            df['close'] = pd.to_numeric(df['close'])
+            df['high'] = pd.to_numeric(df['high'])
+            df['low'] = pd.to_numeric(df['low'])
+            df['open'] = pd.to_numeric(df['open'])
+            df['volume'] = pd.to_numeric(df['volume'])
+            
+            # Validate REAL data
+            if df.isnull().sum().sum() > 0:
+                logger.warning("NULL values in real data")
+            
+            if (df['close'] <= 0).any():
+                logger.error("Invalid prices in real data")
+                return None
+            
+            logger.info(f"✅ Fetched {len(df)} real candles for {symbol}")
+            return df
         
-        # Extract all features
-        df = self._add_price_features(df)
-        df = self._add_volatility_features(df)
-        df = self._add_volume_features(df)
-        df = self._add_trend_features(df)
-        df = self._add_oscillator_features(df)
-        df = self._add_pattern_features(df)
-        
-        # Drop NaN rows
-        df = df.dropna()
-        
-        print(f"✅ ML Feature Engineer: {len(df.columns)} features extracted")
-        self.feature_names = [col for col in df.columns if col not in ['timestamp', 'open', 'high', 'low', 'close', 'volume']]
-        
-        return df
+        except Exception as e:
+            logger.error(f"Binance fetch error: {e}")
+            return None
     
-    def _fetch_data(self, symbol: str, timeframe: str, lookback: int) -> Optional[pd.DataFrame]:
-        """Fetch OHLCV data from Binance"""
+    def extract_features(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+        """Extract ML features from REAL price data
         
-        if not CCXT_AVAILABLE:
-            print("⚠️ ccxt not available - using mock data")
-            return self._generate_mock_data(lookback)
+        Features:
+        - RSI: Relative Strength Index
+        - MACD: Moving Average Convergence
+        - Bollinger: Volatility bands
+        - Volume: Trading volume
+        - Momentum: Rate of change
+        """
+        
+        if df is None or len(df) < 50:
+            logger.error("Insufficient real data for feature extraction")
+            return None
         
         try:
-            exchange = ccxt.binance()
-            ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=lookback)
+            df = df.copy()
             
-            df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            # 1. RSI (Real Strength Index)
+            delta = df['close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss if loss.iloc[-1] != 0 else np.inf
+            df['rsi'] = 100 - (100 / (1 + rs))
             
+            # 2. MACD (Moving Average Convergence Divergence)
+            ema_12 = df['close'].ewm(span=12, adjust=False).mean()
+            ema_26 = df['close'].ewm(span=26, adjust=False).mean()
+            df['macd'] = ema_12 - ema_26
+            df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
+            df['macd_hist'] = df['macd'] - df['macd_signal']
+            
+            # 3. Bollinger Bands
+            sma_20 = df['close'].rolling(20).mean()
+            std_20 = df['close'].rolling(20).std()
+            df['bb_upper'] = sma_20 + (std_20 * 2)
+            df['bb_lower'] = sma_20 - (std_20 * 2)
+            df['bb_position'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
+            
+            # 4. Volume
+            df['volume_sma'] = df['volume'].rolling(20).mean()
+            df['volume_ratio'] = df['volume'] / df['volume_sma']
+            
+            # 5. Momentum
+            df['momentum'] = df['close'].diff(12)
+            
+            # 6. Price changes
+            df['pct_change'] = df['close'].pct_change()
+            df['high_low_ratio'] = (df['high'] - df['low']) / df['close']
+            
+            # Drop NaN
+            df = df.dropna()
+            
+            logger.info(f"✅ Extracted {len(df)} feature rows from real data")
             return df
-            
+        
         except Exception as e:
-            print(f"⚠️ Binance fetch error: {e} - using mock data")
-            return self._generate_mock_data(lookback)
+            logger.error(f"Feature extraction error: {e}")
+            return None
     
-    def _generate_mock_data(self, lookback: int) -> pd.DataFrame:
-        """Generate mock OHLCV data for testing"""
+    async def get_ml_features(
+        self,
+        symbol: str,
+        timeframe: str = '1h',
+        lookback: int = 500
+    ) -> Optional[pd.DataFrame]:
+        """Get ML features from REAL Binance data
         
-        base_price = 69000
-        dates = pd.date_range(end=datetime.now(), periods=lookback, freq='1H')
+        Returns:
+            Features or None (never mock!)
+        """
         
-        # Simulate realistic price movement
-        returns = np.random.normal(0, 0.02, lookback)
-        prices = base_price * np.exp(np.cumsum(returns))
+        # Step 1: Get REAL data
+        df = await asyncio.to_thread(
+            self.fetch_real_data,
+            symbol,
+            timeframe,
+            lookback
+        )
         
-        df = pd.DataFrame({
-            'timestamp': dates,
-            'open': prices * (1 + np.random.uniform(-0.005, 0.005, lookback)),
-            'high': prices * (1 + np.random.uniform(0, 0.01, lookback)),
-            'low': prices * (1 - np.random.uniform(0, 0.01, lookback)),
-            'close': prices,
-            'volume': np.random.uniform(100, 1000, lookback)
-        })
+        if df is None:
+            logger.error(f"Failed to get real data for {symbol}")
+            return None
         
-        return df
-    
-    def _add_price_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Price-based features"""
+        # Step 2: Extract features
+        features = self.extract_features(df)
         
-        # Returns
-        df['return_1'] = df['close'].pct_change(1)
-        df['return_5'] = df['close'].pct_change(5)
-        df['return_10'] = df['close'].pct_change(10)
+        if features is None:
+            logger.error(f"Failed to extract features for {symbol}")
+            return None
         
-        # Log returns
-        df['log_return'] = np.log(df['close'] / df['close'].shift(1))
-        
-        # Momentum
-        df['momentum_10'] = df['close'] - df['close'].shift(10)
-        df['momentum_20'] = df['close'] - df['close'].shift(20)
-        
-        return df
-    
-    def _add_volatility_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Volatility features"""
-        
-        # Rolling standard deviation
-        df['volatility_10'] = df['return_1'].rolling(10).std()
-        df['volatility_20'] = df['return_1'].rolling(20).std()
-        
-        # ATR (Average True Range)
-        high_low = df['high'] - df['low']
-        high_close = np.abs(df['high'] - df['close'].shift())
-        low_close = np.abs(df['low'] - df['close'].shift())
-        
-        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        df['atr_14'] = tr.rolling(14).mean()
-        
-        # Bollinger Band Width
-        sma_20 = df['close'].rolling(20).mean()
-        std_20 = df['close'].rolling(20).std()
-        df['bb_width'] = (std_20 / sma_20) * 100
-        
-        return df
-    
-    def _add_volume_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Volume features"""
-        
-        # Volume moving averages
-        df['volume_ma_10'] = df['volume'].rolling(10).mean()
-        df['volume_ma_20'] = df['volume'].rolling(20).mean()
-        
-        # Volume ratio
-        df['volume_ratio'] = df['volume'] / df['volume_ma_20']
-        
-        # OBV (On-Balance Volume)
-        obv = (np.sign(df['close'].diff()) * df['volume']).fillna(0).cumsum()
-        df['obv'] = obv
-        
-        return df
-    
-    def _add_trend_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Trend indicators"""
-        
-        # SMAs
-        df['sma_10'] = df['close'].rolling(10).mean()
-        df['sma_20'] = df['close'].rolling(20).mean()
-        df['sma_50'] = df['close'].rolling(50).mean()
-        
-        # SMA crossovers
-        df['sma_10_20_cross'] = df['sma_10'] - df['sma_20']
-        df['sma_20_50_cross'] = df['sma_20'] - df['sma_50']
-        
-        # EMA slopes
-        ema_12 = df['close'].ewm(span=12).mean()
-        ema_26 = df['close'].ewm(span=26).mean()
-        df['ema_slope'] = ema_12 - ema_26
-        
-        return df
-    
-    def _add_oscillator_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Oscillator indicators"""
-        
-        # RSI
-        delta = df['close'].diff()
-        gain = delta.where(delta > 0, 0).rolling(14).mean()
-        loss = -delta.where(delta < 0, 0).rolling(14).mean()
-        rs = gain / loss
-        df['rsi_14'] = 100 - (100 / (1 + rs))
-        
-        # MACD
-        ema_12 = df['close'].ewm(span=12).mean()
-        ema_26 = df['close'].ewm(span=26).mean()
-        df['macd'] = ema_12 - ema_26
-        df['macd_signal'] = df['macd'].ewm(span=9).mean()
-        df['macd_hist'] = df['macd'] - df['macd_signal']
-        
-        # Stochastic
-        low_14 = df['low'].rolling(14).min()
-        high_14 = df['high'].rolling(14).max()
-        df['stoch_k'] = ((df['close'] - low_14) / (high_14 - low_14)) * 100
-        df['stoch_d'] = df['stoch_k'].rolling(3).mean()
-        
-        return df
-    
-    def _add_pattern_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Pattern recognition features"""
-        
-        # Higher highs / Lower lows
-        df['higher_high'] = (df['high'] > df['high'].shift(1)).astype(int)
-        df['lower_low'] = (df['low'] < df['low'].shift(1)).astype(int)
-        
-        # Consolidation (low volatility)
-        df['consolidation'] = (df['volatility_10'] < df['volatility_10'].rolling(20).mean()).astype(int)
-        
-        return df
-
-
-# =====================================================
-# STANDALONE TEST
-# =====================================================
-
-if __name__ == "__main__":
-    print("🔱 ML Feature Engineer - Standalone Test")
-    print("=" * 70)
-    
-    engineer = MLFeatureEngineer()
-    
-    features = engineer.extract_features(
-        symbol='BTC/USDT',
-        timeframe='1h',
-        lookback=200
-    )
-    
-    if features is not None:
-        print(f"\n📊 Features extracted: {len(engineer.feature_names)}")
-        print(f"Data shape: {features.shape}")
-        print(f"\nFeature list:")
-        for i, name in enumerate(engineer.feature_names, 1):
-            print(f"{i}. {name}")
-        
-        print(f"\n✅ ML Feature Engineer test complete!")
-    else:
-        print(f"\n❌ Feature extraction failed!")
+        return features
