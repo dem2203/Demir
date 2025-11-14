@@ -82,7 +82,7 @@ st.markdown("""
 # CONFIGURATION
 # ============================================================================
 
-API_URL = os.getenv('API_URL', 'http://localhost:5000')
+API_URL = os.getenv('API_URL', 'http://api-server:5000')
 SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT']
 
 # ============================================================================
