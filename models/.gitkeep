@@ -1,0 +1,17 @@
+# This file keeps the models/ directory in git
+# Models are saved here during runtime
+# Directory structure:
+#
+# models/
+# ├── .gitkeep (this file)
+# ├── versions/
+# │   ├── metadata.json
+# │   ├── transformer_v20251114_220000.pkl
+# │   ├── ensemble_v20251114_220001.pkl
+# │   └── ...
+# ├── v1.0/
+# │   ├── transformer.pkl
+# │   └── ensemble.pkl
+# └── v1.1/
+#     ├── transformer.pkl
+#     └── ensemble.pkl
