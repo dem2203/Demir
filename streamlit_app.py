@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""
-🔱 DEMIR AI - Master Trading Dashboard v3.0 (PRODUCTION)
-Advanced UI with Signals, Entry/TP/SL, Analysis
 
-FEATURES:
-✅ Live trading signals (LONG/SHORT/NEUTRAL)
-✅ Entry price + TP1/TP2/TP3 levels
-✅ Stop Loss with ATR calculation
-✅ Risk/Reward ratio display
-✅ Technical analysis explanations
-✅ Crypto market impact analysis
-✅ Confidence scoring
-✅ Real-time color-coded display
-✅ Portfolio tracking
-✅ Telegram notifications
 """
+🔱 DEMIR AI - Streamlit Dashboard v3.0 (FIXED)
+Advanced UI with Signals, Entry/TP/SL, Analysis
+"""
+
+# ============================================================================
+# IMPORTS - ÇOK ÖNEMLİ! BURAYA GELMELİ
+# ============================================================================
 
 import os
 import streamlit as st
@@ -24,6 +17,7 @@ import requests
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import logging
+from typing import Dict, List  # ← BU SATIR ÖNEMLİ!
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,17 +39,6 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Main theme */
-    :root {
-        --primary: #1e3c72;
-        --secondary: #2a5298;
-        --success: #00ff00;
-        --danger: #ff0000;
-        --warning: #ffaa00;
-        --info: #00aaff;
-    }
-    
-    /* Signal Cards */
     .signal-card {
         padding: 20px;
         border-radius: 10px;
@@ -79,7 +62,6 @@ st.markdown("""
         border-left-color: #ffaa00;
     }
     
-    /* Price levels */
     .price-level {
         display: flex;
         justify-content: space-between;
@@ -90,17 +72,9 @@ st.markdown("""
         font-family: monospace;
     }
     
-    .entry {
-        color: #00aaff;
-    }
-    
-    .tp {
-        color: #00ff00;
-    }
-    
-    .sl {
-        color: #ff0000;
-    }
+    .entry { color: #00aaff; }
+    .tp { color: #00ff00; }
+    .sl { color: #ff0000; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -112,7 +86,7 @@ API_URL = os.getenv('API_URL', 'http://localhost:5000')
 SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT']
 
 # ============================================================================
-# HELPER FUNCTIONS
+# CACHE & API CALLS
 # ============================================================================
 
 @st.cache_data(ttl=30)
@@ -154,6 +128,10 @@ def fetch_metrics():
     except Exception as e:
         logger.error(f"Metrics fetch error: {e}")
         return {}
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
 
 def get_signal_color(signal_type: str) -> str:
     """Get color for signal type"""
@@ -220,7 +198,6 @@ def render_signals_section():
     signals = fetch_signals()
     
     if signals:
-        # Tabs for each symbol
         signal_tabs = st.tabs([s.get('symbol', 'N/A') for s in signals[:5]])
         
         for idx, (tab, signal) in enumerate(zip(signal_tabs, signals[:5])):
@@ -236,7 +213,6 @@ def render_signal_card(signal: Dict):
     emoji = get_signal_emoji(signal_type)
     color = get_signal_color(signal_type)
     
-    # Header
     col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
@@ -251,7 +227,6 @@ def render_signal_card(signal: Dict):
     
     st.divider()
     
-    # Price Levels
     st.markdown("#### 💰 Price Levels")
     
     entry = signal.get('entry_price', 0)
@@ -260,7 +235,6 @@ def render_signal_card(signal: Dict):
     tp2 = signal.get('tp2', 0)
     tp3 = signal.get('tp3', 0)
     
-    # Display prices
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -297,19 +271,9 @@ def render_signal_card(signal: Dict):
     
     st.divider()
     
-    # Analysis
     st.markdown("#### 📊 Technical Analysis")
-    
     analysis = signal.get('analysis', 'No analysis available')
     st.markdown(analysis)
-    
-    st.divider()
-    
-    # Crypto Impact
-    st.markdown("#### 🔗 Crypto Market Impact")
-    
-    impact = signal.get('crypto_impact', 'N/A')
-    st.info(impact)
 
 # ============================================================================
 # PORTFOLIO SECTION
@@ -420,17 +384,13 @@ def main():
     logger.info("🚀 DEMIR AI - Trading Dashboard v3.0 LOADED")
     logger.info("=" * 80)
     
-    # Header
     st.title("🔱 DEMIR AI - Live Trading Dashboard")
     st.markdown("*Advanced AI Trading Bot with Real-time Signals & Analysis*")
     st.divider()
     
-    # Main content
     render_header()
-    
     st.divider()
     
-    # Tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "🎯 Signals",
         "💼 Portfolio",
@@ -451,7 +411,6 @@ def main():
         st.markdown("### Dashboard Settings")
         st.info("Settings panel coming soon...")
     
-    # Footer
     st.divider()
     st.markdown("""
     ---
