@@ -28,6 +28,64 @@ from config import (
 )
 from database import db
 from ai_brain import AIBrain
+from health_monitor import HealthMonitor
+from retry_manager import retry_on_exception
+from telegram_queue import TelegramAlertQueue
+
+class DEMIRAIBackendV51:
+    """Enhanced backend with health monitoring and retry logic"""
+    
+    def __init__(self):
+        # ... existing init ...
+        self.health_monitor = HealthMonitor(config)
+        self.telegram_queue = TelegramAlertQueue(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
+        
+    @retry_on_exception(max_attempts=5, base_delay=2)
+    def fetch_price(self, symbol: str) -> float:
+        """Fetch price with automatic retry"""
+        response = requests.get(
+            f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}",
+            timeout=5
+        )
+        return float(response.json()['price'])
+    
+    @retry_on_exception(max_attempts=3, base_delay=1)
+    def save_signal(self, signal: dict) -> bool:
+        """Save signal with retry"""
+        return db.save_signal(signal)
+    
+    def send_alert(self, message: str):
+        """Send alert via queue (never lost)"""
+        self.telegram_queue.add_alert(message)
+    
+    def start(self):
+        """Start all components"""
+        # Start health monitor
+        self.health_monitor.start_monitoring(interval=60)
+        
+        # Start telegram queue
+        self.telegram_queue.start()
+        
+        # Main loop
+        logger.info("✅ DEMIR AI v5.1 Started")
+        logger.info("🏥 Health monitoring active")
+        logger.info("📱 Telegram queue active")
+        
+        while True:
+            try:
+                for symbol in TRADING_SYMBOLS:
+                    # This now has retry logic
+                    signal = self.generate_real_signal(symbol)
+                    
+                    if signal and signal['confidence'] > CONFIDENCE_THRESHOLD:
+                        # Alert via queue (never lost)
+                        self.send_alert(f"Signal: {signal['symbol']} {signal['type']}")
+                
+                time.sleep(SIGNAL_INTERVAL)
+            
+            except Exception as e:
+                logger.error(f"Cycle error: {e}")
+                time.sleep(5)
 
 # Import advanced AI modules (NEW)
 try:
