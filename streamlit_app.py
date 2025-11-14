@@ -76,7 +76,7 @@ def main():
         conn = get_db_connection()
         
         if conn:
-            st.success("✅ PostgreSQL: CONNECTED", icon="✓")
+            st.success("✅ PostgreSQL: CONNECTED")
             
             try:
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
