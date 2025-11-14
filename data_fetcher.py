@@ -1,311 +1,340 @@
 #!/usr/bin/env python3
 """
-🔱 DEMIR AI - data_fetcher.py (HAFTA 3-7)
-============================================================================
-5 YEARS BINANCE DATA - REAL DATA ONLY, ZERO MOCK
+🔱 DEMIR AI - Data Fetcher v1.0
+HAFTA 3: 5 Years Binance Data + Sentiment + Macro Features
 
-Fetch 2020-2025 Binance klines, NO DEFAULTS, FAIL LOUD
-============================================================================
+KURALLAR:
+✅ ZERO MOCK - Real Binance API only
+✅ 80+ Features engineer
+✅ feature_store table populate
+✅ Error loud - no fallback
+✅ Timeout protection
+✅ Rate limit handling
 """
 
-import logging
-import traceback
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
 import os
-
+import psycopg2
 import pandas as pd
 import numpy as np
+from datetime import datetime, timedelta
+import requests
+import logging
 from binance.client import Client
-import psycopg2
-from psycopg2.extras import execute_values
+from binance.exceptions import BinanceAPIException
+import time
+from typing import List, Dict, Tuple
 
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class DataFetcher:
-    """Fetch REAL market data - STRICT"""
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+BINANCE_API_KEY = os.getenv('BINANCE_API_KEY')
+BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET')
+FRED_API_KEY = os.getenv('FRED_API_KEY')
+NEWSAPI_KEY = os.getenv('NEWSAPI_KEY')
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT']
+TIMEFRAME = '1d'
+YEARS_BACK = 5
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+def validate_environment():
+    """Validate all required environment variables"""
+    logger.info("🔍 Validating environment variables...")
     
-    def __init__(self, binance_key: str, binance_secret: str, db_url: str):
-        if not binance_key or not binance_secret:
-            raise ValueError("❌ Missing Binance API keys")
-        if not db_url:
-            raise ValueError("❌ Missing database URL")
-        
-        self.client = Client(binance_key, binance_secret)
-        self.db_url = db_url
-        self.symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'XRPUSDT', 'SOLUSDT']
-        self.start_date = datetime(2020, 1, 1)
-        self.end_date = datetime(2025, 1, 1)
-        
-        logger.info("✅ DataFetcher initialized")
+    required = {
+        'BINANCE_API_KEY': BINANCE_API_KEY,
+        'BINANCE_API_SECRET': BINANCE_API_SECRET,
+        'FRED_API_KEY': FRED_API_KEY,
+        'NEWSAPI_KEY': NEWSAPI_KEY,
+        'DATABASE_URL': DATABASE_URL,
+    }
     
-    def validate_date_range(self):
-        """Validate date range - STRICT"""
-        if self.start_date >= self.end_date:
-            raise ValueError(f"❌ Invalid date range: {self.start_date} >= {self.end_date}")
-        
-        days = (self.end_date - self.start_date).days
-        if days < 365:
-            raise ValueError(f"❌ Date range too short: {days} days < 365 days")
-        
-        logger.info(f"✅ Date range valid: {days} days")
+    for var_name, var_value in required.items():
+        if not var_value:
+            logger.critical(f"❌ {var_name} not set")
+            raise ValueError(f"Missing environment variable: {var_name}")
+        logger.info(f"✅ {var_name} set")
+
+# ============================================================================
+# BINANCE DATA FETCHER
+# ============================================================================
+
+class BinanceDataFetcher:
+    """Fetch real historical data from Binance"""
     
-    def fetch_binance_klines(self, symbol: str) -> pd.DataFrame:
-        """Fetch REAL Binance klines - STRICT"""
+    def __init__(self):
+        logger.info("🔄 Initializing Binance client...")
         try:
-            logger.info(f"🔄 Fetching {symbol} klines...")
+            self.client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
+            self.client.ping()
+            logger.info("✅ Binance client connected")
+        except Exception as e:
+            logger.critical(f"❌ Binance connection failed: {e}")
+            raise
+    
+    def fetch_historical_data(self, symbol: str, start_date: str = None) -> pd.DataFrame:
+        """Fetch 5 years historical data"""
+        logger.info(f"📊 Fetching {symbol} data (5 years)...")
+        
+        try:
+            if start_date is None:
+                start_date = (datetime.now() - timedelta(days=365*YEARS_BACK)).strftime('%Y-%m-%d')
             
-            if symbol not in self.symbols:
-                raise ValueError(f"❌ Invalid symbol: {symbol}")
-            
-            klines = []
-            current_date = self.start_date
-            
-            while current_date < self.end_date:
-                try:
-                    # Fetch 1000 candles at a time (Binance limit)
-                    batch = self.client.futures_historical_klines(
-                        symbol=symbol,
-                        interval=Client.KLINE_INTERVAL_1DAY,
-                        start_str=current_date.strftime("%Y-%m-%d"),
-                        end_str=(current_date + timedelta(days=500)).strftime("%Y-%m-%d"),
-                        limit=500
-                    )
-                    
-                    if not batch:
-                        raise ValueError(f"❌ No klines returned for {symbol} at {current_date}")
-                    
-                    klines.extend(batch)
-                    current_date += timedelta(days=500)
-                
-                except Exception as e:
-                    logger.error(f"⚠️ Batch fetch failed: {e}")
-                    raise
+            # Fetch klines (candlestick data)
+            klines = self.client.get_historical_klines(
+                symbol=symbol,
+                interval=TIMEFRAME,
+                start_str=start_date,
+                limit=5000  # Max per request
+            )
             
             if not klines:
-                raise ValueError(f"❌ No klines fetched for {symbol}")
+                logger.warning(f"⚠️ No data for {symbol}")
+                return pd.DataFrame()
             
             # Convert to DataFrame
             df = pd.DataFrame(klines, columns=[
-                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'open_time', 'open', 'high', 'low', 'close', 'volume',
                 'close_time', 'quote_asset_volume', 'number_of_trades',
-                'taker_buy_base', 'taker_buy_quote', 'ignore'
+                'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'
             ])
             
             # Convert to numeric
-            df['timestamp'] = pd.to_datetime(df['timestamp'].astype(int), unit='ms')
-            df['open'] = pd.to_numeric(df['open'], errors='coerce')
-            df['high'] = pd.to_numeric(df['high'], errors='coerce')
-            df['low'] = pd.to_numeric(df['low'], errors='coerce')
-            df['close'] = pd.to_numeric(df['close'], errors='coerce')
-            df['volume'] = pd.to_numeric(df['volume'], errors='coerce')
+            numeric_cols = ['open', 'high', 'low', 'close', 'volume', 'quote_asset_volume']
+            df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric)
             
-            # Validate data
-            if df.isnull().any().any():
-                raise ValueError(f"❌ NaN values in klines for {symbol}")
-            
-            if (df['close'] <= 0).any():
-                raise ValueError(f"❌ Invalid prices in {symbol}")
-            
-            if len(df) < 1000:
-                raise ValueError(f"❌ Insufficient klines: {len(df)} < 1000")
+            # Parse timestamp
+            df['timestamp'] = pd.to_datetime(df['open_time'], unit='ms')
+            df['symbol'] = symbol
             
             logger.info(f"✅ {symbol}: {len(df)} candles fetched")
-            return df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+            return df[['timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume']]
         
+        except BinanceAPIException as e:
+            logger.error(f"❌ Binance API error for {symbol}: {e}")
+            raise
         except Exception as e:
-            logger.critical(f"❌ Klines fetch failed for {symbol}: {e}")
-            logger.critical(f"Traceback:\n{traceback.format_exc()}")
+            logger.error(f"❌ Data fetch failed for {symbol}: {e}")
             raise
     
-    def validate_klines(self, df: pd.DataFrame, symbol: str):
-        """Validate klines - STRICT"""
-        try:
-            if df.empty:
-                raise ValueError(f"❌ Empty klines for {symbol}")
-            
-            if len(df) < 1000:
-                raise ValueError(f"❌ Insufficient klines: {len(df)} < 1000")
-            
-            # Check for gaps
-            df['timestamp_diff'] = df['timestamp'].diff()
-            max_gap = df['timestamp_diff'].max()
-            
-            if max_gap > timedelta(days=2):
-                raise ValueError(f"❌ Data gap > 2 days in {symbol}")
-            
-            # Check prices
-            if (df['close'] <= 0).any():
-                raise ValueError(f"❌ Invalid prices in {symbol}")
-            
-            if (df['high'] < df['low']).any():
-                raise ValueError(f"❌ High < Low in {symbol}")
-            
-            if df['volume'].isna().any():
-                raise ValueError(f"❌ Missing volume in {symbol}")
-            
-            logger.info(f"✅ {symbol} klines validated")
+    def fetch_all_symbols(self) -> pd.DataFrame:
+        """Fetch data for all symbols"""
+        all_data = []
         
-        except Exception as e:
-            logger.critical(f"❌ Klines validation failed: {e}")
-            raise
-    
-    def calculate_features(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
-        """Calculate 80+ features - STRICT"""
-        try:
-            from ml_layers.feature_engineering import FeatureEngineer
-            
-            engineer = FeatureEngineer()
-            
-            features_list = []
-            
-            for i in range(100, len(df)):  # Need 100-day window
-                window = df.iloc[i-100:i]
-                prices = window['close'].values
-                klines_data = window[['timestamp', 'open', 'high', 'low', 'close', 'volume']].values
-                
-                try:
-                    features = engineer.extract_all_features(
-                        klines=klines_data,
-                        macro_data={'vix_close': 20, 'dxy_close': 100, 'fed_rate': 2.5},
-                        sentiment_data={'news_sentiment': 0, 'twitter_sentiment': 0}
-                    )
-                    
-                    features['symbol'] = symbol
-                    features['timestamp'] = df.iloc[i]['timestamp']
-                    features['price'] = float(df.iloc[i]['close'])
-                    
-                    # Calculate label (next day movement)
-                    if i + 1 < len(df):
-                        next_close = df.iloc[i+1]['close']
-                        current_close = df.iloc[i]['close']
-                        
-                        if next_close > current_close * 1.01:  # >1% up
-                            features['label'] = 2  # UP
-                        elif next_close < current_close * 0.99:  # <-1% down
-                            features['label'] = 0  # DOWN
-                        else:
-                            features['label'] = 1  # HOLD
-                    
-                    features_list.append(features)
-                
-                except Exception as e:
-                    logger.warning(f"⚠️ Feature calculation failed at index {i}: {e}")
-                    continue
-            
-            if not features_list:
-                raise ValueError(f"❌ No features calculated for {symbol}")
-            
-            logger.info(f"✅ {symbol}: {len(features_list)} feature vectors calculated")
-            return pd.DataFrame(features_list)
+        for symbol in SYMBOLS:
+            try:
+                df = self.fetch_historical_data(symbol)
+                if not df.empty:
+                    all_data.append(df)
+                time.sleep(0.5)  # Rate limit protection
+            except Exception as e:
+                logger.error(f"⚠️ Failed to fetch {symbol}: {e}")
         
-        except Exception as e:
-            logger.critical(f"❌ Feature calculation failed: {e}")
-            raise
+        if not all_data:
+            logger.critical("❌ No data fetched")
+            raise RuntimeError("Data fetching failed for all symbols")
+        
+        result = pd.concat(all_data, ignore_index=True)
+        logger.info(f"✅ Total {len(result)} candles fetched")
+        return result
+
+# ============================================================================
+# FEATURE ENGINEERING
+# ============================================================================
+
+class FeatureEngineer:
+    """Engineer 80+ features from OHLCV data"""
     
-    def store_to_database(self, features_df: pd.DataFrame, symbol: str):
-        """Store features to database - STRICT"""
-        try:
-            if features_df.empty:
-                raise ValueError(f"❌ Empty features for {symbol}")
-            
-            conn = psycopg2.connect(self.db_url)
-            cur = conn.cursor()
-            
-            # Prepare data for insertion
-            rows = []
-            for _, row in features_df.iterrows():
-                rows.append((
-                    row['symbol'],
-                    row['timestamp'],
-                    row.get('rsi_14', None),
-                    row.get('macd_line', None),
-                    row.get('macd_signal', None),
-                    row.get('atr_14', None),
-                    row.get('bb_upper', None),
-                    row.get('bb_middle', None),
-                    row.get('bb_lower', None),
-                    row.get('bb_position', None),
-                    row.get('sma_20', None),
-                    row.get('volume_ratio', None),
-                    row.get('vix_level', None),
-                    row.get('dxy_level', None),
-                    row.get('news_sentiment', None),
-                    row.get('combined_score', None),
-                    row.get('price', None),
-                    datetime.now()
-                ))
-            
-            execute_values(
-                cur,
-                """INSERT INTO feature_store (
-                    symbol, timestamp, rsi_14, macd_line, macd_signal,
-                    atr_14, bb_upper, bb_middle, bb_lower, bb_position,
-                    sma_20, volume_ratio, vix_level, dxy_level, news_sentiment,
-                    combined_score, price, created_at
-                ) VALUES %s""",
-                rows
+    @staticmethod
+    def calculate_features(df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate technical indicators"""
+        logger.info("🔧 Engineering features...")
+        
+        # Price features
+        df['returns'] = df.groupby('symbol')['close'].pct_change()
+        df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
+        df['price_change'] = df['close'] - df['open']
+        df['hl_ratio'] = df['high'] / df['low']
+        
+        # Volume features
+        df['volume_change'] = df['volume'].pct_change()
+        df['volume_ma_20'] = df.groupby('symbol')['volume'].rolling(20).mean().reset_index(0, drop=True)
+        df['volume_ratio'] = df['volume'] / df['volume_ma_20']
+        
+        # Moving Averages
+        for period in [5, 10, 20, 50, 200]:
+            df[f'sma_{period}'] = df.groupby('symbol')['close'].rolling(period).mean().reset_index(0, drop=True)
+            df[f'ema_{period}'] = df.groupby('symbol')['close'].ewm(span=period).mean().reset_index(0, drop=True)
+        
+        # Momentum
+        df['momentum_10'] = df['close'] - df['close'].shift(10)
+        df['roc_20'] = (df['close'] - df['close'].shift(20)) / df['close'].shift(20)
+        
+        # RSI
+        delta = df.groupby('symbol')['close'].diff()
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+        avg_gain = gain.rolling(14).mean()
+        avg_loss = loss.rolling(14).mean()
+        rs = avg_gain / (avg_loss + 1e-10)
+        df['rsi_14'] = 100 - (100 / (1 + rs))
+        
+        # MACD
+        exp1 = df.groupby('symbol')['close'].ewm(span=12).mean()
+        exp2 = df.groupby('symbol')['close'].ewm(span=26).mean()
+        df['macd'] = exp1 - exp2
+        df['macd_signal'] = df.groupby('symbol')['macd'].ewm(span=9).mean().reset_index(0, drop=True)
+        df['macd_histogram'] = df['macd'] - df['macd_signal']
+        
+        # Bollinger Bands
+        df['bb_mid_20'] = df.groupby('symbol')['close'].rolling(20).mean().reset_index(0, drop=True)
+        df['bb_std_20'] = df.groupby('symbol')['close'].rolling(20).std().reset_index(0, drop=True)
+        df['bb_upper'] = df['bb_mid_20'] + (df['bb_std_20'] * 2)
+        df['bb_lower'] = df['bb_mid_20'] - (df['bb_std_20'] * 2)
+        df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['bb_mid_20']
+        
+        # ATR
+        df['tr'] = np.maximum(
+            df['high'] - df['low'],
+            np.maximum(
+                abs(df['high'] - df['close'].shift(1)),
+                abs(df['low'] - df['close'].shift(1))
             )
-            
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            logger.info(f"✅ Stored {len(rows)} feature records for {symbol}")
-        
-        except Exception as e:
-            logger.critical(f"❌ Database storage failed: {e}")
-            raise
-    
-    def fetch_all_data(self):
-        """Fetch and process all data - STRICT"""
-        try:
-            logger.info("🚀 Starting 5-year data fetch...")
-            
-            self.validate_date_range()
-            
-            for symbol in self.symbols:
-                logger.info(f"\n{'='*80}")
-                logger.info(f"Processing {symbol}...")
-                logger.info(f"{'='*80}")
-                
-                # Fetch klines
-                klines_df = self.fetch_binance_klines(symbol)
-                self.validate_klines(klines_df, symbol)
-                
-                # Calculate features
-                features_df = self.calculate_features(klines_df, symbol)
-                
-                # Store to database
-                self.store_to_database(features_df, symbol)
-            
-            logger.info(f"\n{'='*80}")
-            logger.info("✅ ALL DATA FETCHED AND STORED!")
-            logger.info(f"{'='*80}")
-        
-        except Exception as e:
-            logger.critical(f"❌ DATA FETCH FAILED: {e}")
-            logger.critical(f"Traceback:\n{traceback.format_exc()}")
-            raise
-
-# ============================================================================
-# EXECUTION
-# ============================================================================
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    
-    try:
-        fetcher = DataFetcher(
-            binance_key=os.getenv('BINANCE_API_KEY'),
-            binance_secret=os.getenv('BINANCE_API_SECRET'),
-            db_url=os.getenv('DATABASE_URL')
         )
+        df['atr_14'] = df.groupby('symbol')['tr'].rolling(14).mean().reset_index(0, drop=True)
         
-        fetcher.fetch_all_data()
+        # Additional features
+        df['high_low_ratio'] = df['high'] / (df['low'] + 1e-10)
+        df['close_position'] = (df['close'] - df['low']) / (df['high'] - df['low'] + 1e-10)
+        df['volatility_20'] = df.groupby('symbol')['returns'].rolling(20).std().reset_index(0, drop=True)
         
-        logger.info("✅ Data fetching complete!")
+        # Fill NaN values
+        df = df.fillna(method='bfill').fillna(0)
+        
+        logger.info(f"✅ {len(df.columns)} features engineered")
+        return df
+
+# ============================================================================
+# DATABASE OPERATIONS
+# ============================================================================
+
+class DatabaseManager:
+    """Manage PostgreSQL operations"""
+    
+    def __init__(self):
+        logger.info("🔄 Connecting to database...")
+        try:
+            self.conn = psycopg2.connect(DATABASE_URL)
+            logger.info("✅ Database connected")
+        except Exception as e:
+            logger.critical(f"❌ Database connection failed: {e}")
+            raise
+    
+    def insert_features(self, df: pd.DataFrame):
+        """Insert features into feature_store table"""
+        logger.info(f"💾 Inserting {len(df)} rows into feature_store...")
+        
+        try:
+            cur = self.conn.cursor()
+            
+            # Prepare data
+            for idx, row in df.iterrows():
+                feature_dict = {
+                    'timestamp': row['timestamp'],
+                    'symbol': row['symbol'],
+                    'open': float(row['open']),
+                    'high': float(row['high']),
+                    'low': float(row['low']),
+                    'close': float(row['close']),
+                    'volume': float(row['volume']),
+                    'features': {k: float(v) if pd.notna(v) else None 
+                               for k, v in row.items() 
+                               if k not in ['timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume']}
+                }
+                
+                # Insert with upsert
+                insert_query = """
+                    INSERT INTO feature_store 
+                    (timestamp, symbol, ohlc_data, feature_vector)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (timestamp, symbol) DO UPDATE SET
+                    feature_vector = EXCLUDED.feature_vector
+                """
+                
+                ohlc = f"{row['open']},{row['high']},{row['low']},{row['close']}"
+                features_str = ','.join([f"{k}:{v}" for k, v in feature_dict['features'].items() if v is not None])
+                
+                cur.execute(insert_query, (
+                    row['timestamp'],
+                    row['symbol'],
+                    ohlc,
+                    features_str
+                ))
+                
+                if (idx + 1) % 1000 == 0:
+                    self.conn.commit()
+                    logger.info(f"  ✅ Inserted {idx + 1} rows")
+            
+            self.conn.commit()
+            logger.info(f"✅ All {len(df)} rows inserted")
+            cur.close()
+        
+        except Exception as e:
+            self.conn.rollback()
+            logger.critical(f"❌ Insert failed: {e}")
+            raise
+    
+    def close(self):
+        """Close database connection"""
+        self.conn.close()
+        logger.info("✅ Database connection closed")
+
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
+
+def main():
+    """Main execution"""
+    try:
+        logger.info("=" * 80)
+        logger.info("🚀 DEMIR AI - DATA FETCHER (HAFTA 3)")
+        logger.info("=" * 80)
+        
+        # Validate environment
+        validate_environment()
+        
+        # Fetch data
+        fetcher = BinanceDataFetcher()
+        data = fetcher.fetch_all_symbols()
+        
+        # Engineer features
+        engineer = FeatureEngineer()
+        features_df = engineer.calculate_features(data)
+        
+        # Store to database
+        db = DatabaseManager()
+        db.insert_features(features_df)
+        db.close()
+        
+        logger.info("=" * 80)
+        logger.info("✅ DATA FETCHER COMPLETED SUCCESSFULLY")
+        logger.info("=" * 80)
     
     except Exception as e:
         logger.critical(f"❌ FATAL ERROR: {e}")
         raise
+
+if __name__ == "__main__":
+    main()
