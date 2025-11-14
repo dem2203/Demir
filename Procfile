@@ -6,3 +6,6 @@ web: streamlit run streamlit_app.py --server.port=$PORT --logger.level=error
 
 # Health Monitor - Keeps system alive
 monitor: python -c "from health_monitor import HealthMonitor; import os; m = HealthMonitor(dict(os.environ)); m.start_monitoring(60)"
+
+# Telegram Monitoring - Hourly reports + Critical alerts
+telegram: python telegram_monitor.py
