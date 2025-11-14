@@ -112,11 +112,12 @@ class EnhancedRatesLayer:
         # Get 10Y yield
         yield_10y = self.get_10y_treasury_yield()
         
-        # Use fallback if needed
-        if yield_10y is None:
-            logger.warning(f" 📌 Using fallback rate: {self.fallback_rate}%")
-            yield_10y = self.fallback_rate
-            using_fallback = True
+     # API failed - NO FALLBACK, return None
+else:
+    logger.error("❌ All attempts to fetch 10Y Treasury yield failed!")
+    logger.error("⚠️ Policy: NO MOCK DATA, NO FALLBACK - Skipping this layer")
+    self.send_telegram_alert("⚠️ Treasury Yield API Failed - Signal Analysis Skipped")
+    return None  # Skip this layer entirely, don't use fake data
             confidence = 0.65
         else:
             using_fallback = False
