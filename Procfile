@@ -1,5 +1,3 @@
-# Procfile - Production Grade Deployment
-# DEMIR AI v5.0 - Multi-process orchestration
-
-web: streamlit run streamlit_app.py --logger.level=error --client.showErrorDetails=false
+# Procfile - Fixed for Railway execution permissions
+web: python -m streamlit.cli run streamlit_app.py --logger.level=error --client.showErrorDetails=false --server.port=$PORT
 worker: python main.py
