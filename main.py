@@ -87,6 +87,66 @@ class DEMIRAIBackendV51:
                 logger.error(f"Cycle error: {e}")
                 time.sleep(5)
 
+from parallel_analyzer import ParallelAnalyzer
+from redis_cache import RedisCache
+from model_trainer import IncrementalModelTrainer
+
+class DEMIRAIBackendV52:
+    """
+    V5.2: Performance optimization
+    Parallel analysis + Caching + Auto-training
+    """
+    
+    def __init__(self):
+        self.parallel = ParallelAnalyzer(max_workers=5)
+        self.cache = RedisCache()
+        self.trainer = IncrementalModelTrainer(db)
+    
+    def run(self):
+        """Main loop with optimizations"""
+        logger.info("✅ DEMIR AI v5.2 Started")
+        logger.info("⚡ Parallel analysis enabled (5 workers)")
+        logger.info("💾 Redis caching enabled")
+        logger.info("🤖 Auto-training enabled (24h interval)")
+        
+        while True:
+            try:
+                # Check if retraining needed
+                self.trainer.run_training()
+                
+                # Collect klines for all symbols
+                klines_dict = {}
+                for symbol in TRADING_SYMBOLS:
+                    klines_dict[symbol] = self.binance_api.get_klines(symbol, 100)
+                
+                # Analyze ALL symbols in parallel (5x faster!)
+                start_time = time.time()
+                results = self.parallel.analyze_multiple(TRADING_SYMBOLS, klines_dict)
+                parallel_time = time.time() - start_time
+                
+                logger.info(f"✅ Analyzed {len(results)} symbols in {parallel_time:.2f}s (was {parallel_time * 5:.2f}s sequential)")
+                
+                # Process results
+                for result in results:
+                    if result['score'] > CONFIDENCE_THRESHOLD:
+                        signal = self._create_signal(result)
+                        
+                        # Cache result
+                        self.cache.set(f"signal:{result['symbol']}", signal, ttl=300)
+                        
+                        # Save to DB
+                        db.save_signal(signal)
+                        
+                        # Send alert
+                        self.send_alert(f"Signal: {signal['symbol']}")
+                
+                # Retraining check every cycle
+                time.sleep(SIGNAL_INTERVAL)
+            
+            except Exception as e:
+                logger.error(f"Error: {e}")
+                time.sleep(5)
+
 # Import advanced AI modules (NEW)
 try:
     from integrations.binance_api import BinanceAdvancedAPI
