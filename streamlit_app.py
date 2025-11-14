@@ -1,4 +1,4 @@
-```python
+
 """
 DEMIR AI v5.0 - Professional Trading Dashboard
 Advanced AI-driven cryptocurrency trading system
@@ -311,4 +311,4 @@ st.markdown("""
 - All signals logged and executed regardless
 - Monitoring persists in background
 """)
-```
+
