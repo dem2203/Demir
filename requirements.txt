@@ -54,3 +54,15 @@ joblib>=1.2.0
 lightgbm>=3.3.0
 optuna>=3.0.0
 ta-lib>=0.4.0
+
+# APScheduler (for daemon_master.py)
+APScheduler>=3.10.0
+
+# Sentiment Analysis & NLP
+newsapi>=0.1.3
+nltk>=3.8.0
+
+# Additional Trading Tools
+ccxt>=4.0.0
+# ta-lib is included above
+pandas-ta>=0.3.0
