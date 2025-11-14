@@ -1,1 +1,2 @@
-web: streamlit run streamlit_app.py --server.port=8080 --server.headless=true --client.showStreamlitWatermark=false
+web: streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+release: python database_init.py
