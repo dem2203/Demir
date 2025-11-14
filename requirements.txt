@@ -1,36 +1,36 @@
-# Core Dependencies
+# Core Libraries
 aiohttp>=3.8.0
 requests>=2.28.0
 
-# Data & Analysis
+# Data Processing
 pandas>=2.0.0
 numpy>=1.24.0
 SQLAlchemy>=2.0.0
 
-# AI/ML Models
+# ML/AI Libraries
 scikit-learn>=1.3.0
 statsmodels>=0.13.0
 xgboost>=1.7.0
 tensorflow>=2.12.0
 
-# APIs & Exchange Integration
+# Exchange APIs
 python-binance>=1.0.0
 websockets>=10.0
 ccxt>=4.0.0
 
-# Telegram
+# Communication
 python-telegram-bot>=20.0
 
 # Database
 psycopg2-binary>=2.9.0
 redis>=4.5.0
 
-# Streamlit & Visualization
+# Frontend
 streamlit>=1.28.0
 plotly>=5.17.0
 altair>=5.0.0
 
-# Utils
+# Configuration
 python-dotenv>=0.20.0
 pydantic>=1.10.0
 PyJWT>=2.6.0
@@ -39,30 +39,34 @@ cryptography>=38.0.0
 # Monitoring
 prometheus-client>=0.14.0
 
-# Additional Required Packages
+# Web Scraping
 beautifulsoup4>=4.11.0
 lxml>=4.9.0
+
+# Finance Data
 yfinance>=0.2.0
 feedparser>=6.0.0
 tweepy>=4.12.0
+
+# Time/Date
 python-dateutil>=2.8.0
 pytz>=2023.0
 holidays>=0.32
+
+# Visualization
 matplotlib>=3.6.0
 seaborn>=0.12.0
+
+# ML Utilities
 joblib>=1.2.0
 lightgbm>=3.3.0
 optuna>=3.0.0
 ta-lib>=0.4.0
 
-# APScheduler (for daemon_master.py)
+# Scheduling
 APScheduler>=3.10.0
 
-# Sentiment Analysis & NLP
-newsapi>=0.1.3
-nltk>=3.8.0
-
-# Additional Trading Tools
-ccxt>=4.0.0
-# ta-lib is included above
-pandas-ta>=0.3.0
+# Flask Web Framework
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+gunicorn>=20.1.0
