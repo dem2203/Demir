@@ -1,3 +1,3 @@
-# Procfile - Fixed for Railway execution permissions
-web: python -m streamlit.cli run streamlit_app.py --logger.level=error --client.showErrorDetails=false --server.port=$PORT
+# Procfile - Production Deployment
+web: python -m streamlit.cli run streamlit_app.py --logger.level=error
 worker: python main.py
