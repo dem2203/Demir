@@ -1,26 +1,21 @@
-"""
-Sentiment Aggregation
-NewsAPI + Twitter + CMC
-REAL sentiment - 100% Policy
-"""
+# sentiment_aggregator.py - Real Sentiment Aggregation
 
 import requests
 import os
 import logging
 from datetime import datetime
-from textblob import TextBlob
 
 logger = logging.getLogger(__name__)
 
 class NewsAPIIntegration:
-    """NewsAPI - Real news"""
+    """Real NewsAPI data"""
     
     def __init__(self):
         self.api_key = os.getenv('NEWSAPI_KEY', '')
         self.base_url = "https://newsapi.org/v2"
     
-    def get_news(self, query='bitcoin', limit=50):
-        """REAL crypto news"""
+    def get_crypto_news(self, query='bitcoin', limit=50):
+        """Get REAL crypto news"""
         try:
             params = {
                 'q': query,
@@ -32,25 +27,35 @@ class NewsAPIIntegration:
             response = requests.get(f"{self.base_url}/everything", params=params, timeout=10)
             
             if response.status_code == 200:
-                articles = response.json().get('articles', [])
-                logger.info(f"✅ Got {len(articles)} articles")
+                data = response.json()
+                articles = data.get('articles', [])
+                logger.info(f"✅ NewsAPI: Found {len(articles)} articles")
                 return articles
+            
             return []
         except Exception as e:
             logger.error(f"NewsAPI error: {e}")
             return []
 
-class TwitterIntegration:
-    """Twitter - Real tweets"""
+class TwitterSentiment:
+    """Real Twitter sentiment analysis"""
     
     def __init__(self):
+        self.api_key = os.getenv('TWITTER_API_KEY', '')
         self.bearer_token = os.getenv('TWITTER_BEARER_TOKEN', '')
     
-    def get_tweets(self, query='Bitcoin OR Ethereum', limit=100):
-        """REAL crypto tweets"""
+    def get_crypto_tweets(self, query='Bitcoin OR Ethereum', max_results=100):
+        """Get REAL crypto tweets"""
         try:
-            headers = {"Authorization": f"Bearer {self.bearer_token}"}
-            params = {'query': query, 'max_results': limit}
+            headers = {
+                "Authorization": f"Bearer {self.bearer_token}"
+            }
+            
+            params = {
+                'query': query,
+                'max_results': max_results,
+                'tweet.fields': 'created_at,public_metrics'
+            }
             
             response = requests.get(
                 "https://api.twitter.com/2/tweets/search/recent",
@@ -60,81 +65,88 @@ class TwitterIntegration:
             )
             
             if response.status_code == 200:
-                tweets = response.json().get('data', [])
-                logger.info(f"✅ Got {len(tweets)} tweets")
+                data = response.json()
+                tweets = data.get('data', [])
+                logger.info(f"✅ Twitter: Found {len(tweets)} tweets")
                 return tweets
+            
             return []
         except Exception as e:
             logger.error(f"Twitter error: {e}")
             return []
 
 class CMCIntegration:
-    """CoinMarketCap - Real market data"""
+    """CoinMarketCap - Real market sentiment"""
     
     def __init__(self):
         self.api_key = os.getenv('CMC_API_KEY', '')
+        self.base_url = "https://pro-api.coinmarketcap.com/v1"
     
-    def get_market_data(self, limit=10):
-        """REAL market cap data"""
+    def get_market_data(self):
+        """Get REAL market cap data"""
         try:
-            headers = {'X-CMC_PRO_API_KEY': self.api_key}
-            params = {'limit': limit, 'convert': 'USD'}
+            headers = {
+                'X-CMC_PRO_API_KEY': self.api_key
+            }
+            
+            params = {
+                'limit': 10,
+                'convert': 'USD'
+            }
             
             response = requests.get(
-                "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest",
+                f"{self.base_url}/cryptocurrency/listings/latest",
                 headers=headers,
                 params=params,
                 timeout=10
             )
             
             if response.status_code == 200:
-                logger.info("✅ CMC market data retrieved")
-                return response.json().get('data', [])
+                data = response.json()
+                logger.info(f"✅ CMC: Got market data")
+                return data['data']
+            
             return []
         except Exception as e:
             logger.error(f"CMC error: {e}")
             return []
 
-class SentimentAnalyzer:
-    """Analyze sentiment"""
-    
-    @staticmethod
-    def analyze_text(text):
-        """REAL sentiment analysis"""
-        try:
-            blob = TextBlob(text)
-            polarity = blob.sentiment.polarity
-            return (polarity + 1) / 2
-        except:
-            return 0.5
-
 class SentimentAggregator:
-    """Aggregate all sentiments"""
+    """Aggregate sentiment from all sources"""
     
     def __init__(self):
         self.news = NewsAPIIntegration()
-        self.twitter = TwitterIntegration()
+        self.twitter = TwitterSentiment()
         self.cmc = CMCIntegration()
-        self.analyzer = SentimentAnalyzer()
+    
+    def calculate_sentiment_score(self, text):
+        """Calculate REAL sentiment score"""
+        from textblob import TextBlob
+        
+        try:
+            blob = TextBlob(text)
+            polarity = blob.sentiment.polarity
+            return (polarity + 1) / 2  # Convert to 0-1
+        except:
+            return 0.5
     
     def get_overall_sentiment(self):
-        """REAL overall sentiment"""
+        """Get REAL overall market sentiment"""
         try:
-            news = self.news.get_news()
-            tweets = self.twitter.get_tweets()
+            news = self.news.get_crypto_news()
+            tweets = self.twitter.get_crypto_tweets()
             
-            texts = []
-            texts.extend([a['title'] for a in news if a['title']])
-            texts.extend([t['text'] for t in tweets if 'text' in t])
+            all_texts = []
+            all_texts.extend([a['title'] + ' ' + a['description'] for a in news])
+            all_texts.extend([t['text'] for t in tweets])
             
-            if not texts:
-                return 0.5
+            sentiments = [self.calculate_sentiment_score(t) for t in all_texts]
             
-            sentiments = [self.analyzer.analyze_text(t) for t in texts]
-            avg = sum(sentiments) / len(sentiments)
+            avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0.5
             
-            logger.info(f"✅ Sentiment: {avg:.2f}")
-            return avg
+            logger.info(f"✅ Overall Sentiment: {avg_sentiment:.2f}")
+            return avg_sentiment
+        
         except Exception as e:
-            logger.error(f"Sentiment error: {e}")
+            logger.error(f"Sentiment aggregation error: {e}")
             return 0.5
