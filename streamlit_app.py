@@ -1,4 +1,3 @@
-
 """
 DEMIR AI v5.0 - Professional Trading Dashboard
 Advanced AI-driven cryptocurrency trading system
