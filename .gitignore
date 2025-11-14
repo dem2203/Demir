@@ -1,39 +1,36 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-dist/
-*.egg-info/
+# Models (too large for git)
+models/**/*.pkl
+models/**/*.h5
+models/**/*.pt
+models/**/*.pth
 
-# Streamlit
-.streamlit/secrets.toml
+# Keep structure
+!models/.gitkeep
+!models/versions/.gitkeep
+!models/versions/metadata.json
+!models/README.md
+
+# Logs
+logs/*.log
+logs/**/*.log
+
+# Cache
+cache/*
+!cache/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+__pycache__/
+*.pyc
+.pytest_cache/
 
 # Environment
 .env
 .env.local
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-data/demir_memory.db
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
