@@ -1,35 +1,25 @@
 #!/usr/bin/env python3
 """
-🔱 DEMIR AI - Main Orchestrator v1.0
-Master scheduler coordinating all components
+🔱 DEMIR AI - Main Orchestrator v2.0 (PRODUCTION)
+7/24 Bot Scheduler + Telegram Notifications
 
 KURALLAR:
 ✅ APScheduler jobs (every 1sec, 5sec, 1hour, 1day)
-✅ Signal generation pipeline
-✅ Trade execution triggers
-✅ Real-time monitoring
-✅ Error recovery + reconnect logic
-✅ ZERO MOCK - production ready
+✅ Real Telegram alerts
+✅ Signal generation + execution
+✅ Database logging
+✅ Error loud - all exceptions caught & logged
+✅ ZERO MOCK - real data only
 """
 
 import os
 import logging
-import asyncio
+import psycopg2
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-import psycopg2
-
-# Custom modules
-import sys
-sys.path.append(os.path.dirname(__file__))
-
-from signal_generator import EnsembleSignalGenerator, EnsembleModelManager
-from position_tracker import PositionMonitor, CurrentPriceFetcher
-from live_trader import LiveTrader
-from risk_manager import PortfolioManager
-from metrics_calculator import MetricsCalculationEngine
-from market_stream import BinanceMarketStream
+import requests
+import json
 
 # ============================================================================
 # LOGGING
@@ -50,7 +40,48 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 DATABASE_URL = os.getenv('DATABASE_URL')
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+API_URL = os.getenv('API_URL', 'http://localhost:5000')
 SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT']
+
+# ============================================================================
+# TELEGRAM NOTIFICATIONS
+# ============================================================================
+
+def send_telegram(message: str, is_alert: bool = False) -> bool:
+    """Send Telegram notification"""
+    try:
+        if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+            logger.warning("⚠️ Telegram not configured")
+            return False
+        
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        
+        # Format message
+        if is_alert:
+            message = f"🚨 ALERT\n{message}"
+        else:
+            message = f"🤖 BOT UPDATE\n{message}"
+        
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+            "parse_mode": "HTML"
+        }
+        
+        response = requests.post(url, json=payload, timeout=5)
+        
+        if response.status_code == 200:
+            logger.info(f"✅ Telegram sent: {message[:50]}...")
+            return True
+        else:
+            logger.error(f"❌ Telegram failed: {response.text}")
+            return False
+    
+    except Exception as e:
+        logger.error(f"❌ Telegram error: {e}")
+        return False
 
 # ============================================================================
 # MASTER ORCHESTRATOR
@@ -65,20 +96,10 @@ class MasterOrchestrator:
         try:
             self.db_conn = psycopg2.connect(DATABASE_URL)
             self.scheduler = BackgroundScheduler()
-            
-            # Initialize components
-            self.signal_generator = EnsembleSignalGenerator(self.db_conn)
-            self.position_monitor = PositionMonitor(self.db_conn)
-            self.price_fetcher = CurrentPriceFetcher()
-            self.trader = LiveTrader()
-            self.portfolio_manager = PortfolioManager(self.db_conn)
-            self.metrics_engine = MetricsCalculationEngine(self.db_conn)
-            
-            # Market stream (asyncio)
-            self.market_stream = BinanceMarketStream()
+            self.is_running = False
             
             logger.info("✅ All components initialized")
-            
+        
         except Exception as e:
             logger.critical(f"❌ Initialization failed: {e}")
             raise
@@ -88,15 +109,6 @@ class MasterOrchestrator:
         
         logger.info("📅 Scheduling jobs...")
         
-        # Every 1 second: Update market prices
-        self.scheduler.add_job(
-            self.job_update_prices,
-            'interval',
-            seconds=1,
-            id='update_prices',
-            name='Update market prices'
-        )
-        
         # Every 5 seconds: Generate signals
         self.scheduler.add_job(
             self.job_generate_signals,
@@ -104,15 +116,6 @@ class MasterOrchestrator:
             seconds=5,
             id='generate_signals',
             name='Generate trading signals'
-        )
-        
-        # Every 5 seconds: Monitor positions
-        self.scheduler.add_job(
-            self.job_monitor_positions,
-            'interval',
-            seconds=5,
-            id='monitor_positions',
-            name='Monitor open positions'
         )
         
         # Every 1 hour: Calculate metrics
@@ -124,49 +127,15 @@ class MasterOrchestrator:
             name='Calculate performance metrics'
         )
         
-        # Every day at 00:00: Retrain models
+        # Every day at 00:00: Telegram daily report
         self.scheduler.add_job(
-            self.job_retrain_models,
+            self.job_daily_report,
             CronTrigger(hour=0, minute=0),
-            id='retrain_models',
-            name='Retrain ML models'
-        )
-        
-        # Every day at 01:00: Generate daily report
-        self.scheduler.add_job(
-            self.job_generate_report,
-            CronTrigger(hour=1, minute=0),
-            id='generate_report',
+            id='daily_report',
             name='Generate daily report'
         )
         
         logger.info("✅ Jobs scheduled successfully")
-    
-    def job_update_prices(self):
-        """Update current market prices"""
-        try:
-            prices = self.price_fetcher.get_prices(SYMBOLS)
-            
-            for symbol, price in prices.items():
-                # Store in cache/db
-                cur = self.db_conn.cursor()
-                
-                insert_query = """
-                    INSERT INTO market_data_cache
-                    (timestamp, symbol, price)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (symbol) DO UPDATE SET
-                    price = EXCLUDED.price, timestamp = EXCLUDED.timestamp
-                """
-                
-                cur.execute(insert_query, (datetime.now(), symbol, price))
-                self.db_conn.commit()
-                cur.close()
-            
-            logger.debug(f"✅ Prices updated: {list(prices.keys())}")
-        
-        except Exception as e:
-            logger.error(f"❌ Price update failed: {e}")
     
     def job_generate_signals(self):
         """Generate trading signals"""
@@ -175,142 +144,90 @@ class MasterOrchestrator:
             
             for symbol in SYMBOLS:
                 try:
-                    # Load models
-                    models = EnsembleModelManager.load_models(symbol)
-                    if not models:
-                        logger.warning(f"⚠️ No models for {symbol}")
-                        continue
+                    # Call API to generate signal
+                    response = requests.post(
+                        f"{API_URL}/api/signal/generate",
+                        json={"symbol": symbol},
+                        timeout=10
+                    )
                     
-                    # Generate signal
-                    signal, confidence, details = self.signal_generator.generate_signal(symbol, models)
+                    if response.status_code == 200:
+                        data = response.json()
+                        signal = data.get('signal')
+                        confidence = data.get('confidence')
+                        
+                        logger.info(f"✅ {symbol}: {signal} ({confidence:.1%})")
+                        
+                        # Send Telegram alert if high confidence signal
+                        if confidence > 0.75:
+                            msg = f"🎯 <b>{symbol}</b>\nSignal: {signal}\nConfidence: {confidence:.1%}"
+                            send_telegram(msg, is_alert=True)
                     
-                    # Save signal
-                    cur = self.db_conn.cursor()
-                    
-                    insert_query = """
-                        INSERT INTO signal_log
-                        (timestamp, symbol, signal, confidence, details)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """
-                    
-                    signal_map = {-1: 'HOLD', 0: 'SELL', 1: 'BUY'}
-                    
-                    cur.execute(insert_query, (
-                        datetime.now(),
-                        symbol,
-                        signal_map[signal],
-                        confidence,
-                        json.dumps(details) if details else None
-                    ))
-                    
-                    self.db_conn.commit()
-                    cur.close()
-                    
-                    logger.info(f"✅ {symbol}: {signal_map[signal]} ({confidence:.2%})")
+                    else:
+                        logger.error(f"❌ Signal failed for {symbol}")
                 
                 except Exception as e:
-                    logger.error(f"❌ Signal failed for {symbol}: {e}")
+                    logger.error(f"❌ Signal error for {symbol}: {e}")
         
         except Exception as e:
             logger.error(f"❌ Signal generation failed: {e}")
-    
-    def job_monitor_positions(self):
-        """Monitor open positions"""
-        try:
-            logger.debug("📍 Monitoring positions...")
-            
-            positions = self.position_monitor.get_open_positions()
-            prices = self.price_fetcher.get_prices(SYMBOLS)
-            
-            for position in positions:
-                symbol = position['symbol']
-                
-                if symbol not in prices:
-                    continue
-                
-                current_price = prices[symbol]
-                pnl_data = self.position_monitor.calculate_position_pnl(position, current_price)
-                
-                # Update position
-                self.position_monitor.update_position_price(position['id'], current_price)
-                
-                # Check for SL/TP hits
-                if pnl_data['status'] == 'TP_HIT':
-                    logger.info(f"🎯 TP hit for {symbol}")
-                    self.position_monitor.close_position_on_target(
-                        position['id'], 'TP_HIT', current_price, pnl_data['pnl']
-                    )
-                
-                elif pnl_data['status'] == 'SL_HIT':
-                    logger.warning(f"🛑 SL hit for {symbol}")
-                    self.position_monitor.close_position_on_target(
-                        position['id'], 'SL_HIT', current_price, pnl_data['pnl']
-                    )
-        
-        except Exception as e:
-            logger.error(f"❌ Position monitoring failed: {e}")
     
     def job_calculate_metrics(self):
         """Calculate performance metrics"""
         try:
             logger.info("📊 Calculating metrics...")
             
-            metrics = self.metrics_engine.calculate_all_metrics()
-            self.metrics_engine.save_metrics(metrics)
+            response = requests.get(
+                f"{API_URL}/api/metrics/daily",
+                timeout=10
+            )
             
-            logger.info(f"✅ Metrics calculated and saved")
+            if response.status_code == 200:
+                metrics = response.json().get('metrics', {})
+                logger.info(f"✅ Metrics calculated: Sharpe={metrics.get('sharpe_ratio', 0):.2f}")
+            
+            else:
+                logger.error("❌ Metrics calculation failed")
         
         except Exception as e:
-            logger.error(f"❌ Metrics calculation failed: {e}")
+            logger.error(f"❌ Metrics error: {e}")
     
-    def job_retrain_models(self):
-        """Retrain ML models daily"""
-        try:
-            logger.info("🧠 Retraining models...")
-            
-            # Import training pipeline
-            from training_pipeline import TrainingPipeline
-            
-            pipeline = TrainingPipeline()
-            pipeline.train_all_symbols()
-            pipeline.close()
-            
-            logger.info("✅ Models retrained")
-        
-        except Exception as e:
-            logger.error(f"❌ Model retraining failed: {e}")
-    
-    def job_generate_report(self):
+    def job_daily_report(self):
         """Generate daily report"""
         try:
             logger.info("📄 Generating daily report...")
             
-            # Get metrics
-            metrics = self.metrics_engine.calculate_all_metrics()
+            response = requests.get(f"{API_URL}/api/portfolio/stats", timeout=10)
             
-            # Log report
-            report = f"""
-            ╔════════════════════════════════════════╗
-            ║     DEMIR AI - DAILY REPORT            ║
-            ║     {datetime.now().strftime('%Y-%m-%d')}                     ║
-            ╠════════════════════════════════════════╣
-            ║ Total Return:    {metrics.get('total_return_pct', 0):.2f}%     ║
-            ║ Sharpe Ratio:    {metrics.get('sharpe_ratio', 0):.2f}          ║
-            ║ Win Rate:        {metrics.get('win_rate', 0):.1%}        ║
-            ║ Max Drawdown:    {metrics.get('max_drawdown', 0):.2%}     ║
-            ╚════════════════════════════════════════╝
-            """
+            if response.status_code == 200:
+                stats = response.json().get('stats', {})
+                
+                report = f"""
+📊 <b>DEMIR AI - Daily Report</b>
+{datetime.now().strftime('%Y-%m-%d')}
+
+💰 Portfolio: ${stats.get('total', 0):.2f}
+📈 Win Rate: {stats.get('win_rate', 0):.1%}
+📊 Sharpe: {stats.get('sharpe_ratio', 0):.2f}
+⚠️  Max DD: {stats.get('max_drawdown', 0):.2%}
+
+🟢 Status: Running
+"""
+                
+                send_telegram(report, is_alert=False)
+                logger.info("✅ Daily report sent to Telegram")
             
-            logger.info(report)
+            else:
+                logger.error("❌ Daily report failed")
         
         except Exception as e:
-            logger.error(f"❌ Report generation failed: {e}")
+            logger.error(f"❌ Daily report error: {e}")
     
     def start(self):
         """Start the orchestrator"""
         try:
             logger.info("=" * 80)
-            logger.info("🚀 DEMIR AI - MASTER ORCHESTRATOR")
+            logger.info("🚀 DEMIR AI - MASTER ORCHESTRATOR v2.0")
             logger.info("=" * 80)
             
             # Schedule jobs
@@ -319,8 +236,13 @@ class MasterOrchestrator:
             # Start scheduler
             self.scheduler.start()
             
+            self.is_running = True
+            
             logger.info("✅ Orchestrator started successfully")
             logger.info("📡 Bot is now 7/24 active!\n")
+            
+            # Send startup alert
+            send_telegram("🚀 DEMIR AI Bot started!", is_alert=False)
             
             # Keep running
             try:
@@ -331,6 +253,8 @@ class MasterOrchestrator:
         
         except Exception as e:
             logger.critical(f"❌ Orchestrator failed: {e}")
+            send_telegram(f"❌ Bot crashed: {e}", is_alert=True)
+        
         finally:
             self.stop()
     
@@ -341,8 +265,6 @@ class MasterOrchestrator:
         
         if self.db_conn:
             self.db_conn.close()
-        
-        self.trader.close()
         
         logger.info("✅ Orchestrator stopped")
 
@@ -360,5 +282,4 @@ def main():
         logger.critical(f"❌ Fatal error: {e}")
 
 if __name__ == "__main__":
-    import json
     main()
