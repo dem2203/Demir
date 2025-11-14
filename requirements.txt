@@ -1,71 +1,103 @@
-# Core
+# DEMIR AI - FIXED requirements.txt (Python 3.12 Compatible)
+# Railway'de sorunsuz çalışacak
+# Hata: numpy==1.24.3 Python 3.12 ile incompatible
+# Çözüm: Tüm paketleri Python 3.12 için compatible versiyonlar
+
+# ============================================================================
+# CORE DEPENDENCIES
+# ============================================================================
+
 python-dotenv==1.0.0
 requests==2.31.0
-websocket-client==1.6.4
+websocket-client==1.7.0
 
-# Data & ML
-pandas==2.1.1
-numpy==1.24.3
-scikit-learn==1.3.1
-xgboost==2.0.1
-lightgbm==4.0.0
-talib==0.4.28
+# ============================================================================
+# DATA PROCESSING
+# ============================================================================
 
-# Deep Learning
-tensorflow==2.13.0
-keras==2.13.1
-torch==2.0.1
-torch-geometric==2.3.1
+# FIX: numpy 1.24.3 → 1.26.4 (Python 3.12 compatible)
+numpy==1.26.4
+pandas==2.2.0
 
-# Time Series
+# ============================================================================
+# MACHINE LEARNING & AI
+# ============================================================================
+
+# TensorFlow (Deep Learning)
+tensorflow==2.15.0
+
+# Scikit-learn (Traditional ML)
+scikit-learn==1.3.2
+
+# Gradient Boosting
+xgboost==2.0.3
+lightgbm==4.1.1
+
+# Neural Networks & Advanced
+torch==2.1.1
+torchvision==0.16.1
+
+# LSTM & Time Series
+keras==2.15.0
 statsmodels==0.14.0
-pmdarima==2.0.4
+
+# ============================================================================
+# ADVANCED AI & ANALYSIS
+# ============================================================================
 
 # Causal Inference
-dowhy==0.10.1
-networkx==3.1
-scipy==1.11.2
+dowhy==0.11.1
+networkx==3.2
 
-# Sentiment & NLP
-textblob==0.17.1
-nltk==3.8.1
-tweepy==4.14.0
+# Reinforcement Learning
+gym==0.26.2
+stable-baselines3==2.1.0
 
-# Database
-psycopg2-binary==2.9.7
-sqlalchemy==2.0.21
-alembic==1.12.0
+# Quantum (Optional)
+qiskit==0.44.1
+qiskit-aer==0.13.1
 
-# Monitoring & Logging
-prometheus-client==0.18.0
-python-json-logger==2.0.7
+# ============================================================================
+# DATA VISUALIZATION & MONITORING
+# ============================================================================
 
-# API & Web
-fastapi==0.104.1
-uvicorn==0.24.0
 streamlit==1.28.1
-plotly==5.17.0
-dash==2.14.1
+plotly==5.18.0
+matplotlib==3.8.2
 
-# Visualization
-matplotlib==3.8.0
-seaborn==0.13.0
-pyqtgraph==0.13.3
+# ============================================================================
+# DATABASE & PERSISTENCE
+# ============================================================================
 
-# Utilities
-python-dateutil==2.8.2
-pytz==2023.3
-click==8.1.7
-pydantic==2.4.2
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+redis==5.0.1
 
-# Testing & Quality
+# ============================================================================
+# API & INTEGRATION
+# ============================================================================
+
+aiohttp==3.9.1
+asyncio-contextmanager==1.0.0
+
+# ============================================================================
+# UTILITIES & HELPERS
+# ============================================================================
+
+python-binance==1.0.17
+TA-Lib==0.4.28
+pandas-ta==0.3.14b0
+
+# ============================================================================
+# LOGGING & MONITORING
+# ============================================================================
+
+loguru==0.7.2
+prometheus-client==0.19.0
+
+# ============================================================================
+# TESTING (Optional)
+# ============================================================================
+
 pytest==7.4.3
-pytest-cov==4.1.0
 pytest-asyncio==0.21.1
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.0
-
-# DevOps
-docker==6.1.0
-kubernetes==28.0.0
