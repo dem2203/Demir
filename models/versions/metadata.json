@@ -1,0 +1,32 @@
+{
+  "models": [],
+  "last_updated": "2025-11-14T22:00:00Z",
+  "version": "1.0",
+  "description": "Model versioning metadata for DEMIR AI",
+  "schema": {
+    "version": "string - timestamp format YYYYMMDD_HHMMSS",
+    "type": "string - model type (transformer, ensemble, lstm, etc)",
+    "saved_at": "ISO 8601 timestamp",
+    "metrics": {
+      "accuracy": "float 0-1",
+      "loss": "float",
+      "win_rate": "float 0-1",
+      "sharpe_ratio": "float",
+      "profit_factor": "float"
+    },
+    "path": "string - relative path to model file"
+  },
+  "example": {
+    "version": "20251114_220000",
+    "type": "transformer",
+    "saved_at": "2025-11-14T22:00:00Z",
+    "metrics": {
+      "accuracy": 0.85,
+      "loss": 0.12,
+      "win_rate": 0.72,
+      "sharpe_ratio": 1.45,
+      "profit_factor": 2.1
+    },
+    "path": "models/versions/transformer_v20251114_220000.pkl"
+  }
+}
