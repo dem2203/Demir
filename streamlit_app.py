@@ -197,8 +197,8 @@ def main():
             )
         
         with col2:
-            long_count = len(signals_df[signals_df['signal_type'] == 'LONG'])
-            short_count = len(signals_df[signals_df['signal_type'] == 'SHORT'])
+            long_count = len(signals_df[signals_df['direction'] == 'LONG'])
+            short_count = len(signals_df[signals_df['direction'] == 'SHORT'])
             st.metric(
                 "🟢 LONG / 🔴 SHORT",
                 f"{long_count} / {short_count}",
