@@ -27,7 +27,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime
 import json
-
+from database_settings import (
+    init_settings_table, save_setting, 
+    load_setting, get_all_settings
+)
 # ============================================================================
 # PAGE CONFIG
 # ============================================================================
