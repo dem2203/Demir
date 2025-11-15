@@ -138,9 +138,8 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             query = '''
                 INSERT INTO trades (
-                    symbol, signal_type, confidence, entry_price,
-                    take_profit_1, take_profit_2, take_profit_3,
-                    stop_loss, timestamp, layer_scores, analysis_reason
+    symbol, direction, entry_price, tp1, tp2, tp3,
+    sl, entry_time, id, position_size
                 ) VALUES (
                     %(symbol)s, %(signal_type)s, %(confidence)s,
                     %(entry_price)s, %(tp1)s, %(tp2)s, %(tp3)s,
@@ -514,7 +513,8 @@ class DemirAISignalGenerator:
                 
                 # Wait for next cycle
                 logger.info(f"⏰ Next cycle in {self.cycle_interval} seconds...")
-                asyncio.sleep(self.cycle_interval)
+                import time
+                time.sleep(self.cycle_interval)
         
         except KeyboardInterrupt:
             logger.info("🛑 Signal generator stopped by user")
