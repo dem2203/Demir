@@ -1,10 +1,10 @@
 """
-🚀 DEMIR AI v5.2 - ULTRA FIXED Streamlit Dashboard
-📊 100% Database Schema Match
-🎯 Zero Errors - Production Ready
+🚀 DEMIR AI v5.2 - FIXED Streamlit Dashboard
+📊 Production-Grade User Interface
+🎯 100% Database Schema Match
 
-Location: GitHub Root / streamlit_app.py (REPLACE)
-Date: 2025-11-15 22:49 CET
+Location: GitHub Root / streamlit_app.py (REPLACE EXISTING)
+Date: 2025-11-15 23:19 CET
 """
 
 import os
@@ -32,31 +32,20 @@ st.set_page_config(
 # DATABASE CONNECTION
 # ============================================================================
 
-@st.cache_resource
-def get_db_connection():
-    """Get database connection"""
-    try:
-        conn = psycopg2.connect(os.getenv('DATABASE_URL'))
-        logger.info("✅ Database connected")
-        return conn
-    except Exception as e:
-        logger.error(f"❌ Database error: {e}")
-        st.error(f"❌ Database connection failed: {e}")
-        return None
-
 def get_new_connection():
-    """Get fresh connection (no cache)"""
+    """Get fresh connection"""
     try:
         return psycopg2.connect(os.getenv('DATABASE_URL'))
-    except:
+    except Exception as e:
+        logger.error(f"❌ Database error: {e}")
         return None
 
 # ============================================================================
-# DATA LOADING - FIXED COLUMN NAMES
+# DATA LOADING - FIXED COLUMN NAMES FROM ACTUAL SCHEMA
 # ============================================================================
 
 def load_recent_signals(hours: int = 24, limit: int = 50) -> pd.DataFrame:
-    """Load recent signals - FIXED"""
+    """Load recent signals - FIXED SCHEMA"""
     conn = get_new_connection()
     if not conn:
         return pd.DataFrame()
@@ -85,7 +74,7 @@ def load_recent_signals(hours: int = 24, limit: int = 50) -> pd.DataFrame:
         return pd.DataFrame()
 
 def load_overall_stats(hours: int = 24) -> dict:
-    """Load overall statistics - FIXED"""
+    """Load overall statistics - FIXED SCHEMA"""
     conn = get_new_connection()
     if not conn:
         return {'total_signals': 0, 'long_count': 0, 'short_count': 0}
@@ -308,9 +297,9 @@ def main():
                 query = '''
                     SELECT 
                         COUNT(*) as total,
-                        AVG(entry_price::float) as avg_entry,
-                        MAX(entry_price::float) as max_entry,
-                        MIN(entry_price::float) as min_entry
+                        AVG(entry_price::numeric) as avg_entry,
+                        MAX(entry_price::numeric) as max_entry,
+                        MIN(entry_price::numeric) as min_entry
                     FROM trades
                 '''
                 result = pd.read_sql(query, conn)
