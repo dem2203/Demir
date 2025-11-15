@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
 ═══════════════════════════════════════════════════════════════════════════════
-DEMIR AI - TELEGRAM MONITOR v5.2
+DEMIR AI - TELEGRAM MONITOR v5.3
 ═══════════════════════════════════════════════════════════════════════════════
 
 🔴 SAATLIK RAPOR + DURUMU BİLDİRİMİ
-├─ Her saat başında: Kripto fiyatları + AI sinyalleri
-├─ Her 5 dakika: Bot sağlık kontrolü
-├─ Hata oluşunca: Acil uyarı
-└─ 24/7 ÇALIŞAN daemon process
+✅ RAILWAY ENV VARIABLES İLE UYUMLU!
+└─ TELEGRAM_CHAT_ID (underscore ile)
+└─ TELEGRAM_TOKEN (underscore ile)
 
 ✅ 100% REAL DATA - NO MOCK
 ✅ PRODUCTION READY
@@ -44,18 +43,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# ENVIRONMENT VARIABLES
+# ENVIRONMENT VARIABLES - RAILWAY'deki İSİMLER!
 # ============================================================================
 
+# ✅ RAILWAY'deki isimlere göre:
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHATID = os.getenv('TELEGRAM_CHATID')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')  # ← underscore ile!
 DATABASE_URL = os.getenv('DATABASE_URL')
 
-if not TELEGRAM_TOKEN or not TELEGRAM_CHATID:
-    logger.error("❌ TELEGRAM_TOKEN or TELEGRAM_CHATID not set!")
-    logger.error("Set in Railway environment variables:")
+if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+    logger.error("❌ TELEGRAM_TOKEN or TELEGRAM_CHAT_ID not set!")
+    logger.error("Railway Settings → Environment Variables'ta kontrol et:")
     logger.error("  TELEGRAM_TOKEN = your_bot_token")
-    logger.error("  TELEGRAM_CHATID = your_chat_id")
+    logger.error("  TELEGRAM_CHAT_ID = your_chat_id  (with underscore)")
     sys.exit(1)
 
 # ============================================================================
@@ -72,7 +72,7 @@ def send_telegram_message(message: str, parse_mode: str = "HTML") -> bool:
     """
     try:
         payload = {
-            'chat_id': TELEGRAM_CHATID,
+            'chat_id': TELEGRAM_CHAT_ID,  # ← Railway variable adı kullan
             'text': message,
             'parse_mode': parse_mode
         }
@@ -88,6 +88,7 @@ def send_telegram_message(message: str, parse_mode: str = "HTML") -> bool:
             return True
         else:
             logger.error(f"❌ Telegram error: {response.status_code}")
+            logger.error(f"Response: {response.text}")
             return False
     except Exception as e:
         logger.error(f"❌ Telegram connection error: {e}")
@@ -229,7 +230,7 @@ def create_hourly_report() -> str:
     if btc and btc['change_24h'] > 5:
         message += f"🔴 UYARI: BTC %{btc['change_24h']:.1f} yükseldi - Volatilite yüksek!\n"
     elif btc and btc['change_24h'] < -5:
-        message += f"🟢 FIRSAy: BTC %{abs(btc['change_24h']):.1f} düştü - Satın alma fırsatı?\n"
+        message += f"🟢 FIRSAT: BTC %{abs(btc['change_24h']):.1f} düştü - Satın alma fırsatı?\n"
     
     # Bot Durumu
     message += f"\n<b>🤖 SİSTEM DURUMU</b>\n"
@@ -272,25 +273,12 @@ def send_health_check() -> bool:
         except:
             database_ok = False
         
-        # Durum mesajı
+        # Durum mesajı (Optional - her saat de gönderebilirsin)
         status_emoji = "🟢" if all([binance_ok, telegram_ok, database_ok]) else "🟡"
-        
-        message = f"""
-<b>{status_emoji} DEMIR AI - HEALTH CHECK</b>
-<b>⏰ {datetime.now().strftime('%d.%m.%Y %H:%M:%S UTC')}</b>
-
-<b>API Kontrolleri:</b>
-{'🟢' if binance_ok else '🔴'} Binance API: {'Bağlı' if binance_ok else 'Hata'}
-{'🟢' if telegram_ok else '🔴'} Telegram API: {'Bağlı' if telegram_ok else 'Hata'}
-{'🟢' if database_ok else '🔴'} Database: {'Bağlı' if database_ok else 'Hata'}
-
-<b>Sonuç:</b> {'✅ Sistem Sağlıklı' if all([binance_ok, telegram_ok, database_ok]) else '⚠️ Kontrol Gerekli'}
-"""
         
         logger.info(f"Health check result: Binance={binance_ok}, Telegram={telegram_ok}, DB={database_ok}")
         
-        # 5 dakikada bir değilse, her 5 dakikada bir gönder (fazla mesaj engelleme)
-        return True
+        return all([binance_ok, telegram_ok, database_ok])
         
     except Exception as e:
         logger.error(f"❌ Health check error: {e}")
@@ -334,7 +322,9 @@ class TelegramMonitor:
                 # SAĞLIK KONTROLÜ (Her 5 dakika)
                 if (now - self.last_health_check).total_seconds() >= 300:
                     logger.info("🏥 Health check...")
-                    send_health_check()
+                    health_ok = send_health_check()
+                    if not health_ok:
+                        logger.warning("⚠️ Health check failed!")
                     self.last_health_check = now
                 
                 # Her 10 saniye kontrol et
@@ -359,10 +349,11 @@ class TelegramMonitor:
 
 if __name__ == "__main__":
     logger.info("=" * 80)
-    logger.info("DEMIR AI - TELEGRAM MONITOR v5.2")
+    logger.info("DEMIR AI - TELEGRAM MONITOR v5.3")
     logger.info("=" * 80)
     logger.info(f"TELEGRAM_TOKEN: {TELEGRAM_TOKEN[:10]}...")
-    logger.info(f"TELEGRAM_CHATID: {TELEGRAM_CHATID}")
+    logger.info(f"TELEGRAM_CHAT_ID: {TELEGRAM_CHAT_ID}")
+    logger.info(f"DATABASE_URL: Connected")
     logger.info(f"Start time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S UTC')}")
     logger.info("=" * 80)
     
