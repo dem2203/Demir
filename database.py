@@ -108,6 +108,5 @@ class Database:
         except Exception as e:
             logger.error(f"❌ Query failed: {e}")
             return []
-
 # Global database instance
 db = Database()
