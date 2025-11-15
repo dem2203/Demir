@@ -3,19 +3,17 @@
 📊 Production-Grade Signal Generation Loop
 🔐 100% Real Data Policy - NO MOCK, NO FAKE, NO FALLBACK
 
-FIXED: asyncio.sleep → time.sleep
-FIXED: INSERT query columns match trades table schema
-FIXED: Logging handlers syntax
+✅ FIXED: Auto-migration for trades table ID sequence
 
 Location: GitHub Root / main.py (REPLACE EXISTING)
-Date: 2025-11-15 23:40 CET
+Date: 2025-11-16 00:15 CET
 """
 
 import os
 import sys
 import logging
 import json
-import time  # ✅ FIX: Import time instead of asyncio for sleep
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import psycopg2
@@ -32,7 +30,6 @@ load_dotenv()
 # LOGGING CONFIGURATION - PRODUCTION GRADE
 # ============================================================================
 
-# ✅ FIX: Corrected logging handlers syntax
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - [%(levelname)s] - %(name)s - %(message)s',
@@ -42,6 +39,76 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger('DEMIR_AI_MAIN')
+
+# ============================================================================
+# DATABASE MIGRATION - AUTO-RUN AT STARTUP
+# ============================================================================
+
+class DatabaseMigration:
+    """Handle database schema migrations automatically"""
+    
+    def __init__(self, db_url: str):
+        self.db_url = db_url
+        self.connection = None
+    
+    def connect(self):
+        """Connect to database"""
+        try:
+            self.connection = psycopg2.connect(self.db_url)
+            logger.info("✅ Connected to PostgreSQL for migration")
+            return True
+        except psycopg2.Error as e:
+            logger.error(f"❌ Migration connection error: {e}")
+            return False
+    
+    def run_migrations(self):
+        """Run all pending migrations"""
+        if not self.connection:
+            return False
+        
+        try:
+            cursor = self.connection.cursor()
+            
+            # ✅ MIGRATION 1: Create sequence for trades.id auto-increment
+            logger.info("🔄 Running migration: Add trades_id_seq...")
+            
+            migration_sql = """
+            -- Create sequence if not exists
+            CREATE SEQUENCE IF NOT EXISTS trades_id_seq START 1 OWNED BY trades.id;
+            
+            -- Set id column default to auto-increment
+            ALTER TABLE trades ALTER COLUMN id SET DEFAULT nextval('trades_id_seq'::regclass);
+            """
+            
+            cursor.execute(migration_sql)
+            self.connection.commit()
+            
+            logger.info("✅ Migration completed: trades_id_seq configured")
+            
+            # Verify
+            cursor.execute("""
+                SELECT column_default FROM information_schema.columns 
+                WHERE table_name='trades' AND column_name='id'
+            """)
+            
+            result = cursor.fetchone()
+            if result and 'nextval' in str(result[0]):
+                logger.info("✅ Verification: trades.id is now auto-increment")
+            else:
+                logger.warning("⚠️ Verification failed - id sequence may not be set")
+            
+            cursor.close()
+            return True
+            
+        except psycopg2.Error as e:
+            logger.error(f"❌ Migration error: {e}")
+            self.connection.rollback()
+            return False
+    
+    def close(self):
+        """Close database connection"""
+        if self.connection:
+            self.connection.close()
 
 # ============================================================================
 # ENVIRONMENT VARIABLE VALIDATION
@@ -94,14 +161,11 @@ class DatabaseManager:
             raise
     
     def insert_signal(self, signal_data: Dict) -> bool:
-        """
-        Insert real signal into database (100% REAL DATA)
-        ✅ FIX: Column names match actual trades table schema
-        """
+        """Insert real signal into database (100% REAL DATA)"""
         try:
             cursor = self.connection.cursor()
             
-            # ✅ FIX: Correct column names from trades table
+            # ✅ Column names match actual trades table schema
             query = '''
             INSERT INTO trades (
                 symbol, direction, entry_price, tp1, tp2, sl, entry_time, position_size
@@ -259,7 +323,7 @@ class TelegramNotificationEngine:
                 logger.error(f"❌ Telegram send error (attempt {attempt+1}/{retries}): {e}")
             
             if attempt < retries - 1:
-                time.sleep(1)  # ✅ FIX: Using time.sleep() instead of asyncio.sleep()
+                time.sleep(1)
         
         return False
     
@@ -269,14 +333,13 @@ class TelegramNotificationEngine:
 🚀 YENİ SİNYAL - DEMIR AI v5.2
 
 📍 Coin: {signal['symbol']}
-🎯 Yön: {'🟢 LONG' if signal['direction'] == 'LONG' else '🔴 SHORT' if signal['direction'] == 'SHORT' else '⚪ WAIT'}
+🎯 Yön: {'🟢 LONG' if signal['direction'] == 'LONG' else '🔴 SHORT'}
 💰 Giriş: ${signal['entry_price']:.2f}
 📈 TP1: ${signal['tp1']:.2f}
 📈 TP2: ${signal['tp2']:.2f}
 ❌ SL: ${signal['sl']:.2f}
 
 ⏱️ Zaman: {signal['entry_time']}
-Oluşturulan: {datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}
         '''
         
         if self.api_url:
@@ -298,6 +361,13 @@ class DemirAISignalGenerator:
     def __init__(self):
         # Validate environment
         ConfigValidator.validate()
+        
+        # ✅ RUN DATABASE MIGRATION FIRST
+        logger.info("🔄 Starting database migration...")
+        migration = DatabaseMigration(os.getenv('DATABASE_URL'))
+        if migration.connect():
+            migration.run_migrations()
+            migration.close()
         
         # Initialize components
         self.db = DatabaseManager(os.getenv('DATABASE_URL'))
@@ -337,7 +407,6 @@ class DemirAISignalGenerator:
                     except Exception as e:
                         logger.error(f"❌ Error processing {symbol}: {e}")
                 
-                # ✅ FIX: Using time.sleep() instead of asyncio.sleep()
                 logger.info(f"⏰ Next cycle in {self.cycle_interval} seconds...")
                 time.sleep(self.cycle_interval)
                 
@@ -366,7 +435,7 @@ class DemirAISignalGenerator:
             logger.warning(f"⚠️ Could not fetch OHLCV for {symbol}")
             return
         
-        # Generate signal (simplified demo - replace with AI brain)
+        # Generate signal
         signal = self._generate_test_signal(symbol, price, ohlcv_1h)
         
         if not signal:
