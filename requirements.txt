@@ -16,16 +16,11 @@ python-dotenv==1.0.0
 SQLAlchemy==2.0.23
 alembic==1.13.1
 
-# Machine Learning & AI (Python 3.12 Compatible)
+# Machine Learning (Python 3.12 Compatible)
 scikit-learn==1.3.2
 xgboost==2.0.3
 
-# NOTE: TensorFlow & PyTorch removed for Python 3.12 compatibility
-# These require compilation and have limited 3.12 support
-# Alternative: Use CPU-only or ONNX models instead
-
-# Technical Analysis
-talib==0.4.28
+# Technical Analysis (NO talib - use ta instead)
 ta==0.10.2
 
 # Visualization
@@ -49,9 +44,3 @@ pyyaml==6.0.1
 redis==5.0.1
 gunicorn==21.2.0
 uvicorn==0.24.0
-
-# Optional: Development Tools (not needed for production)
-# pytest==7.4.3
-# black==23.12.0
-# flake8==6.1.0
-# pylint==3.0.3
