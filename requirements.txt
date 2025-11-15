@@ -1,4 +1,3 @@
-"""
 🚀 DEMIR AI v5.2 - Requirements File
 📦 All Dependencies - Production Optimized
 🔐 No Security Vulnerabilities
