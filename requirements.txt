@@ -1,13 +1,3 @@
-🚀 DEMIR AI v5.2 - Requirements File
-📦 All Dependencies - Production Optimized
-🔐 No Security Vulnerabilities
-
-Location: GitHub Root / requirements.txt (REPLACE EXISTING)
-Size: ~60 lines
-Author: AI Research Agent
-Date: 2025-11-15
-"""
-
 # Core Framework
 streamlit==1.32.0
 psycopg2-binary==2.9.9
