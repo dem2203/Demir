@@ -1,5 +1,4 @@
-"""
-🚀 DEMIR AI v6.0 - main.py (COMPLETE - 1300+ LINES)
+""" 🚀 DEMIR AI v6.0 - main.py (COMPLETE - 1300+ LINES)
 ✅ v5.2 Base Code (930 lines) + Phase 1/5/6 Integration
 ✅ RotatingFileHandler FIXED (NO MORE CRASHES!)
 ✅ PostgreSQL REAL Data Verification
@@ -34,7 +33,6 @@ load_dotenv()
 # ============================================================================
 # SETUP LOGGING - DETAILED TRACE FOR PRODUCTION (FIXED!)
 # ============================================================================
-
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - [%(levelname)s] - %(name)s - %(message)s',
@@ -48,7 +46,6 @@ logging.basicConfig(
         )
     ]
 )
-
 logger = logging.getLogger('DEMIR_AI_v6.0_MAIN')
 
 # PRINT STARTUP BANNER
@@ -70,7 +67,8 @@ print("✅ Templates Folder: HTML Dashboard")
 print("="*100 + "\n")
 
 # INITIALIZE FLASK APP
-app = Flask(__name__,
+app = Flask(
+    __name__,
     static_folder=os.path.abspath('static'),
     static_url_path='/static',
     template_folder=os.path.abspath('templates')
@@ -81,7 +79,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max request
 # ============================================================================
 # STRICT ENVIRONMENT VALIDATION
 # ============================================================================
-
 class ConfigValidator:
     """Validate all required environment variables - STRICT MODE"""
     REQUIRED_VARS = [
@@ -108,7 +105,7 @@ class ConfigValidator:
                 missing.append(var)
                 logger.critical(f"❌ MISSING REQUIRED: {var}")
             else:
-                masked_value = value[:10] + "***" if len(value) > 10 else "***"
+                masked_value = value[:10] + "***" if len(value) > 10 else "**"
                 logger.info(f"✅ {var}: configured ({masked_value})")
 
         if missing:
@@ -120,7 +117,6 @@ class ConfigValidator:
 # ============================================================================
 # DATABASE MANAGER - POSTGRESQL WITH FULL VERIFICATION + PHASE COLUMNS
 # ============================================================================
-
 class DatabaseManager:
     """PostgreSQL connection with REAL data verification + metrics tracking + Phase boost columns"""
 
@@ -233,7 +229,7 @@ class DatabaseManager:
         try:
             cursor = self.connection.cursor()
             cursor.execute("""
-            SELECT table_name FROM information_schema.tables
+            SELECT table_name FROM information_schema.tables 
             WHERE table_schema='public' AND table_type='BASE TABLE'
             """)
             tables = [row[0] for row in cursor.fetchall()]
@@ -257,12 +253,12 @@ class DatabaseManager:
             # Insert to trades table with Phase boosts
             insert_sql = """
             INSERT INTO trades (
-                symbol, direction, entry_price, tp1, tp2, sl, entry_time,
-                position_size, status, confidence, rr_ratio, ensemble_score,
+                symbol, direction, entry_price, tp1, tp2, sl, entry_time, 
+                position_size, status, confidence, rr_ratio, ensemble_score, 
                 phase1_boost, phase5_boost, phase6_boost, data_source
             ) VALUES (
-                %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s, %(sl)s, %(entry_time)s,
-                %(position_size)s, %(status)s, %(confidence)s, %(rr_ratio)s, %(ensemble_score)s,
+                %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s, %(sl)s, %(entry_time)s, 
+                %(position_size)s, %(status)s, %(confidence)s, %(rr_ratio)s, %(ensemble_score)s, 
                 %(phase1_boost)s, %(phase5_boost)s, %(phase6_boost)s, %(data_source)s
             )
             """
@@ -288,10 +284,10 @@ class DatabaseManager:
             # Also insert to signal history with Phase boosts
             history_sql = """
             INSERT INTO signal_history (
-                symbol, signal_type, confidence, ensemble_score,
+                symbol, signal_type, confidence, ensemble_score, 
                 phase1_boost, phase5_boost, phase6_boost, data_source
             ) VALUES (
-                %(symbol)s, %(direction)s, %(confidence)s, %(ensemble_score)s,
+                %(symbol)s, %(direction)s, %(confidence)s, %(ensemble_score)s, 
                 %(phase1_boost)s, %(phase5_boost)s, %(phase6_boost)s, %(data_source)s
             )
             """
@@ -351,7 +347,7 @@ class DatabaseManager:
         try:
             cursor = self.connection.cursor(cursor_factory=RealDictCursor)
             query = """
-            SELECT
+            SELECT 
                 COUNT(*) as total_trades,
                 SUM(CASE WHEN direction = 'LONG' THEN 1 ELSE 0 END) as long_trades,
                 SUM(CASE WHEN direction = 'SHORT' THEN 1 ELSE 0 END) as short_trades,
@@ -403,7 +399,6 @@ class DatabaseManager:
 # ============================================================================
 # MULTI-EXCHANGE DATA FETCHER - WITH REAL FALLBACK
 # ============================================================================
-
 class MultiExchangeDataFetcher:
     """Fetch REAL data from multiple exchanges with fallback chain"""
 
@@ -506,6 +501,7 @@ class MultiExchangeDataFetcher:
                         except (ValueError, IndexError) as e:
                             logger.warning(f"Skipping invalid candle: {e}")
                             continue
+
                     if ohlcv_data:
                         logger.info(f"✅ OHLCV {symbol} from BINANCE: {len(ohlcv_data)} candles")
                         return ohlcv_data, 'BINANCE'
@@ -544,6 +540,7 @@ class MultiExchangeDataFetcher:
                         except (ValueError, IndexError) as e:
                             logger.warning(f"Skipping invalid candle: {e}")
                             continue
+
                     if ohlcv_data:
                         logger.info(f"✅ OHLCV {symbol} from BYBIT: {len(ohlcv_data)} candles")
                         return ohlcv_data, 'BYBIT'
@@ -557,7 +554,6 @@ class MultiExchangeDataFetcher:
 # ============================================================================
 # TELEGRAM NOTIFICATION ENGINE (OPTIONAL)
 # ============================================================================
-
 class TelegramNotificationEngine:
     """Send REAL notifications to Telegram (OPTIONAL - not critical)"""
 
@@ -624,12 +620,10 @@ class TelegramNotificationEngine:
         """Queue a signal notification with Phase boost info"""
         if not self.api_url:
             return
-
         direction_emoji = '📈' if signal['direction'] == 'LONG' else '📉'
         phase1 = signal.get('phase1_boost', 0.0)
         phase5 = signal.get('phase5_boost', 0.0)
         phase6 = signal.get('phase6_boost', 0.0)
-
         message = f"""
 🚀 NEW SIGNAL - DEMIR AI v6.0
 {direction_emoji} {signal['symbol']} - {signal['direction']}
@@ -638,9 +632,9 @@ class TelegramNotificationEngine:
 🛑 SL: ${signal['sl']:.2f}
 🎯 Score: {signal.get('ensemble_score', 0):.0%}
 📊 Phase Boosts:
-  • Phase 1 (Multi-TF): +{phase1:.1%}
-  • Phase 5 (Harmonic): +{phase5:.1%}
-  • Phase 6 (Candlestick): +{phase6:.1%}
+• Phase 1 (Multi-TF): +{phase1:.1%}
+• Phase 5 (Harmonic): +{phase5:.1%}
+• Phase 6 (Candlestick): +{phase6:.1%}
 📡 Source: {signal.get('data_source', 'BINANCE')}
 ⏰ {signal['entry_time'].strftime('%Y-%m-%d %H:%M:%S UTC')}
 """
@@ -664,7 +658,6 @@ class TelegramNotificationEngine:
 # ============================================================================
 # SIGNAL GENERATOR ENGINE - CORE WITH AI BRAIN v6.0 + PHASE 1/5/6
 # ============================================================================
-
 class DemirAISignalGenerator:
     """Main signal generator with REAL data and AI Brain v6.0 (Phase 1/5/6)"""
 
@@ -698,7 +691,6 @@ class DemirAISignalGenerator:
 
             # Get REAL OHLCV with fallback
             ohlcv_data, ohlcv_source = self.fetcher.get_ohlcv_data(symbol, '1h', 100)
-
             logger.debug(f"📊 Data sources - Price: {price_source}, OHLCV: {ohlcv_source}")
 
             # Extract numpy arrays for AI Brain
@@ -748,11 +740,9 @@ class DemirAISignalGenerator:
 
             # Send Telegram notification
             self.telegram.queue_signal_notification(signal)
-
             self.total_signals_generated += 1
             logger.info(f"✅ Signal: {symbol} {signal['direction']} @ {signal['ensemble_score']:.0%} (Phase: +{signal['phase1_boost']:.1%}+{signal['phase5_boost']:.1%}+{signal['phase6_boost']:.1%})")
             return signal
-
         except Exception as e:
             logger.error(f"❌ Error processing {symbol}: {e}")
             return None
@@ -793,22 +783,22 @@ def dashboard():
             os.path.join(os.path.dirname(__file__), 'index.html'),
             '/app/index.html',  # Railway
         ]
-        
+
         logger.debug("🔍 Looking for index.html in ROOT...")
-        
+
         for path in possible_paths:
             if os.path.exists(path):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         html_content = f.read()
-                    
+
                     if len(html_content) > 100:
                         logger.info(f"✅ Dashboard served from ROOT: {path}")
                         return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
                 except Exception as e:
                     logger.warning(f"⚠️ Error reading {path}: {e}")
                     continue
-        
+
         # Fallback
         logger.warning("⚠️ index.html not found in ROOT, serving minimal fallback")
         fallback_html = """<!DOCTYPE html>
@@ -835,152 +825,115 @@ def dashboard():
 </body>
 </html>"""
         return fallback_html, 200, {'Content-Type': 'text/html; charset=utf-8'}
-        
+
     except Exception as e:
         logger.error(f"❌ Dashboard route error: {e}")
         return {"error": "Dashboard error", "message": str(e)}, 500
 
-@app.route('/api/health', methods=['GET'])
-def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'OPERATIONAL',
-        'version': '6.0',
-        'timestamp': datetime.now(pytz.UTC).isoformat(),
-        'ai_brain': 'Active (Phase 1/5/6)',
-        'database': 'PostgreSQL Connected',
-        'components': {
-            'sentiment': 4,
-            'ml': 1,
-            'technical': 25,
-            'phase1_multi_tf': True,
-            'phase5_harmonic': True,
-            'phase6_candlestick': True
-        }
-    }), 200
-
-@app.route('/api/signal', methods=['POST'])
-def get_signal():
-    """Generate trading signal"""
-    try:
-        data = request.get_json() or {}
-        logger.debug(f"Signal request received")
-
-        # Generate signals
-        signals = signal_generator.process_all()
-
-        if signals:
-            return jsonify({
-                'status': 'success',
-                'signals': signals,
-                'count': len(signals),
-                'timestamp': datetime.now(pytz.UTC).isoformat()
-            }), 200
-        else:
-            return jsonify({
-                'status': 'neutral',
-                'signals': [],
-                'message': 'No signals generated',
-                'timestamp': datetime.now(pytz.UTC).isoformat()
-            }), 200
-    except Exception as e:
-        logger.error(f"Signal endpoint error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@app.route('/api/statistics', methods=['GET'])
-def get_statistics():
-    """Get trading statistics"""
-    try:
-        stats = db.get_statistics()
-        return jsonify({
-            'status': 'success',
-            'statistics': stats,
-            'timestamp': datetime.now(pytz.UTC).isoformat()
-        }), 200
-    except Exception as e:
-        logger.error(f"Statistics endpoint error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@app.route('/api/recent', methods=['GET'])
-def get_recent():
+@app.route('/api/signals')
+def get_signals():
     """Get recent signals"""
     try:
-        limit = request.args.get('limit', 50, type=int)
-        signals = db.get_recent_signals(limit)
-        return jsonify({
-            'status': 'success',
-            'signals': signals,
-            'count': len(signals),
-            'timestamp': datetime.now(pytz.UTC).isoformat()
-        }), 200
+        signals = db.get_recent_signals(50)
+        return jsonify({'status': 'success', 'data': signals})
     except Exception as e:
-        logger.error(f"Recent endpoint error: {e}")
+        logger.error(f"❌ Get signals error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/statistics')
+def get_statistics():
+    """Get system statistics"""
+    try:
+        stats = db.get_statistics()
+        return jsonify({'status': 'success', 'data': stats})
+    except Exception as e:
+        logger.error(f"❌ Get statistics error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint"""
+    try:
+        db_healthy = db.heartbeat()
+        return jsonify({
+            'status': 'healthy' if db_healthy else 'warning',
+            'backend': 'operational',
+            'database': 'connected' if db_healthy else 'disconnected',
+            'timestamp': datetime.now(pytz.UTC).isoformat(),
+            'version': '6.0'
+        })
+    except Exception as e:
+        logger.error(f"❌ Health check error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/status')
+def status():
+    """Get system status"""
+    try:
+        return jsonify({
+            'status': 'operational',
+            'timestamp': datetime.now(pytz.UTC).isoformat(),
+            'version': 'DEMIR AI v6.0',
+            'database': 'PostgreSQL (REAL)',
+            'exchanges': ['Binance', 'Bybit', 'Coinbase'],
+            'ai_brain': 'v6.0 (Phase 1/5/6)',
+            'signals_today': signal_generator.get_stats()
+        })
+    except Exception as e:
+        logger.error(f"❌ Status error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({'status': 'error', 'message': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    logger.error(f"❌ Internal server error: {error}")
+    return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
 # ============================================================================
-# STATIC FILES SERVING ROUTES - CSS & JS FROM TEMPLATES
+# INITIALIZE GLOBAL OBJECTS
 # ============================================================================
 
-@app.route('/style.css')
-def serve_css():
-    """Serve style.css from templates folder"""
-    try:
-        return send_from_directory(app.template_folder, 'style.css', mimetype='text/css')
-    except Exception as e:
-        logger.error(f"CSS serve error: {e}")
-        return "/* CSS not found */", 404
+try:
+    # Validate config
+    ConfigValidator.validate()
 
-@app.route('/app.js')
-def serve_js():
-    """Serve app.js from templates folder"""
-    try:
-        return send_from_directory(app.template_folder, 'app.js', mimetype='application/javascript')
-    except Exception as e:
-        logger.error(f"JS serve error: {e}")
-        return "// JS not found", 404
+    # Initialize database
+    db_url = os.getenv('DATABASE_URL')
+    db = DatabaseManager(db_url)
+
+    # Initialize data fetcher
+    fetcher = MultiExchangeDataFetcher()
+
+    # Initialize telegram
+    telegram = TelegramNotificationEngine()
+    telegram.start()
+
+    # Initialize signal generator
+    signal_generator = DemirAISignalGenerator(db, fetcher, telegram)
+
+    logger.info("✅ ALL SYSTEMS INITIALIZED - PRODUCTION READY")
+except Exception as e:
+    logger.critical(f"❌ INITIALIZATION FAILED: {e}")
+    raise
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
 if __name__ == '__main__':
     try:
-        # Validate config
-        ConfigValidator.validate()
-
-        # Initialize components
-        logger.info("🔧 Initializing all components...")
-
-        db = DatabaseManager(os.getenv('DATABASE_URL'))
-        fetcher = MultiExchangeDataFetcher()
-        telegram = TelegramNotificationEngine()
-        telegram.start()
-
-        signal_generator = DemirAISignalGenerator(db, fetcher, telegram)
-
-        # Process signals in background
-        def background_processor():
-            while True:
-                try:
-                    signal_generator.process_all()
-                    time.sleep(signal_generator.cycle_interval)
-                except Exception as e:
-                    logger.error(f"Background processor error: {e}")
-                    time.sleep(10)
-
-        processor_thread = threading.Thread(target=background_processor, daemon=True)
-        processor_thread.start()
-        logger.info("✅ Background signal processor started")
-
-        # Start Flask
         port = int(os.getenv('PORT', 8000))
-        logger.info(f"🚀 Starting Flask on port {port}...")
-        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
-
+        logger.info(f"🚀 Starting DEMIR AI v6.0 on port {port}...")
+        app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
     except Exception as e:
-        logger.critical(f"❌ CRITICAL ERROR: {e}")
-        sys.exit(1)
+        logger.critical(f"❌ Application startup failed: {e}")
+        raise
     finally:
-        if 'db' in locals():
-            db.close()
-        if 'telegram' in locals():
-            telegram.stop()
+        telegram.stop()
+        db.close()
+        logger.info("✅ Application shutdown complete")
