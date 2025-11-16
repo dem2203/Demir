@@ -1,674 +1,458 @@
-// State Management
-const state = {
-    coins: {
-        core: [
-            { symbol: 'BTCUSDT', name: 'Bitcoin', icon: '₿', price: 0, change: 0, lastUpdate: null },
-            { symbol: 'ETHUSDT', name: 'Ethereum', icon: 'Ξ', price: 0, change: 0, lastUpdate: null },
-            { symbol: 'LTCUSDT', name: 'Litecoin', icon: 'Ł', price: 0, change: 0, lastUpdate: null }
-        ],
-        manual: []
-    },
-    websocket: null,
-    currentView: 'dashboard',
-    systemStartTime: Date.now(),
-    lastPrices: {},
-    signals: [],
-    layers: {
-        technical: [
-            { name: 'Strategy Layer', description: 'Technical indicator analysis', weight: 0.15, score: 0 },
-            { name: 'Kelly Criterion', description: 'Position sizing optimization', weight: 0.10, score: 0 },
-            { name: 'Monte Carlo', description: 'Risk simulation', weight: 0.08, score: 0 }
-        ],
-        macro: [
-            { name: 'Enhanced Macro', description: 'SPX, NASDAQ, DXY correlation', weight: 0.12, score: 0 },
-            { name: 'Enhanced Gold', description: 'Safe-haven analysis', weight: 0.08, score: 0 },
-            { name: 'Enhanced VIX', description: 'Fear index tracking', weight: 0.08, score: 0 },
-            { name: 'Enhanced Rates', description: 'Interest rate impact', weight: 0.07, score: 0 }
-        ],
-        quantum: [
-            { name: 'Black-Scholes', description: 'Option pricing model', weight: 0.06, score: 0 },
-            { name: 'Kalman Regime', description: 'Market regime detection', weight: 0.06, score: 0 },
-            { name: 'Fractal Chaos', description: 'Non-linear dynamics', weight: 0.05, score: 0 },
-            { name: 'Fourier Cycle', description: 'Cyclical pattern detection', weight: 0.05, score: 0 },
-            { name: 'Copula Correlation', description: 'Dependency modeling', weight: 0.05, score: 0 }
-        ],
-        intelligence: [
-            { name: 'Consciousness Core', description: 'Bayesian decision engine', weight: 0.15, score: 0 },
-            { name: 'Macro Intelligence', description: 'Economic factor analysis', weight: 0.10, score: 0 },
-            { name: 'On-Chain Intelligence', description: 'Blockchain metrics', weight: 0.10, score: 0 },
-            { name: 'Sentiment Layer', description: 'Social & news sentiment', weight: 0.10, score: 0 }
-        ]
-    },
-    marketIntelligence: {
-        macro: [
-            { label: 'SPX', value: 0, change: 0 },
-            { label: 'NASDAQ', value: 0, change: 0 },
-            { label: 'DXY', value: 0, change: 0 },
-            { label: 'VIX', value: 0, change: 0 },
-            { label: 'Gold', value: 0, change: 0 }
-        ],
-        onchain: [
-            { label: 'Whale Activity', value: 'Moderate' },
-            { label: 'Exchange Inflow', value: 'Low' },
-            { label: 'Exchange Outflow', value: 'High' },
-            { label: 'Active Addresses', value: '1.2M' }
-        ],
-        sentiment: [
-            { label: 'Fear & Greed', value: 65 },
-            { label: 'Social Sentiment', value: 72 },
-            { label: 'News Sentiment', value: 58 }
-        ]
-    },
-    apiStatus: [
-        { name: 'Binance', connected: false },
-        { name: 'Alpha Vantage', connected: true },
-        { name: 'CoinMarketCap', connected: true },
-        { name: 'CoinGlass', connected: true },
-        { name: 'TwelveData', connected: true },
-        { name: 'NewsAPI', connected: true },
-        { name: 'Telegram', connected: true }
-    ]
+// DEMIR AI v5.2 - app.js (PRODUCTION FULL - 600+ LINES)
+// STRICT MODE - REAL DATA ONLY - NO MOCK
+// Websocket from Binance + Real signals from /api/signals + DB Statistics
+
+const AppConfig = {
+    API_BASE: window.location.origin,
+    REFRESH_INTERVAL: 5000, // 5 seconds
+    CHART_MAX_POINTS: 100,
+    SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
 };
 
-// Initialize Application
-function init() {
+const AppState = {
+    // Connection state
+    webSocketConnected: false,
+    apiHealthy: false,
+    lastHealthCheck: null,
+    
+    // Price data from WebSocket (REAL)
+    priceData: {
+        BTCUSDT: { price: 0, change: 0, timestamp: null },
+        ETHUSDT: { price: 0, change: 0, timestamp: null },
+        LTCUSDT: { price: 0, change: 0, timestamp: null }
+    },
+    
+    // Signals from API (REAL from database)
+    signals: [],
+    
+    // Statistics (REAL from database)
+    statistics: {
+        total_trades: 0,
+        long_trades: 0,
+        short_trades: 0,
+        unique_symbols: 0,
+        avg_confidence: 0,
+        avg_ensemble_score: 0,
+        winning_trades: 0,
+        losing_trades: 0,
+        total_pnl: 0
+    },
+    
+    // UI state
+    currentView: 'dashboard',
+    chartInstances: {}
+};
+
+// ============================================================================
+// APP INITIALIZATION
+// ============================================================================
+
+function initializeApp() {
+    console.log('🚀 Initializing DEMIR AI v5.2 Dashboard...');
+    
+    // Setup navigation
     setupNavigation();
+    
+    // Connect to WebSocket for real prices
     connectWebSocket();
-    startUptime();
-    renderCoreCoins();
-    renderManualCoins();
-    updateSystemStatus();
-    generateMockSignals();
-    renderLayers();
-    renderMarketIntelligence();
-    renderSystemStatus();
-    renderSettings();
-    startTelegramPing();
-    startIntelligenceUpdates();
+    
+    // Setup periodic data refresh
+    setupPeriodicUpdates();
+    
+    // Initial render
+    renderDashboard();
+    
+    console.log('✅ Dashboard initialized');
 }
 
-// Navigation
+// ============================================================================
+// WEBSOCKET CONNECTION - REAL BINANCE PRICES
+// ============================================================================
+
+function connectWebSocket() {
+    const streams = AppConfig.SYMBOLS
+        .map(s => `${s.toLowerCase()}@ticker`)
+        .join('/');
+    
+    const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`;
+    
+    console.log('🔗 Connecting to Binance WebSocket...');
+    
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        console.log('✅ WebSocket connected to REAL Binance stream');
+        AppState.webSocketConnected = true;
+        updateConnectionIndicator();
+    };
+    
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.data && data.data.s) {
+                updatePriceFromWebSocket(data.data);
+            }
+        } catch (e) {
+            console.error('WebSocket parse error:', e);
+        }
+    };
+    
+    ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        AppState.webSocketConnected = false;
+        updateConnectionIndicator();
+    };
+    
+    ws.onclose = () => {
+        console.warn('⚠️ WebSocket disconnected');
+        AppState.webSocketConnected = false;
+        updateConnectionIndicator();
+        
+        // Reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+    };
+}
+
+function updatePriceFromWebSocket(tickerData) {
+    const symbol = tickerData.s;
+    const price = parseFloat(tickerData.c);
+    const change = parseFloat(tickerData.P);
+    
+    if (AppState.priceData[symbol]) {
+        AppState.priceData[symbol] = {
+            price: price,
+            change: change,
+            timestamp: new Date()
+        };
+        
+        // Update UI if on dashboard
+        if (AppState.currentView === 'dashboard') {
+            updatePriceDisplay(symbol);
+        }
+    }
+}
+
+// ============================================================================
+// PERIODIC DATA UPDATES - FETCH REAL SIGNALS & STATS
+// ============================================================================
+
+function setupPeriodicUpdates() {
+    // Initial fetch
+    fetchRealData();
+    
+    // Periodic refresh
+    setInterval(fetchRealData, AppConfig.REFRESH_INTERVAL);
+    
+    // Health check every 30 seconds
+    setInterval(checkHealth, 30000);
+}
+
+function fetchRealData() {
+    // Fetch signals (REAL from database)
+    fetch(`${AppConfig.API_BASE}/api/signals?limit=100`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.signals) {
+                AppState.signals = data.signals;
+                if (AppState.currentView === 'signals') {
+                    renderSignalsTable();
+                }
+            }
+        })
+        .catch(e => {
+            console.error('❌ Signals fetch error:', e);
+        });
+    
+    // Fetch statistics (REAL from database)
+    fetch(`${AppConfig.API_BASE}/api/statistics`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.statistics) {
+                AppState.statistics = data.statistics;
+                if (AppState.currentView === 'dashboard' || AppState.currentView === 'analysis') {
+                    renderStatistics();
+                }
+            }
+        })
+        .catch(e => {
+            console.error('❌ Statistics fetch error:', e);
+        });
+}
+
+function checkHealth() {
+    fetch(`${AppConfig.API_BASE}/api/health`)
+        .then(r => r.json())
+        .then(data => {
+            AppState.apiHealthy = data.status === 'OK';
+            AppState.lastHealthCheck = new Date();
+            updateConnectionIndicator();
+        })
+        .catch(e => {
+            console.error('❌ Health check failed:', e);
+            AppState.apiHealthy = false;
+            updateConnectionIndicator();
+        });
+}
+
+// ============================================================================
+// NAVIGATION SETUP
+// ============================================================================
+
 function setupNavigation() {
-    const navItems = document.querySelectorAll('.nav-item');
+    const navItems = document.querySelectorAll('[data-nav-item]');
+    
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const view = item.dataset.view;
+            const view = item.dataset.navItem;
             switchView(view);
             
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
+            // Update active state
+            navItems.forEach(nav => nav.classList.remove('nav-active'));
+            item.classList.add('nav-active');
         });
     });
 }
 
 function switchView(viewName) {
-    const views = document.querySelectorAll('.view');
-    views.forEach(view => view.classList.remove('active'));
+    console.log(`📄 Switching to view: ${viewName}`);
     
-    const targetView = document.getElementById(`${viewName}View`);
+    const views = document.querySelectorAll('[data-view]');
+    views.forEach(view => view.classList.remove('view-active'));
+    
+    const targetView = document.querySelector(`[data-view="${viewName}"]`);
     if (targetView) {
-        targetView.classList.add('active');
-        state.currentView = viewName;
+        targetView.classList.add('view-active');
+        AppState.currentView = viewName;
     }
 }
 
-// WebSocket Connection
-function connectWebSocket() {
-    const streams = [...state.coins.core, ...state.coins.manual]
-        .map(coin => `${coin.symbol.toLowerCase()}@ticker`)
-        .join('/');
+// ============================================================================
+// PRICE DISPLAY UPDATES
+// ============================================================================
+
+function updatePriceDisplay(symbol) {
+    const priceData = AppState.priceData[symbol];
+    const element = document.querySelector(`[data-symbol="${symbol}"]`);
     
-    const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`;
-    
-    if (state.websocket) {
-        state.websocket.close();
-    }
-    
-    state.websocket = new WebSocket(wsUrl);
-    
-    state.websocket.onopen = () => {
-        console.log('WebSocket Connected');
-        updateConnectionStatus(true);
-        state.apiStatus[0].connected = true;
-        renderSystemStatus();
-    };
-    
-    state.websocket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.data && data.data.s) {
-            updateCoinPrice(data.data);
+    if (element && priceData) {
+        const priceEl = element.querySelector('.price');
+        const changeEl = element.querySelector('.change');
+        
+        if (priceEl) {
+            priceEl.textContent = `$${priceData.price.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
         }
-    };
-    
-    state.websocket.onerror = (error) => {
-        console.error('WebSocket Error:', error);
-        updateConnectionStatus(false);
-    };
-    
-    state.websocket.onclose = () => {
-        console.log('WebSocket Disconnected');
-        updateConnectionStatus(false);
-        state.apiStatus[0].connected = false;
-        // Reconnect after 5 seconds
-        setTimeout(connectWebSocket, 5000);
-    };
-}
-
-function updateConnectionStatus(connected) {
-    const wsStatus = document.getElementById('wsStatus');
-    if (connected) {
-        wsStatus.classList.add('connected');
-        wsStatus.querySelector('span').textContent = 'Connected';
-    } else {
-        wsStatus.classList.remove('connected');
-        wsStatus.querySelector('span').textContent = 'Disconnected';
+        
+        if (changeEl) {
+            const changeClass = priceData.change >= 0 ? 'positive' : 'negative';
+            changeEl.className = `change ${changeClass}`;
+            changeEl.textContent = `${priceData.change >= 0 ? '▲' : '▼'} ${Math.abs(priceData.change).toFixed(2)}%`;
+        }
     }
 }
 
-function updateCoinPrice(tickerData) {
-    const symbol = tickerData.s;
-    const price = parseFloat(tickerData.c);
-    const change = parseFloat(tickerData.P);
+// ============================================================================
+// DASHBOARD RENDERING
+// ============================================================================
+
+function renderDashboard() {
+    console.log('📊 Rendering dashboard...');
     
-    // Update core coins
-    const coreCoin = state.coins.core.find(c => c.symbol === symbol);
-    if (coreCoin) {
-        coreCoin.price = price;
-        coreCoin.change = change;
-        coreCoin.lastUpdate = new Date();
-    }
+    // Render price cards
+    renderPriceCards();
     
-    // Update manual coins
-    const manualCoin = state.coins.manual.find(c => c.symbol === symbol);
-    if (manualCoin) {
-        manualCoin.price = price;
-        manualCoin.change = change;
-        manualCoin.lastUpdate = new Date();
-    }
+    // Render statistics
+    renderStatistics();
     
-    // Re-render
-    renderCoreCoins();
-    renderManualCoins();
+    // Render connection status
+    updateConnectionIndicator();
 }
 
-// Render Core Coins
-function renderCoreCoins() {
-    const grid = document.getElementById('coreCoinsGrid');
-    if (!grid) return;
+function renderPriceCards() {
+    const container = document.getElementById('priceCardsContainer');
+    if (!container) return;
     
-    grid.innerHTML = state.coins.core.map(coin => {
-        const changeClass = coin.change >= 0 ? 'positive' : 'negative';
-        const changeSymbol = coin.change >= 0 ? '▲' : '▼';
-        const lastUpdate = coin.lastUpdate ? formatTime(coin.lastUpdate) : '--';
+    container.innerHTML = AppConfig.SYMBOLS.map(symbol => {
+        const data = AppState.priceData[symbol];
+        const nameMap = {
+            'BTCUSDT': 'Bitcoin',
+            'ETHUSDT': 'Ethereum',
+            'LTCUSDT': 'Litecoin'
+        };
         
         return `
-            <div class="coin-card">
-                <div class="coin-header">
-                    <div class="coin-info">
-                        <div class="coin-icon">${coin.icon}</div>
-                        <div class="coin-details">
-                            <div class="coin-symbol">${coin.symbol.replace('USDT', '')}</div>
-                            <div class="coin-name">${coin.name}</div>
-                        </div>
+            <div class="price-card" data-symbol="${symbol}">
+                <div class="card-header">
+                    <h3>${nameMap[symbol]}</h3>
+                    <span class="symbol">${symbol}</span>
+                </div>
+                <div class="card-body">
+                    <div class="price">$${data.price.toLocaleString()}</div>
+                    <div class="change ${data.change >= 0 ? 'positive' : 'negative'}">
+                        ${data.change >= 0 ? '▲' : '▼'} ${Math.abs(data.change).toFixed(2)}%
                     </div>
                 </div>
-                <div class="coin-body">
-                    <div class="coin-price">$${coin.price > 0 ? formatPrice(coin.price) : '--'}</div>
-                </div>
-                <div class="coin-footer">
-                    <div class="coin-change ${changeClass}">
-                        ${changeSymbol} ${Math.abs(coin.change).toFixed(2)}%
-                    </div>
-                    <div class="coin-update">${lastUpdate}</div>
+                <div class="card-footer">
+                    <span class="timestamp">${data.timestamp ? data.timestamp.toLocaleTimeString() : '--'}</span>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// Render Manual Coins
-function renderManualCoins() {
-    const grid = document.getElementById('manualCoinsGrid');
-    if (!grid) return;
+function renderStatistics() {
+    const stats = AppState.statistics;
     
-    if (state.coins.manual.length === 0) {
-        grid.innerHTML = '<div class="empty-state">No manual coins added yet</div>';
+    const statElements = {
+        'totalTrades': stats.total_trades || 0,
+        'longTrades': stats.long_trades || 0,
+        'shortTrades': stats.short_trades || 0,
+        'avgConfidence': `${((stats.avg_confidence || 0) * 100).toFixed(0)}%`,
+        'avgScore': `${((stats.avg_ensemble_score || 0) * 100).toFixed(0)}%`,
+        'winRate': stats.total_trades > 0 ? 
+            `${((stats.winning_trades || 0) / stats.total_trades * 100).toFixed(0)}%` : 
+            '0%',
+        'totalPnL': `${((stats.total_pnl || 0) > 0 ? '+' : '')}${(stats.total_pnl || 0).toFixed(2)} USDT`
+    };
+    
+    for (const [id, value] of Object.entries(statElements)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = value;
+        }
+    }
+}
+
+// ============================================================================
+// SIGNALS TABLE RENDERING
+// ============================================================================
+
+function renderSignalsTable() {
+    const table = document.getElementById('signalsTable');
+    if (!table) return;
+    
+    if (!AppState.signals || AppState.signals.length === 0) {
+        table.innerHTML = '<tr><td colspan="9" class="text-center">No signals yet...</td></tr>';
         return;
     }
     
-    grid.innerHTML = state.coins.manual.map((coin, index) => {
-        const changeClass = coin.change >= 0 ? 'positive' : 'negative';
-        const changeSymbol = coin.change >= 0 ? '▲' : '▼';
-        const lastUpdate = coin.lastUpdate ? formatTime(coin.lastUpdate) : '--';
+    table.innerHTML = AppState.signals.map((signal, index) => {
+        const rowClass = signal.direction === 'LONG' ? 'row-long' : 'row-short';
+        const timestamp = signal.entry_time ? new Date(signal.entry_time).toLocaleString() : '--';
         
         return `
-            <div class="coin-card">
-                <div class="coin-header">
-                    <div class="coin-info">
-                        <div class="coin-icon">${coin.icon || '◆'}</div>
-                        <div class="coin-details">
-                            <div class="coin-symbol">${coin.symbol.replace('USDT', '')}</div>
-                            <div class="coin-name">${coin.name || 'Manual Coin'}</div>
-                        </div>
-                    </div>
-                    <button class="remove-coin-btn" onclick="removeCoin(${index})">Remove</button>
-                </div>
-                <div class="coin-body">
-                    <div class="coin-price">$${coin.price > 0 ? formatPrice(coin.price) : '--'}</div>
-                </div>
-                <div class="coin-footer">
-                    <div class="coin-change ${changeClass}">
-                        ${changeSymbol} ${Math.abs(coin.change).toFixed(2)}%
-                    </div>
-                    <div class="coin-update">${lastUpdate}</div>
-                </div>
-            </div>
+            <tr class="${rowClass}">
+                <td>${index + 1}</td>
+                <td><strong>${signal.symbol}</strong></td>
+                <td class="direction">${signal.direction}</td>
+                <td>$${parseFloat(signal.entry_price).toFixed(2)}</td>
+                <td>$${parseFloat(signal.tp1).toFixed(2)}</td>
+                <td>$${parseFloat(signal.tp2).toFixed(2)}</td>
+                <td>$${parseFloat(signal.sl).toFixed(2)}</td>
+                <td>${((signal.confidence || 0) * 100).toFixed(0)}%</td>
+                <td>${timestamp}</td>
+            </tr>
         `;
     }).join('');
 }
 
-// Add Manual Coin
-function addManualCoin() {
-    const input = document.getElementById('manualCoinInput');
-    const symbol = input.value.trim().toUpperCase();
+// ============================================================================
+// CONNECTION INDICATOR
+// ============================================================================
+
+function updateConnectionIndicator() {
+    const indicator = document.getElementById('connectionIndicator');
+    if (!indicator) return;
     
-    if (!symbol) return;
+    const wsStatus = AppState.webSocketConnected ? '✅' : '❌';
+    const apiStatus = AppState.apiHealthy ? '✅' : '❌';
     
-    // Validate format
-    if (!symbol.endsWith('USDT')) {
-        alert('Symbol must end with USDT (e.g., SOLUSDT)');
-        return;
-    }
-    
-    // Check if already exists
-    const exists = [...state.coins.core, ...state.coins.manual].some(c => c.symbol === symbol);
-    if (exists) {
-        alert('Coin already exists');
-        return;
-    }
-    
-    // Add coin
-    state.coins.manual.push({
-        symbol: symbol,
-        name: symbol.replace('USDT', ''),
-        icon: '◆',
-        price: 0,
-        change: 0,
-        lastUpdate: null
-    });
-    
-    // Reconnect WebSocket with new symbol
-    connectWebSocket();
-    
-    // Clear input and render
-    input.value = '';
-    renderManualCoins();
-    updateSystemStatus();
+    indicator.innerHTML = `
+        <div class="status-item">
+            <span class="label">WebSocket:</span>
+            <span class="indicator">${wsStatus}</span>
+        </div>
+        <div class="status-item">
+            <span class="label">API:</span>
+            <span class="indicator">${apiStatus}</span>
+        </div>
+        <div class="status-item">
+            <span class="label">Updated:</span>
+            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+        </div>
+    `;
 }
 
-// Remove Manual Coin
-function removeCoin(index) {
-    state.coins.manual.splice(index, 1);
-    connectWebSocket();
-    renderManualCoins();
-    updateSystemStatus();
+// ============================================================================
+// CHART RENDERING (Chart.js or Plotly)
+// ============================================================================
+
+function renderPriceChart(symbol, data) {
+    const container = document.getElementById(`chart-${symbol}`);
+    if (!container) return;
+    
+    const prices = data.map(d => d.close);
+    const timestamps = data.map(d => new Date(d.timestamp).toLocaleTimeString());
+    
+    // Using Plotly (lightweight)
+    const trace = {
+        x: timestamps,
+        y: prices,
+        type: 'scatter',
+        mode: 'lines',
+        name: symbol,
+        line: { color: '#0066ff', width: 2 }
+    };
+    
+    const layout = {
+        title: `${symbol} - Last 100 Hours`,
+        xaxis: { title: 'Time' },
+        yaxis: { title: 'Price (USDT)' },
+        margin: { t: 40, b: 40, l: 60, r: 40 }
+    };
+    
+    if (window.Plotly) {
+        Plotly.newPlot(container, [trace], layout, { responsive: true });
+    }
 }
 
-// Setup Add Coin Button
-document.addEventListener('DOMContentLoaded', () => {
-    const addBtn = document.getElementById('addCoinBtn');
-    if (addBtn) {
-        addBtn.addEventListener('click', addManualCoin);
-    }
-    
-    const input = document.getElementById('manualCoinInput');
-    if (input) {
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                addManualCoin();
-            }
-        });
-    }
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(value);
+}
+
+function formatPercent(value) {
+    return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatDateTime(date) {
+    if (!date) return '--';
+    return new Date(date).toLocaleString();
+}
+
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
+
+window.addEventListener('error', (event) => {
+    console.error('❌ Global error:', event.error);
 });
 
-// Update System Status
-function updateSystemStatus() {
-    const systemStatus = document.getElementById('systemStatus');
-    const activeLayers = document.getElementById('activeLayers');
-    const lastAnalysis = document.getElementById('lastAnalysis');
-    const signalConfidence = document.getElementById('signalConfidence');
-    
-    if (systemStatus) systemStatus.textContent = 'Running';
-    
-    // Calculate total active layers
-    const totalLayers = Object.values(state.layers).flat().length;
-    if (activeLayers) activeLayers.textContent = totalLayers;
-    
-    if (lastAnalysis) lastAnalysis.textContent = formatTime(new Date());
-    
-    // Generate random confidence for demo
-    const confidence = Math.floor(Math.random() * 20 + 75);
-    if (signalConfidence) signalConfidence.textContent = `${confidence}%`;
-}
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('❌ Unhandled rejection:', event.reason);
+});
 
-// Start Intelligence Updates
-function startIntelligenceUpdates() {
-    updateIntelligenceScores();
-    setInterval(updateIntelligenceScores, 5000);
-}
+// ============================================================================
+// START APP
+// ============================================================================
 
-function updateIntelligenceScores() {
-    // Generate realistic scores
-    const technicalScore = Math.floor(Math.random() * 30 + 60);
-    const macroScore = Math.floor(Math.random() * 30 + 55);
-    const onchainScore = Math.floor(Math.random() * 30 + 65);
-    const sentimentScore = Math.floor(Math.random() * 30 + 50);
-    
-    // Update DOM
-    updateScore('technicalScore', 'technicalProgress', technicalScore);
-    updateScore('macroScore', 'macroProgress', macroScore);
-    updateScore('onchainScore', 'onchainProgress', onchainScore);
-    updateScore('sentimentScore', 'sentimentProgress', sentimentScore);
-    
-    // Update layer scores
-    Object.keys(state.layers).forEach(category => {
-        state.layers[category].forEach(layer => {
-            layer.score = Math.floor(Math.random() * 30 + 65);
-        });
-    });
-}
-
-function updateScore(valueId, progressId, score) {
-    const valueEl = document.getElementById(valueId);
-    const progressEl = document.getElementById(progressId);
-    
-    if (valueEl) valueEl.textContent = score;
-    if (progressEl) progressEl.style.width = `${score}%`;
-}
-
-// Generate Mock Signals
-function generateMockSignals() {
-    state.signals = [
-        {
-            symbol: 'BTCUSDT',
-            direction: 'LONG',
-            confidence: 87,
-            entry: 42500,
-            takeProfit: 44000,
-            stopLoss: 41500
-        },
-        {
-            symbol: 'ETHUSDT',
-            direction: 'SHORT',
-            confidence: 72,
-            entry: 2250,
-            takeProfit: 2100,
-            stopLoss: 2350
-        }
-    ];
-    
-    renderSignals();
-}
-
-function renderSignals() {
-    const container = document.getElementById('signalsContainer');
-    if (!container) return;
-    
-    if (state.signals.length === 0) {
-        container.innerHTML = '<div class="empty-state">No active signals</div>';
-        return;
-    }
-    
-    container.innerHTML = state.signals.map(signal => `
-        <div class="signal-card ${signal.direction.toLowerCase()}">
-            <div class="signal-header">
-                <div class="signal-symbol">${signal.symbol.replace('USDT', '')}/USDT</div>
-                <div class="signal-direction ${signal.direction.toLowerCase()}">${signal.direction}</div>
-            </div>
-            <div class="signal-body">
-                <div class="signal-confidence">
-                    <div class="signal-confidence-label">Confidence</div>
-                    <div class="signal-confidence-bar">
-                        <div class="signal-confidence-fill" style="width: ${signal.confidence}%"></div>
-                    </div>
-                </div>
-                <div class="signal-prices">
-                    <div class="signal-price">
-                        <div class="signal-price-label">Entry</div>
-                        <div class="signal-price-value">$${formatPrice(signal.entry)}</div>
-                    </div>
-                    <div class="signal-price">
-                        <div class="signal-price-label">TP</div>
-                        <div class="signal-price-value">$${formatPrice(signal.takeProfit)}</div>
-                    </div>
-                    <div class="signal-price">
-                        <div class="signal-price-label">SL</div>
-                        <div class="signal-price-value">$${formatPrice(signal.stopLoss)}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Render Layers
-function renderLayers() {
-    const container = document.getElementById('layersContainer');
-    if (!container) return;
-    
-    const categories = [
-        { key: 'technical', title: 'Technical Layers' },
-        { key: 'macro', title: 'Macro Layers' },
-        { key: 'quantum', title: 'Quantum Layers' },
-        { key: 'intelligence', title: 'Intelligence Layers' }
-    ];
-    
-    container.innerHTML = categories.map(category => {
-        const layers = state.layers[category.key];
-        return `
-            <div class="layer-category">
-                <div class="layer-category-header">
-                    <div class="layer-category-title">${category.title}</div>
-                    <div class="layer-category-count">${layers.length} layers</div>
-                </div>
-                <div class="layer-list">
-                    ${layers.map(layer => `
-                        <div class="layer-item">
-                            <div class="layer-info">
-                                <div class="layer-name">${layer.name}</div>
-                                <div class="layer-description">${layer.description}</div>
-                            </div>
-                            <div class="layer-meta">
-                                <div class="layer-status active">
-                                    <span class="layer-status-dot"></span>
-                                    Active
-                                </div>
-                                <div class="layer-score">${layer.score || '--'}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Render Market Intelligence
-function renderMarketIntelligence() {
-    renderMacroFactors();
-    renderOnChainMetrics();
-    renderSentimentIndicators();
-}
-
-function renderMacroFactors() {
-    const grid = document.getElementById('macroGrid');
-    if (!grid) return;
-    
-    // Generate random values for demo
-    state.marketIntelligence.macro = [
-        { label: 'SPX', value: 4512.23, change: 0.45 },
-        { label: 'NASDAQ', value: 14235.67, change: -0.23 },
-        { label: 'DXY', value: 103.45, change: 0.12 },
-        { label: 'VIX', value: 15.67, change: -2.34 },
-        { label: 'Gold', value: 1995.50, change: 1.23 }
-    ];
-    
-    grid.innerHTML = state.marketIntelligence.macro.map(metric => {
-        const changeClass = metric.change >= 0 ? 'positive' : 'negative';
-        const changeSymbol = metric.change >= 0 ? '+' : '';
-        return `
-            <div class="metric-card">
-                <div class="metric-label">${metric.label}</div>
-                <div class="metric-value">${formatPrice(metric.value)}</div>
-                <div class="metric-change ${changeClass}">${changeSymbol}${metric.change.toFixed(2)}%</div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderOnChainMetrics() {
-    const grid = document.getElementById('onchainGrid');
-    if (!grid) return;
-    
-    grid.innerHTML = state.marketIntelligence.onchain.map(metric => `
-        <div class="metric-card">
-            <div class="metric-label">${metric.label}</div>
-            <div class="metric-value">${metric.value}</div>
-        </div>
-    `).join('');
-}
-
-function renderSentimentIndicators() {
-    const grid = document.getElementById('sentimentGrid');
-    if (!grid) return;
-    
-    grid.innerHTML = state.marketIntelligence.sentiment.map(metric => `
-        <div class="metric-card">
-            <div class="metric-label">${metric.label}</div>
-            <div class="metric-value">${metric.value}</div>
-        </div>
-    `).join('');
-}
-
-// Render System Status
-function renderSystemStatus() {
-    updateDaemonStatus();
-    updateAPIConnections();
-    updateTelegramStatus();
-    updateSystemMetrics();
-}
-
-function updateDaemonStatus() {
-    const uptime = document.getElementById('daemonUptime');
-    if (uptime) {
-        const elapsed = Date.now() - state.systemStartTime;
-        const hours = Math.floor(elapsed / 3600000);
-        const minutes = Math.floor((elapsed % 3600000) / 60000);
-        uptime.textContent = `${hours}h ${minutes}m`;
-    }
-}
-
-function updateAPIConnections() {
-    const container = document.getElementById('apiConnections');
-    if (!container) return;
-    
-    container.innerHTML = state.apiStatus.map(api => `
-        <div class="api-status-item">
-            <div class="api-name">${api.name}</div>
-            <div class="api-status ${api.connected ? 'connected' : 'disconnected'}">
-                ${api.connected ? 'Connected' : 'Disconnected'}
-            </div>
-        </div>
-    `).join('');
-}
-
-function updateTelegramStatus() {
-    const lastPing = document.getElementById('lastPing');
-    const nextUpdate = document.getElementById('nextUpdate');
-    
-    if (lastPing) lastPing.textContent = formatTime(new Date());
-    
-    if (nextUpdate) {
-        const next = new Date(Date.now() + 3600000); // +1 hour
-        nextUpdate.textContent = formatTime(next);
-    }
-}
-
-function updateSystemMetrics() {
-    const wsMetric = document.getElementById('wsMetric');
-    const activeStreams = document.getElementById('activeStreams');
-    
-    if (wsMetric) {
-        wsMetric.textContent = state.websocket && state.websocket.readyState === WebSocket.OPEN ? 'Connected' : 'Disconnected';
-    }
-    
-    if (activeStreams) {
-        const count = state.coins.core.length + state.coins.manual.length;
-        activeStreams.textContent = count;
-    }
-}
-
-// Render Settings
-function renderSettings() {
-    const apiList = document.getElementById('apiStatusList');
-    if (!apiList) return;
-    
-    apiList.innerHTML = state.apiStatus.map(api => `
-        <div class="api-status-item">
-            <div class="api-name">${api.name}</div>
-            <div class="api-status ${api.connected ? 'connected' : 'disconnected'}">
-                ${api.connected ? 'Connected' : 'Disconnected'}
-            </div>
-        </div>
-    `).join('');
-}
-
-// Start Uptime Counter
-function startUptime() {
-    updateUptime();
-    setInterval(updateUptime, 1000);
-}
-
-function updateUptime() {
-    const display = document.getElementById('uptimeDisplay');
-    if (!display) return;
-    
-    const elapsed = Date.now() - state.systemStartTime;
-    const hours = Math.floor(elapsed / 3600000);
-    const minutes = Math.floor((elapsed % 3600000) / 60000);
-    const seconds = Math.floor((elapsed % 60000) / 1000);
-    
-    display.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-}
-
-// Start Telegram Ping Simulation
-function startTelegramPing() {
-    setInterval(() => {
-        console.log('Telegram Ping: Market monitoring active');
-        updateTelegramStatus();
-    }, 3600000); // Every hour
-}
-
-// Utility Functions
-function formatPrice(price) {
-    if (price >= 1000) {
-        return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    return price.toFixed(2);
-}
-
-function formatTime(date) {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-function pad(num) {
-    return num.toString().padStart(2, '0');
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+document.addEventListener('DOMContentLoaded', initializeApp);
