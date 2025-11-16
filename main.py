@@ -28,7 +28,34 @@ from dotenv import load_dotenv
 import threading
 import queue
 import numpy as np
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'OK')
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def log_message(self, format, *args):
+        pass  # Suppress logging
+
+def start_health_server():
+    PORT = int(os.getenv('PORT', 8000))
+    server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    print(f"✅ Health server running on port {PORT}")
+
+# In __main__:
+if __name__ == '__main__':
+    start_health_server()  # Start health check server
+    # ... rest of code
 load_dotenv()
 
 # ============================================================================
