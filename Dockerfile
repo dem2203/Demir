@@ -1,4 +1,3 @@
-cat > Dockerfile << 'DOCKERFILE_END'
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -19,4 +18,3 @@ ENV PYTHONDONTWRITEBYTECODE=1
 RUN mkdir -p logs
 
 CMD ["python", "main.py"]
-DOCKERFILE_END
