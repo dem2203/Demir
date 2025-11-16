@@ -920,6 +920,27 @@ def get_recent():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # ============================================================================
+# STATIC FILES SERVING ROUTES - CSS & JS FROM TEMPLATES
+# ============================================================================
+
+@app.route('/style.css')
+def serve_css():
+    """Serve style.css from templates folder"""
+    try:
+        return send_from_directory(app.template_folder, 'style.css', mimetype='text/css')
+    except Exception as e:
+        logger.error(f"CSS serve error: {e}")
+        return "/* CSS not found */", 404
+
+@app.route('/app.js')
+def serve_js():
+    """Serve app.js from templates folder"""
+    try:
+        return send_from_directory(app.template_folder, 'app.js', mimetype='application/javascript')
+    except Exception as e:
+        logger.error(f"JS serve error: {e}")
+        return "// JS not found", 404
+# ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
