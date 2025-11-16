@@ -1,8 +1,3 @@
-# ============================================================================
-# RAILWAY.YML - Deployment Configuration
-# ============================================================================
-
-RAILWAY_YML_CONTENT = """
 version: 0.1.0
 
 services:
@@ -11,46 +6,59 @@ services:
       context: .
       dockerfile: Dockerfile
     
+    # ✅ CRITICAL FIX: Explicit start command
     start: python main.py
     
+    # ✅ PORT MUST be set
     environment:
+      PORT: 8000
+      
       # API Keys (set in Railway dashboard)
-      - ALPHA_VANTAGE_API_KEY
-      - BINANCE_API_KEY
-      - BINANCE_API_SECRET
-      - COINGLASS_API_KEY
-      - CRYPTOALERT_API_KEY
-      - DEXCHECK_API_KEY
-      - FRED_API_KEY
-      - NEWSAPI_KEY
-      - TELEGRAM_TOKEN
-      - TELEGRAM_CHAT_ID
-      - TELEGRAM_LOG_CHAT_ID
-      - TWITTER_BEARER_TOKEN
-      - BYBIT_API_KEY
-      - BYBIT_API_SECRET
-      - COINBASE_API_KEY
-      - COINBASE_API_SECRET
-      - CoinMarketCap_API_KEY
-      - DATABASE_URL
-      - PYTHON_VERSION=3.11
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+      BINANCE_API_KEY: ${BINANCE_API_KEY}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET}
+      COINGLASS_API_KEY: ${COINGLASS_API_KEY}
+      CRYPTOALERT_API_KEY: ${CRYPTOALERT_API_KEY}
+      DEXCHECK_API_KEY: ${DEXCHECK_API_KEY}
+      FRED_API_KEY: ${FRED_API_KEY}
+      NEWSAPI_KEY: ${NEWSAPI_KEY}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TELEGRAM_LOG_CHAT_ID: ${TELEGRAM_LOG_CHAT_ID}
+      TWITTER_BEARER_TOKEN: ${TWITTER_BEARER_TOKEN}
+      BYBIT_API_KEY: ${BYBIT_API_KEY}
+      BYBIT_API_SECRET: ${BYBIT_API_SECRET}
+      COINBASE_API_KEY: ${COINBASE_API_KEY}
+      COINBASE_API_SECRET: ${COINBASE_API_SECRET}
+      CoinMarketCap_API_KEY: ${CoinMarketCap_API_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      
+      PYTHON_VERSION: 3.11
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
     
+    # ✅ CRITICAL: Health check configuration
     healthCheck:
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+      # ✅ Health check endpoint
+      command: curl -f http://localhost:8000/health || exit 1
 
-  database:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=ai_trader
-      - POSTGRES_PASSWORD=$DATABASE_PASSWORD
-      - POSTGRES_DB=demir_ai
-    
-    volumes:
-      - data:/var/lib/postgresql/data
+  # ✅ OPTIONAL: Separate PostgreSQL service (if not using Railway's managed DB)
+  # database:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: demir_ai
+  #   
+  #   volumes:
+  #     - data:/var/lib/postgresql/data
+  #   
+  #   ports:
+  #     - "5432:5432"
 
-volumes:
-  data:
-"""
+# volumes:
+#   data:
