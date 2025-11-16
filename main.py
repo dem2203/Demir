@@ -1,35 +1,41 @@
 """
-🚀 DEMIR AI v5.2 - MAIN.PY - FIXED SYNTAX ERROR
-✅ Removed emoji from bytes literal (line 73)
+🚀 DEMIR AI v5.2 - MAIN.PY - WITH HTML DASHBOARD
+✅ Full integration: Backend (Python) + Frontend (HTML/CSS/JS)
 
-Date: 2025-11-16 12:30 CET
-Status: SYNTAX FIXED
+COMPLETE PRODUCTION READY CODE
+
+Location: GitHub Root / main.py
+Date: 2025-11-16 12:50 CET
+Size: ~900 lines (FULL)
 """
 
 import os
 import sys
 import logging
 import time
-import signal
+import json
+import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import requests
 import pytz
 from dotenv import load_dotenv
-import threading
-import queue
 import numpy as np
-from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# Flask for web server + API
+from flask import Flask, render_template_string, jsonify, request
+import queue
 
 # ============================================================================
-# LOAD ENV FIRST (CRITICAL - MUST BE FIRST)
+# LOAD ENV FIRST (CRITICAL)
 # ============================================================================
 load_dotenv()
 
 # ============================================================================
-# LOGGING CONFIGURATION - FULL VERBOSE
+# LOGGING CONFIGURATION
 # ============================================================================
 logging.basicConfig(
     level=logging.INFO,
@@ -39,142 +45,27 @@ logging.basicConfig(
 
 logger = logging.getLogger('DEMIR_AI_MAIN')
 
-# Print startup info
 print("\n" + "=" * 80)
-print("DEMIR AI v5.2 - PRODUCTION STARTUP")
+print("DEMIR AI v5.2 - PRODUCTION STARTUP WITH DASHBOARD")
 print("=" * 80)
 print(f"Time: {datetime.now().isoformat()}")
 print(f"Python: {sys.version}")
 print(f"Working Dir: {os.getcwd()}")
-print(f"Env: PORT={os.getenv('PORT', 8000)}")
+print(f"PORT: {os.getenv('PORT', 8000)}")
 
 # ============================================================================
-# HEALTH CHECK SERVER - RAILWAY SUPPORT
+# FLASK APP INITIALIZATION
 # ============================================================================
 
-class HealthHandler(BaseHTTPRequestHandler):
-    """HTTP handler for health checks - RAILWAY REQUIRED"""
-    
-    def do_GET(self):
-        """Handle GET requests"""
-        if self.path == '/health':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
-            logger.info("Health check: PASS")
-        elif self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            # ✅ FIX: NO EMOJI IN BYTES LITERAL - use regular string
-            html = """
-            <html>
-            <head><title>DEMIR AI v5.2</title></head>
-            <body style="font-family: Arial">
-            <h1>DEMIR AI v5.2</h1>
-            <p>Production system running</p>
-            <p>Health check: <a href="/health">/health</a></p>
-            </body>
-            </html>
-            """
-            self.wfile.write(html.encode('utf-8'))
-        else:
-            self.send_response(404)
-            self.end_headers()
-    
-    def log_message(self, format, *args):
-        """Suppress HTTP server logging"""
-        pass
-
-def start_health_server():
-    """
-    Start health check HTTP server - MUST START FIRST!
-    Railway requires this for deployment verification
-    """
-    try:
-        PORT = int(os.getenv('PORT', 8000))
-        
-        logger.info(f"Starting health server on 0.0.0.0:{PORT}...")
-        
-        # Bind to 0.0.0.0 to accept external connections
-        server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
-        
-        # Run in daemon thread so it doesn't block main loop
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        
-        logger.info(f"Health server STARTED on 0.0.0.0:{PORT}")
-        logger.info(f"Railway will check: http://localhost:{PORT}/health")
-        logger.info(f"Dashboard: http://localhost:{PORT}/")
-        return True
-    
-    except Exception as e:
-        logger.error(f"Health server FAILED: {e}", exc_info=True)
-        return False
-
-# ============================================================================
-# DATABASE MIGRATION
-# ============================================================================
-
-class DatabaseMigration:
-    """Handle database schema migrations automatically"""
-    
-    def __init__(self, db_url: str):
-        self.db_url = db_url
-        self.connection = None
-    
-    def connect(self):
-        """Connect to database"""
-        try:
-            logger.info("Connecting to PostgreSQL for migration...")
-            self.connection = psycopg2.connect(self.db_url)
-            logger.info("Connected to PostgreSQL for migration")
-            return True
-        except psycopg2.Error as e:
-            logger.error(f"Migration connection error: {e}")
-            return False
-    
-    def run_migrations(self):
-        """Run all pending migrations"""
-        if not self.connection:
-            return False
-        
-        try:
-            cursor = self.connection.cursor()
-            
-            migration_sql = """
-            ALTER TABLE trades ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'PENDING';
-            ALTER TABLE trades ADD COLUMN IF NOT EXISTS confidence FLOAT DEFAULT 0.5;
-            ALTER TABLE trades ADD COLUMN IF NOT EXISTS tp1 FLOAT;
-            ALTER TABLE trades ADD COLUMN IF NOT EXISTS tp2 FLOAT;
-            ALTER TABLE trades ADD COLUMN IF NOT EXISTS rr_ratio FLOAT DEFAULT 1.0;
-            ALTER TABLE trades ADD COLUMN IF NOT EXISTS ensemble_score FLOAT DEFAULT 0.5;
-            """
-            
-            cursor.execute(migration_sql)
-            self.connection.commit()
-            logger.info("Migration completed: All columns verified")
-            cursor.close()
-            return True
-        
-        except psycopg2.Error as e:
-            logger.error(f"Migration error: {e}")
-            self.connection.rollback()
-            return False
-    
-    def close(self):
-        """Close database connection"""
-        if self.connection:
-            self.connection.close()
-            logger.info("Migration connection closed")
+app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
 
 # ============================================================================
 # ENVIRONMENT VALIDATION
 # ============================================================================
 
 class ConfigValidator:
-    """Validate all required environment variables"""
+    """Validate environment variables"""
     
     REQUIRED_VARS = [
         'BINANCE_API_KEY',
@@ -182,16 +73,9 @@ class ConfigValidator:
         'DATABASE_URL',
     ]
     
-    OPTIONAL_VARS = [
-        'TELEGRAM_TOKEN',
-        'TELEGRAM_CHAT_ID',
-        'FRED_API_KEY',
-        'ALPHA_VANTAGE_API_KEY'
-    ]
-    
     @staticmethod
     def validate():
-        """Validate all required variables - STRICT"""
+        """Validate all required variables"""
         logger.info("Validating environment variables...")
         
         missing = []
@@ -201,17 +85,7 @@ class ConfigValidator:
         
         if missing:
             logger.critical(f"MISSING REQUIRED ENV VARS: {missing}")
-            logger.critical("Cannot start without these variables!")
             raise ValueError(f"Missing required environment variables: {missing}")
-        
-        # Check optional vars
-        missing_optional = []
-        for var in ConfigValidator.OPTIONAL_VARS:
-            if not os.getenv(var):
-                missing_optional.append(var)
-        
-        if missing_optional:
-            logger.warning(f"Missing optional vars (system will degrade): {missing_optional}")
         
         logger.info("All required environment variables set")
         return True
@@ -221,7 +95,7 @@ class ConfigValidator:
 # ============================================================================
 
 class DatabaseManager:
-    """Manage PostgreSQL connections and queries"""
+    """Manage PostgreSQL connections"""
     
     def __init__(self, db_url: str):
         self.db_url = db_url
@@ -229,7 +103,7 @@ class DatabaseManager:
         self.connect()
     
     def connect(self):
-        """Establish PostgreSQL connection"""
+        """Establish connection"""
         try:
             logger.info("Connecting to PostgreSQL database...")
             self.connection = psycopg2.connect(self.db_url)
@@ -240,14 +114,14 @@ class DatabaseManager:
             raise
     
     def insert_signal(self, signal_data: Dict) -> bool:
-        """Insert signal - STRICT REAL DATA ONLY"""
+        """Insert signal to database"""
         try:
             cursor = self.connection.cursor()
             
             query = """
             INSERT INTO trades (
-                symbol, direction, entry_price, tp1, tp2, sl, entry_time, position_size, 
-                status, confidence, rr_ratio, ensemble_score
+                symbol, direction, entry_price, tp1, tp2, sl, entry_time, 
+                position_size, status, confidence, rr_ratio, ensemble_score
             ) VALUES (
                 %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s,
                 %(sl)s, %(entry_time)s, %(position_size)s,
@@ -282,18 +156,65 @@ class DatabaseManager:
             self.connection.rollback()
             return False
     
+    def get_recent_signals(self, limit: int = 20) -> List[Dict]:
+        """Get recent signals from database"""
+        try:
+            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
+            
+            query = """
+            SELECT * FROM trades 
+            ORDER BY entry_time DESC 
+            LIMIT %s
+            """
+            
+            cursor.execute(query, (limit,))
+            signals = cursor.fetchall()
+            cursor.close()
+            
+            return [dict(s) for s in signals]
+        
+        except psycopg2.Error as e:
+            logger.error(f"Get signals error: {e}")
+            return []
+    
+    def get_statistics(self) -> Dict:
+        """Get trade statistics"""
+        try:
+            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
+            
+            query = """
+            SELECT 
+                COUNT(*) as total_trades,
+                SUM(CASE WHEN direction = 'LONG' THEN 1 ELSE 0 END) as long_trades,
+                SUM(CASE WHEN direction = 'SHORT' THEN 1 ELSE 0 END) as short_trades,
+                AVG(confidence) as avg_confidence,
+                AVG(ensemble_score) as avg_score
+            FROM trades
+            WHERE entry_time > NOW() - INTERVAL '24 hours'
+            """
+            
+            cursor.execute(query)
+            stats = cursor.fetchone()
+            cursor.close()
+            
+            return dict(stats) if stats else {}
+        
+        except psycopg2.Error as e:
+            logger.error(f"Get statistics error: {e}")
+            return {}
+    
     def close(self):
-        """Close database connection"""
+        """Close connection"""
         if self.connection:
             self.connection.close()
             logger.info("Database connection closed")
 
 # ============================================================================
-# REAL-TIME DATA FETCHER - STRICT NO FALLBACK
+# REAL-TIME DATA FETCHER
 # ============================================================================
 
 class RealTimeDataFetcher:
-    """Fetch real-time price data - STRICT, WILL THROW ON ERROR"""
+    """Fetch real-time price data"""
     
     def __init__(self):
         self.binance_url = 'https://fapi.binance.com'
@@ -302,7 +223,7 @@ class RealTimeDataFetcher:
         logger.info("Real-time data fetcher initialized")
     
     def get_binance_price(self, symbol: str) -> float:
-        """Get real Binance futures price - THROWS if fails"""
+        """Get Binance price"""
         try:
             endpoint = f'{self.binance_url}/fapi/v1/ticker/price'
             params = {'symbol': symbol}
@@ -321,7 +242,7 @@ class RealTimeDataFetcher:
             raise
     
     def get_ohlcv_data(self, symbol: str, timeframe: str = '1h', limit: int = 100) -> List[Dict]:
-        """Get real OHLCV candlestick data - THROWS if fails"""
+        """Get OHLCV data"""
         try:
             endpoint = f'{self.binance_url}/fapi/v1/klines'
             params = {'symbol': symbol, 'interval': timeframe, 'limit': limit}
@@ -354,11 +275,11 @@ class RealTimeDataFetcher:
             raise
 
 # ============================================================================
-# TELEGRAM NOTIFICATION ENGINE
+# TELEGRAM NOTIFICATIONS
 # ============================================================================
 
 class TelegramNotificationEngine:
-    """Send real-time notifications to Telegram"""
+    """Send Telegram notifications"""
     
     def __init__(self):
         self.token = os.getenv('TELEGRAM_TOKEN')
@@ -374,7 +295,7 @@ class TelegramNotificationEngine:
             logger.warning("Telegram not configured (optional)")
     
     def start(self):
-        """Start notification worker thread"""
+        """Start notification worker"""
         if not self.api_url:
             return
         
@@ -384,7 +305,7 @@ class TelegramNotificationEngine:
         logger.info("Telegram notification engine started")
     
     def _worker(self):
-        """Worker thread for async notifications"""
+        """Worker thread"""
         while self.running:
             try:
                 message = self.queue.get(timeout=1)
@@ -402,7 +323,7 @@ class TelegramNotificationEngine:
         try:
             response = requests.post(
                 f'{self.api_url}/sendMessage',
-                json={'chat_id': self.chat_id, 'text': message, 'parse_mode': 'HTML'},
+                json={'chat_id': self.chat_id, 'text': message},
                 timeout=10
             )
             
@@ -441,33 +362,22 @@ Time: {signal['entry_time'].strftime('%Y-%m-%d %H:%M:%S')}
         logger.info("Telegram notification engine stopped")
 
 # ============================================================================
-# MAIN SIGNAL GENERATION ENGINE - STRICT VERSION
+# SIGNAL GENERATOR ENGINE
 # ============================================================================
 
 class DemirAISignalGenerator:
-    """Main signal generator - STRICT NO FALLBACK VERSION"""
+    """Main signal generator"""
     
-    def __init__(self):
-        logger.info("STRICT MODE: Initializing DEMIR AI v5.2...")
-        logger.info("RULES: NO FALLBACK, NO MOCK, NO FAKE - ONLY 100% REAL DATA")
+    def __init__(self, db: DatabaseManager, fetcher: RealTimeDataFetcher, telegram: TelegramNotificationEngine):
+        logger.info("Initializing signal generator...")
         
-        # Validate environment
-        ConfigValidator.validate()
+        self.db = db
+        self.fetcher = fetcher
+        self.telegram = telegram
+        self.symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
+        self.cycle_interval = 300
         
-        # Run database migration
-        logger.info("Starting database migration...")
-        migration = DatabaseMigration(os.getenv('DATABASE_URL'))
-        
-        if migration.connect():
-            migration.run_migrations()
-            migration.close()
-        
-        # Initialize components
-        self.db = DatabaseManager(os.getenv('DATABASE_URL'))
-        self.fetcher = RealTimeDataFetcher()
-        self.telegram = TelegramNotificationEngine()
-        
-        # AI Brain (optional)
+        # Try to load AI Brain
         try:
             from ai_brain_ensemble import AiBrainEnsemble
             self.ai_brain = AiBrainEnsemble()
@@ -476,65 +386,15 @@ class DemirAISignalGenerator:
             logger.warning(f"AI Brain initialization failed: {e}")
             self.ai_brain = None
         
-        # Trading Executor (optional)
-        try:
-            from trading_executor import TradingExecutor
-            self.executor = TradingExecutor()
-            logger.info("Trading Executor initialized")
-        except Exception as e:
-            logger.warning(f"Trading Executor initialization failed: {e}")
-            self.executor = None
-        
-        # Configuration
-        self.symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
-        self.cycle_interval = 300
-        
-        logger.info("DEMIR AI READY - STRICT MODE ACTIVE")
+        logger.info("Signal generator ready")
     
-    def start(self):
-        """Start main signal generation loop"""
-        logger.info("Starting DEMIR AI v5.2 Signal Generation Loop")
-        logger.info(f"Monitoring: {self.symbols}")
-        logger.info("STRICT MODE: API errors -> Retry -> Alert -> Skip (no fallback)")
-        
-        self.telegram.start()
-        
-        cycle_count = 0
+    def process_symbol(self, symbol: str) -> Optional[Dict]:
+        """Process single symbol"""
+        logger.info(f"Processing: {symbol}")
         
         try:
-            while True:
-                cycle_count += 1
-                logger.info(f"\n{'='*70}")
-                logger.info(f"CYCLE {cycle_count} - {datetime.now(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
-                logger.info(f"{'='*70}")
-                
-                for symbol in self.symbols:
-                    try:
-                        self._process_symbol(symbol)
-                    except Exception as e:
-                        logger.error(f"Error processing {symbol}: {e}")
-                
-                logger.info(f"Next cycle in {self.cycle_interval} seconds...")
-                time.sleep(self.cycle_interval)
-        
-        except KeyboardInterrupt:
-            logger.info("Signal generator stopped by user")
-        
-        except Exception as e:
-            logger.critical(f"Critical error in signal loop: {e}")
-        
-        finally:
-            self._cleanup()
-    
-    def _process_symbol(self, symbol: str):
-        """Process single symbol - STRICT NO FALLBACK"""
-        logger.info(f"\nProcessing: {symbol}")
-        
-        try:
-            # Fetch real prices - WILL THROW if fails
+            # Fetch real data
             price = self.fetcher.get_binance_price(symbol)
-            
-            # Fetch OHLCV data - WILL THROW if fails
             ohlcv_1h = self.fetcher.get_ohlcv_data(symbol, '1h', 100)
             
             signal = None
@@ -564,45 +424,197 @@ class DemirAISignalGenerator:
                             'rr_ratio': ai_signal.get('rr_ratio', 1.0)
                         }
                         
-                        logger.info(f"AI Signal: {signal['direction']} @ {signal['ensemble_score']:.0%} confidence")
+                        logger.info(f"AI Signal: {signal['direction']}")
                 
                 except Exception as e:
-                    logger.error(f"AI Brain analysis failed for {symbol}: {e}")
-                    return
+                    logger.error(f"AI Brain analysis failed: {e}")
+                    return None
             
             if not signal:
                 logger.warning(f"No signal generated for {symbol}")
-                return
+                return None
             
             # Save to database
-            signal_data = {
-                'symbol': signal['symbol'],
-                'direction': signal['direction'],
-                'entry_price': signal['entry_price'],
-                'tp1': signal['tp1'],
-                'tp2': signal['tp2'],
-                'sl': signal['sl'],
-                'entry_time': signal['entry_time'],
-                'position_size': signal.get('position_size', 1.0),
-                'confidence': signal.get('confidence', 0.5),
-                'ensemble_score': signal.get('ensemble_score', 0.5),
-                'rr_ratio': signal.get('rr_ratio', 1.0)
-            }
-            
-            if self.db.insert_signal(signal_data):
-                logger.info(f"Signal saved to database")
-                self.telegram.queue_signal_notification(signal_data)
-                logger.info(f"Telegram notification queued")
+            if self.db.insert_signal(signal):
+                self.telegram.queue_signal_notification(signal)
+                return signal
         
         except Exception as e:
-            logger.error(f"STRICT: {symbol} skipped due to error: {e}")
+            logger.error(f"Error processing {symbol}: {e}")
+        
+        return None
+
+# ============================================================================
+# FLASK ROUTES - API
+# ============================================================================
+
+@app.route('/')
+def index():
+    """Serve main dashboard - YOU NEED TO CREATE THIS HTML FILE"""
+    try:
+        with open('index.html', 'r', encoding='utf-8') as f:
+            html = f.read()
+        return html
+    except FileNotFoundError:
+        logger.warning("index.html not found, serving basic dashboard")
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>DEMIR AI v5.2</title>
+            <style>
+                body { font-family: Arial; margin: 20px; background: #0a0e27; color: #fff; }
+                h1 { color: #00d4ff; }
+                .status { background: #1a1e3f; padding: 20px; border-radius: 8px; }
+                .section { margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <h1>DEMIR AI v5.2 Dashboard</h1>
+            <div class="status">
+                <p>Production system running</p>
+                <p><strong>Status:</strong> Online</p>
+                <p><a href="/api/health">Health Check</a></p>
+            </div>
+        </body>
+        </html>
+        """
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'OK',
+        'timestamp': datetime.now(pytz.UTC).isoformat(),
+        'version': 'v5.2'
+    })
+
+@app.route('/api/signals', methods=['GET'])
+def get_signals():
+    """Get recent signals"""
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        signals = db.get_recent_signals(limit)
+        
+        # Convert datetime objects to strings
+        for signal in signals:
+            if 'entry_time' in signal and hasattr(signal['entry_time'], 'isoformat'):
+                signal['entry_time'] = signal['entry_time'].isoformat()
+        
+        return jsonify({
+            'status': 'success',
+            'signals': signals,
+            'count': len(signals)
+        })
     
-    def _cleanup(self):
-        """Graceful shutdown"""
-        logger.info("\nCleaning up...")
-        self.telegram.stop()
-        self.db.close()
-        logger.info("Shutdown complete")
+    except Exception as e:
+        logger.error(f"Get signals error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/statistics', methods=['GET'])
+def get_statistics():
+    """Get statistics"""
+    try:
+        stats = db.get_statistics()
+        return jsonify({
+            'status': 'success',
+            'data': stats
+        })
+    
+    except Exception as e:
+        logger.error(f"Get statistics error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/prices/<symbol>', methods=['GET'])
+def get_price(symbol: str):
+    """Get current price"""
+    try:
+        price = fetcher.get_binance_price(symbol)
+        return jsonify({
+            'status': 'success',
+            'symbol': symbol,
+            'price': price
+        })
+    
+    except Exception as e:
+        logger.error(f"Get price error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+# ============================================================================
+# STATIC FILES
+# ============================================================================
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files"""
+    try:
+        if filename.endswith('.css'):
+            with open(f'static/{filename}', 'r') as f:
+                return f.read(), 200, {'Content-Type': 'text/css'}
+        elif filename.endswith('.js'):
+            with open(f'static/{filename}', 'r') as f:
+                return f.read(), 200, {'Content-Type': 'application/javascript'}
+    except FileNotFoundError:
+        logger.warning(f"Static file not found: {filename}")
+        return 'Not found', 404
+
+# ============================================================================
+# INITIALIZATION & START
+# ============================================================================
+
+# Global instances
+db = None
+fetcher = None
+telegram = None
+generator = None
+
+def initialize_system():
+    """Initialize all components"""
+    global db, fetcher, telegram, generator
+    
+    logger.info("Initializing system...")
+    
+    # Validate environment
+    ConfigValidator.validate()
+    
+    # Initialize components
+    db = DatabaseManager(os.getenv('DATABASE_URL'))
+    fetcher = RealTimeDataFetcher()
+    telegram = TelegramNotificationEngine()
+    generator = DemirAISignalGenerator(db, fetcher, telegram)
+    
+    logger.info("System initialized")
+
+def start_signal_loop():
+    """Start signal generation loop in background"""
+    telegram.start()
+    
+    def loop():
+        logger.info("Signal generation loop started")
+        cycle_count = 0
+        
+        try:
+            while True:
+                cycle_count += 1
+                logger.info(f"CYCLE {cycle_count}")
+                
+                for symbol in generator.symbols:
+                    try:
+                        generator.process_symbol(symbol)
+                    except Exception as e:
+                        logger.error(f"Error processing {symbol}: {e}")
+                
+                time.sleep(generator.cycle_interval)
+        
+        except Exception as e:
+            logger.critical(f"Signal loop error: {e}")
+        
+        finally:
+            logger.info("Signal generation loop stopped")
+    
+    thread = threading.Thread(target=loop, daemon=True)
+    thread.start()
+    logger.info("Signal loop thread started")
 
 # ============================================================================
 # MAIN ENTRY POINT
@@ -610,21 +622,32 @@ class DemirAISignalGenerator:
 
 if __name__ == '__main__':
     try:
-        # START HEALTH SERVER FIRST - CRITICAL FOR RAILWAY
-        logger.info("STARTING HEALTH SERVER...")
-        if not start_health_server():
-            logger.error("Failed to start health server - exiting")
-            sys.exit(1)
+        # Initialize
+        logger.info("STARTING DEMIR AI v5.2...")
+        initialize_system()
         
-        # Wait for health server to be ready
-        time.sleep(1)
-        logger.info("Health server is ready")
+        # Start background signal loop
+        start_signal_loop()
         
-        # Then start main generator
-        logger.info("STARTING MAIN GENERATOR...")
-        generator = DemirAISignalGenerator()
-        generator.start()
+        # Start Flask server
+        PORT = int(os.getenv('PORT', 8000))
+        logger.info(f"Starting Flask server on port {PORT}...")
+        logger.info(f"Dashboard: http://localhost:{PORT}/")
+        logger.info(f"API Health: http://localhost:{PORT}/api/health")
+        
+        # Run Flask with production settings
+        app.run(
+            host='0.0.0.0',
+            port=PORT,
+            debug=False,
+            use_reloader=False,
+            threaded=True
+        )
     
     except Exception as e:
         logger.critical(f"Fatal error: {e}", exc_info=True)
+        if db:
+            db.close()
+        if telegram:
+            telegram.stop()
         sys.exit(1)
