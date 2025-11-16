@@ -26,9 +26,8 @@ SQLAlchemy==2.0.23
 alembic==1.13.1
 redis==5.0.1
 
-# Technical Analysis
+# Technical Analysis (ta-lib removed - needs C libs)
 ta==0.10.2
-ta-lib==0.4.28
 
 # Data Visualization
 plotly==5.17.0
