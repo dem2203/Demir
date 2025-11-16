@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEMIR AI v6.0 - Trading Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <title>DEMIR AI v6.0 - 4-GROUP SYSTEM</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -15,7 +13,7 @@
     <header class="header">
         <div class="header-left">
             <h1>🤖 DEMIR AI v6.0</h1>
-            <p>Professional AI Trading Dashboard</p>
+            <p>4-GROUP SIGNAL SYSTEM: Tech (20) + Sentiment (20) + On-Chain (6) + Macro+Risk (14)</p>
         </div>
         <div class="header-right">
             <span id="connection-status" class="status-indicator">🟢 Connected</span>
@@ -23,13 +21,23 @@
         </div>
     </header>
 
-    <!-- Symbol Selector -->
-    <div class="symbol-selector">
-        <button class="symbol-btn active" data-symbol="BTCUSDT">₿ BTC</button>
-        <button class="symbol-btn" data-symbol="ETHUSDT">Ξ ETH</button>
-        <button class="symbol-btn" data-symbol="BNBUSDT">🟨 BNB</button>
-        <button class="symbol-btn" data-symbol="XRPUSDT">XRP</button>
-        <button class="symbol-btn" data-symbol="ADAUSDT">ADA</button>
+    <!-- Coin Management -->
+    <div class="coin-management">
+        <div class="coin-selector">
+            <h3>📊 Tracked Coins</h3>
+            <div id="coin-buttons" class="coin-buttons">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+        
+        <div class="add-coin-section">
+            <h3>➕ Add New Coin</h3>
+            <div class="add-coin-form">
+                <input type="text" id="new-coin-input" placeholder="e.g., SOLUSDT" maxlength="20">
+                <button id="add-coin-btn" class="btn-add">+ ADD</button>
+            </div>
+            <p class="hint">Type coin symbol (e.g., SOLUSDT, BNBUSDT, ADAUSDT)</p>
+        </div>
     </div>
 
     <!-- Main Dashboard Grid -->
@@ -48,179 +56,108 @@
                     <span class="change positive" id="price-change">↑ +2.5%</span>
                 </div>
                 <div class="price-row">
-                    <span class="label">24h Volume:</span>
-                    <span id="volume-24h">$28.5B</span>
-                </div>
-                <div class="price-row">
-                    <span class="label">High/Low:</span>
-                    <span id="high-low">$45,900 / $44,100</span>
+                    <span class="label">Selected:</span>
+                    <span class="selected-symbol" id="selected-symbol">BTCUSDT</span>
                 </div>
             </div>
         </div>
 
-        <!-- Panel 2: Current Signal -->
+        <!-- Panel 2: 4-GROUP System Status -->
+        <div class="panel groups-panel">
+            <h2>🎯 4-GROUP System</h2>
+            <div class="groups-content">
+                <div class="group-item">
+                    <span class="group-name">Technical (20 layers)</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill tech" id="tech-score" style="width: 74%"></div>
+                    </div>
+                    <span class="group-percent" id="tech-percent">74%</span>
+                </div>
+                <div class="group-item">
+                    <span class="group-name">Sentiment (20 layers)</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill sentiment" id="sentiment-score" style="width: 68%"></div>
+                    </div>
+                    <span class="group-percent" id="sentiment-percent">68%</span>
+                </div>
+                <div class="group-item">
+                    <span class="group-name">On-Chain (6 layers)</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill onchain" id="onchain-score" style="width: 72%"></div>
+                    </div>
+                    <span class="group-percent" id="onchain-percent">72%</span>
+                </div>
+                <div class="group-item">
+                    <span class="group-name">Macro+Risk (14 layers)</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill macro" id="macro-score" style="width: 81%"></div>
+                    </div>
+                    <span class="group-percent" id="macro-percent">81%</span>
+                </div>
+            </div>
+            <div class="ensemble-score">
+                <h4>Ensemble Score</h4>
+                <div class="score-value" id="ensemble-value">74%</div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Signal Status -->
         <div class="panel signal-panel">
-            <h2>🎯 Signal (15m)</h2>
+            <h2>🎯 Current Signal</h2>
             <div class="signal-box" id="master-signal">
                 <div class="signal-main">
                     <h3 id="signal-text">🟢 STRONG BUY</h3>
-                    <div class="confidence-container">
-                        <div class="confidence-label">Confidence</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="confidence-bar" style="width: 82%"></div>
-                        </div>
-                        <span class="confidence-value" id="confidence-text">82%</span>
+                    <div class="signal-levels">
+                        <p>Entry: <strong id="entry-price">$45,100</strong></p>
+                        <p>TP1: <strong id="tp1-price">$45,800</strong> ✅</p>
+                        <p>TP2: <strong id="tp2-price">$46,500</strong> ✅</p>
+                        <p>SL: <strong id="sl-price">$44,500</strong> 🛑</p>
                     </div>
-                </div>
-                <div class="levels">
-                    <div class="level-item">
-                        <span class="level-label">Entry:</span>
-                        <span class="level-value" id="entry-price">$45,100</span>
-                    </div>
-                    <div class="level-item">
-                        <span class="level-label">TP1:</span>
-                        <span class="level-value" id="tp1-price">$45,800 (+1.5%)</span>
-                    </div>
-                    <div class="level-item">
-                        <span class="level-label">TP2:</span>
-                        <span class="level-value" id="tp2-price">$46,500 (+3.1%)</span>
-                    </div>
-                    <div class="level-item">
-                        <span class="level-label">SL:</span>
-                        <span class="level-value" id="sl-price">$44,500 (-0.7%)</span>
-                    </div>
-                </div>
-                <button id="add-trade-btn" class="btn-primary">📝 ADD TRADE</button>
-            </div>
-        </div>
-
-        <!-- Panel 3: Group Status Heatmap -->
-        <div class="panel heatmap-panel">
-            <h2>🔥 Group Consensus (60 layers)</h2>
-            <div class="groups-status">
-                <div class="group-item">
-                    <span class="group-label">Technical (20)</span>
-                    <div class="mini-progress">
-                        <div class="mini-fill" style="width: 74%; background: #10b981;"></div>
-                    </div>
-                    <span class="group-value" id="tech-confidence">74%</span>
-                </div>
-                <div class="group-item">
-                    <span class="group-label">Sentiment (20)</span>
-                    <div class="mini-progress">
-                        <div class="mini-fill" style="width: 78%; background: #3b82f6;"></div>
-                    </div>
-                    <span class="group-value" id="sent-confidence">78%</span>
-                </div>
-                <div class="group-item">
-                    <span class="group-label">On-Chain (6)</span>
-                    <div class="mini-progress">
-                        <div class="mini-fill" style="width: 68%; background: #f59e0b;"></div>
-                    </div>
-                    <span class="group-value" id="onchain-confidence">68%</span>
-                </div>
-                <div class="group-item">
-                    <span class="group-label">Macro+Risk (14)</span>
-                    <div class="mini-progress">
-                        <div class="mini-fill" style="width: 81%; background: #ef4444;"></div>
-                    </div>
-                    <span class="group-value" id="macro-confidence">81%</span>
-                </div>
-            </div>
-            <div class="multiframe-check">
-                <span id="multiframe-status">✅ 15m + 1h Match</span>
-            </div>
-        </div>
-
-        <!-- Panel 4: Live Chart -->
-        <div class="panel chart-panel">
-            <h2>📈 1-Hour Chart</h2>
-            <div class="chart-container">
-                <canvas id="price-chart"></canvas>
-            </div>
-        </div>
-
-        <!-- Panel 5: Open Trades -->
-        <div class="panel trades-panel">
-            <h2>📍 Open Positions</h2>
-            <div class="trades-list" id="trades-list">
-                <div class="trade-item green">
-                    <div class="trade-header">
-                        <h4>ETHUSDT LONG</h4>
-                        <span class="trade-status">+0.7%</span>
-                    </div>
-                    <p class="trade-info">Entry: $2,800 · 2h ago</p>
-                    <p class="trade-current">Current: $2,820 ✓</p>
                 </div>
             </div>
         </div>
 
-        <!-- Panel 6: Performance -->
-        <div class="panel performance-panel">
-            <h2>📊 Performance (30d)</h2>
-            <div class="perf-grid">
-                <div class="perf-item">
-                    <span class="perf-label">Win Rate</span>
-                    <span class="perf-value" id="win-rate">62.3%</span>
+        <!-- Panel 4: Recent Signals -->
+        <div class="panel signals-history">
+            <h2>📋 Recent Signals</h2>
+            <div id="signals-list" class="signals-list">
+                <p class="loading">Loading signals...</p>
+            </div>
+        </div>
+
+        <!-- Panel 5: Statistics -->
+        <div class="panel stats-panel">
+            <h2>📈 Statistics (30d)</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Total Signals</span>
+                    <span class="stat-value" id="stat-total">0</span>
                 </div>
-                <div class="perf-item">
-                    <span class="perf-label">Sharpe Ratio</span>
-                    <span class="perf-value" id="sharpe">1.87</span>
+                <div class="stat-item">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value" id="stat-winrate">--</span>
                 </div>
-                <div class="perf-item">
-                    <span class="perf-label">ROI</span>
-                    <span class="perf-value positive" id="roi">+18.4%</span>
+                <div class="stat-item">
+                    <span class="stat-label">Avg Confidence</span>
+                    <span class="stat-value" id="stat-confidence">--</span>
                 </div>
-                <div class="perf-item">
-                    <span class="perf-label">Max Drawdown</span>
-                    <span class="perf-value" id="max-dd">-3.2%</span>
+                <div class="stat-item">
+                    <span class="stat-label">P&L</span>
+                    <span class="stat-value positive" id="stat-pnl">--</span>
                 </div>
             </div>
         </div>
 
-    </div>
-
-    <!-- Alerts Panel -->
-    <div class="alerts-section">
-        <h3>🔔 Live Alerts</h3>
-        <div class="alerts-container" id="alerts-container">
-            <div class="alert alert-info">🔔 Connected to DEMIR AI Dashboard</div>
-        </div>
     </div>
 
 </div>
 
 <!-- Footer -->
 <footer class="footer">
-    <p>DEMIR AI v6.0 | 100% Real Data | Futures Trading | Advanced AI | © 2025</p>
+    <p>DEMIR AI v6.0 | 4-GROUP SIGNAL SYSTEM | Real Data | BTC+ETH+LTC+Custom | © 2025</p>
 </footer>
 
-<!-- Modal for Add Trade -->
-<div id="trade-modal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>📝 Add Manual Trade</h2>
-        <form id="trade-form">
-            <input type="hidden" id="trade-symbol" value="BTCUSDT">
-            <div class="form-group">
-                <label>Direction</label>
-                <div class="radio-group">
-                    <input type="radio" name="direction" value="LONG" checked>
-                    <label>🟢 LONG</label>
-                    <input type="radio" name="direction" value="SHORT">
-                    <label>🔴 SHORT</label>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Entry Price (USDT)</label>
-                <input type="number" id="entry-input" step="0.01" required>
-            </div>
-            <button type="submit" class="btn-primary">Add Trade</button>
-        </form>
-    </div>
-</div>
-
-<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
