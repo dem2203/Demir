@@ -9,9 +9,10 @@
 - 100% real data from APIs only
 - All 30 layers integrated
 - Monitoring & alerts active
+- Railway Health Server for PORT binding
 
 Location: GitHub Root / main.py
-Date: 2025-11-16 02:20 CET
+Date: 2025-11-16 11:45 CET
 """
 
 import os
@@ -28,11 +29,17 @@ from dotenv import load_dotenv
 import threading
 import queue
 import numpy as np
-import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+# ============================================================================
+# HEALTH CHECK SERVER - RAILWAY SUPPORT
+# ============================================================================
+
 class HealthHandler(BaseHTTPRequestHandler):
+    """HTTP handler for Railway health checks"""
+    
     def do_GET(self):
+        """Handle GET requests"""
         if self.path == '/health':
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
@@ -43,19 +50,26 @@ class HealthHandler(BaseHTTPRequestHandler):
             self.end_headers()
     
     def log_message(self, format, *args):
-        pass  # Suppress logging
+        """Suppress logging"""
+        pass
 
 def start_health_server():
-    PORT = int(os.getenv('PORT', 8000))
-    server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    print(f"✅ Health server running on port {PORT}")
+    """Start health check HTTP server on Railway PORT"""
+    try:
+        PORT = int(os.getenv('PORT', 8000))
+        server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        logger.info(f"✅ Health server listening on 0.0.0.0:{PORT}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Health server error: {e}")
+        return False
 
-# In __main__:
-if __name__ == '__main__':
-    start_health_server()  # Start health check server
-    # ... rest of code
+# ============================================================================
+# LOAD ENVIRONMENT VARIABLES
+# ============================================================================
+
 load_dotenv()
 
 # ============================================================================
@@ -676,6 +690,12 @@ class DemirAISignalGenerator:
 
 if __name__ == '__main__':
     try:
+        # START HEALTH SERVER FIRST (Railway needs this!)
+        if not start_health_server():
+            logger.error("❌ Failed to start health server")
+            sys.exit(1)
+        
+        # Then start main generator
         generator = DemirAISignalGenerator()
         generator.start()
     
