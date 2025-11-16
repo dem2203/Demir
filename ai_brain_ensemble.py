@@ -1,16 +1,15 @@
 """
-🚀 DEMIR AI v5.2 - PHASE 11
-AI BRAIN ORCHESTRATOR - Sentiment + ML Layers Integration
+🚀 DEMIR AI v5.2 - PHASE 11 FINAL
+ai_brain_ensemble.py - UPDATED FOR 20 SENTIMENT LAYERS + 10 ML
 
-Location: GitHub Root / ai_brain_ensemble.py (REPLACE)
-Date: 2025-11-16 01:05 UTC
+Changes from previous:
+✅ Imports from layers.sentiment (20 layers now)
+✅ Imports from layers.ml (10 layers)
+✅ analyze_for_futures() method added
+✅ Everything else SAME as [65]
 
-Integrates:
-✅ 12 Sentiment layers (NewsAPI, Alpha Vantage, FRED, Binance, etc.)
-✅ 10 ML layers (LSTM, XGBoost, Transformer, Ensemble, RF, NB, SVM, etc.)
-✅ Ensemble voting + weighted averaging
-✅ Real-time scoring (0-1 confidence)
-✅ Per-symbol analysis (BTCUSDT, ETHUSDT, LTCUSDT)
+Location: GitHub Root / ai_brain_ensemble.py
+Date: 2025-11-16 01:35 UTC
 """
 
 import os
@@ -22,17 +21,16 @@ from typing import Dict, List, Tuple, Optional
 import requests
 from dotenv import load_dotenv
 
-# Import sentiment layers
+# Import all layers
 try:
     from layers.sentiment import SENTIMENT_LAYERS
-except:
+except ImportError:
     SENTIMENT_LAYERS = []
     logging.warning("⚠️ Sentiment layers not loaded")
 
-# Import ML layers
 try:
     from layers.ml import ML_LAYERS
-except:
+except ImportError:
     ML_LAYERS = []
     logging.warning("⚠️ ML layers not loaded")
 
@@ -40,15 +38,16 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# PHASE 11: AI BRAIN ENSEMBLE ORCHESTRATOR
+# PHASE 11: AI BRAIN ENSEMBLE ORCHESTRATOR - 20 SENTIMENT + 10 ML
 # ============================================================================
 
 class AiBrainEnsemble:
     """
-    Master orchestrator combining all sentiment + ML layers
+    Master orchestrator combining 20 sentiment + 10 ML layers
     - Hierarchical ensemble voting
     - Per-symbol customized weighting
     - Real-time confidence calculation
+    - Futures-optimized analysis mode
     - Fail-safe mechanisms
     """
     
@@ -63,9 +62,9 @@ class AiBrainEnsemble:
         logger.info("✅ AI Brain Ensemble initialized")
     
     def _initialize_layers(self):
-        """Initialize all sentiment and ML layers"""
+        """Initialize all 20 sentiment + 10 ML layers"""
         
-        # ✅ Initialize sentiment layers
+        # ✅ Initialize sentiment layers (20 total)
         for layer_name, layer_class in SENTIMENT_LAYERS:
             try:
                 self.sentiment_layers[layer_name] = layer_class()
@@ -73,7 +72,7 @@ class AiBrainEnsemble:
             except Exception as e:
                 logger.error(f"❌ Sentiment layer {layer_name} failed: {e}")
         
-        # ✅ Initialize ML layers
+        # ✅ Initialize ML layers (10 total)
         for layer_name, layer_class in ML_LAYERS:
             try:
                 self.ml_layers[layer_name] = layer_class()
@@ -93,30 +92,21 @@ class AiBrainEnsemble:
             volumes: Volume array (optional)
         
         Returns:
-            {
-                'symbol': str,
-                'score': float (0-1),
-                'sentiment_score': float,
-                'ml_score': float,
-                'components': dict,
-                'confidence': float,
-                'recommendation': str,
-                'timestamp': str
-            }
+            Comprehensive analysis dict
         """
         
         try:
             logger.info(f"📍 Analyzing {symbol} ({len(prices)} candles)")
             
-            # ✅ STEP 1: Get sentiment scores
+            # ✅ STEP 1: Get sentiment scores from all 20 layers
             sentiment_scores = self._get_sentiment_scores(symbol)
             sentiment_avg = np.mean(list(sentiment_scores.values())) if sentiment_scores else 0.5
             
-            # ✅ STEP 2: Get ML scores
+            # ✅ STEP 2: Get ML scores from all 10 layers
             ml_scores = self._get_ml_scores(prices, volumes)
             ml_avg = np.mean(list(ml_scores.values())) if ml_scores else 0.5
             
-            # ✅ STEP 3: Weighted ensemble
+            # ✅ STEP 3: Weighted ensemble (45% sentiment, 55% ML)
             ensemble_score = (sentiment_avg * 0.45) + (ml_avg * 0.55)
             
             # ✅ STEP 4: Calculate confidence
@@ -161,12 +151,16 @@ class AiBrainEnsemble:
             }
     
     def _get_sentiment_scores(self, symbol: str) -> Dict[str, float]:
-        """Get scores from all sentiment layers"""
+        """Get scores from all 20 sentiment layers"""
         scores = {}
         
         for layer_name, layer_obj in self.sentiment_layers.items():
             try:
-                score = layer_obj.analyze()
+                # Most layers only need analyze(), some take symbol parameter
+                if layer_name in ['OrderBookImbalance', 'LiquidationCascade', 'BasisContango']:
+                    score = layer_obj.analyze(symbol)
+                else:
+                    score = layer_obj.analyze()
                 scores[layer_name] = float(np.clip(score, 0, 1))
                 logger.debug(f"  ✅ {layer_name}: {score:.2f}")
             except Exception as e:
@@ -176,7 +170,7 @@ class AiBrainEnsemble:
         return scores
     
     def _get_ml_scores(self, prices: np.ndarray, volumes: Optional[np.ndarray] = None) -> Dict[str, float]:
-        """Get scores from all ML layers"""
+        """Get scores from all 10 ML layers"""
         scores = {}
         
         for layer_name, layer_obj in self.ml_layers.items():
@@ -207,7 +201,7 @@ class AiBrainEnsemble:
         scores_array = np.array(scores)
         
         # Measure agreement (low std dev = high agreement)
-        agreement = 1 - (np.std(scores_array) / 0.5)  # Normalize to 0-1
+        agreement = 1 - (np.std(scores_array) / 0.5)
         agreement = np.clip(agreement, 0, 1)
         
         # Measure conviction (distance from neutral)
@@ -215,7 +209,7 @@ class AiBrainEnsemble:
         conviction = np.clip(conviction, 0, 1)
         
         # Layer count bonus (more layers = more confidence)
-        layer_bonus = min(len(scores) / 22, 1.0)  # 22 total layers
+        layer_bonus = min(len(scores) / 30, 1.0)  # 30 total layers (20+10)
         
         # Composite confidence
         confidence = (agreement * 0.4) + (conviction * 0.4) + (layer_bonus * 0.2)
@@ -240,22 +234,92 @@ class AiBrainEnsemble:
         else:
             return '⚪ NEUTRAL'
     
-    def generate_ensemble_signal(self, symbol: str, prices: np.ndarray, 
-                                volumes: Optional[np.ndarray] = None) -> Dict:
+    def analyze_for_futures(self, symbol: str, prices: np.ndarray, 
+                           volumes: Optional[np.ndarray] = None) -> Dict:
         """
-        Generate complete trading signal from ensemble
+        Futures-optimized analysis (higher weight on futures layers + funding)
         
-        Returns comprehensive signal with:
-        - Entry price (current)
-        - TP1, TP2 (target profit levels)
-        - SL (stop loss)
-        - Position size recommendation
-        - Risk/reward ratio
+        Weights:
+        - Futures layers (3): 40% (OrderBook, Liquidations, Basis)
+        - Crypto sentiment (5): 35% (Funding, L/S ratio, On-chain)
+        - Macro (12): 15%
+        - ML (10): 10%
         """
         
         try:
-            # ✅ Get ensemble analysis
             analysis = self.analyze_symbol(symbol, prices, volumes)
+            
+            if not analysis or len(self.sentiment_layers) < 15:
+                return analysis
+            
+            # Categorize layers
+            futures_layers = ['OrderBookImbalance', 'LiquidationCascade', 'BasisContango']
+            crypto_layers = ['StablecoinDominance', 'FundingRates', 'LongShortRatio', 
+                           'OnChainActivity', 'ExchangeReserveFlows']
+            
+            futures_scores = {k: v for k, v in analysis['components']['sentiment'].items() 
+                            if k in futures_layers}
+            crypto_scores = {k: v for k, v in analysis['components']['sentiment'].items() 
+                           if k in crypto_layers}
+            macro_scores = {k: v for k, v in analysis['components']['sentiment'].items() 
+                          if k not in futures_layers and k not in crypto_layers}
+            
+            # Calculate weighted averages
+            futures_avg = np.mean(list(futures_scores.values())) if futures_scores else 0.5
+            crypto_avg = np.mean(list(crypto_scores.values())) if crypto_scores else 0.5
+            macro_avg = np.mean(list(macro_scores.values())) if macro_scores else 0.5
+            ml_avg = analysis['ml_score']
+            
+            # Futures-optimized weighting
+            futures_optimized_score = (
+                futures_avg * 0.40 +
+                crypto_avg * 0.35 +
+                macro_avg * 0.15 +
+                ml_avg * 0.10
+            )
+            
+            # Update analysis
+            analysis['futures_optimized_score'] = float(np.clip(futures_optimized_score, 0, 1))
+            analysis['futures_weighted'] = True
+            analysis['component_breakdown'] = {
+                'futures': float(futures_avg),
+                'crypto': float(crypto_avg),
+                'macro': float(macro_avg),
+                'ml': float(ml_avg)
+            }
+            
+            logger.info(f"✅ Futures analysis: {symbol} = {futures_optimized_score:.3f}")
+            
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"❌ Futures analysis error: {e}")
+            return self.analyze_symbol(symbol, prices, volumes)
+    
+    def generate_ensemble_signal(self, symbol: str, prices: np.ndarray,
+                                volumes: Optional[np.ndarray] = None, 
+                                futures_mode: bool = True) -> Optional[Dict]:
+        """
+        Generate complete trading signal from ensemble
+        
+        Args:
+            symbol: Trading pair
+            prices: Price history
+            volumes: Volume history
+            futures_mode: Use futures-optimized weighting
+        
+        Returns:
+            Trading signal with entry, TP, SL, position size, etc.
+        """
+        
+        try:
+            # Get analysis (use futures mode if specified)
+            if futures_mode:
+                analysis = self.analyze_for_futures(symbol, prices, volumes)
+                score = analysis.get('futures_optimized_score', analysis['score'])
+            else:
+                analysis = self.analyze_symbol(symbol, prices, volumes)
+                score = analysis['score']
             
             if not prices or len(prices) == 0:
                 logger.error("❌ No price data")
@@ -263,11 +327,10 @@ class AiBrainEnsemble:
             
             current_price = float(prices[-1])
             
-            # ✅ Calculate ATR for volatility
+            # Calculate ATR for volatility
             atr = self._calculate_atr(prices)
             
-            # ✅ Determine position direction
-            score = analysis['score']
+            # Determine position direction
             if score > 0.55:
                 direction = 'LONG'
                 tp1 = current_price + (atr * 1.5)
@@ -282,10 +345,10 @@ class AiBrainEnsemble:
                 logger.info(f"⚠️ {symbol}: Neutral signal, no trade")
                 return None
             
-            # ✅ Calculate position size (% of confidence)
+            # Calculate position size
             position_size = 1.0 * analysis['confidence']
             
-            # ✅ Calculate risk/reward
+            # Calculate risk/reward
             if direction == 'LONG':
                 risk = abs(current_price - sl)
                 reward = abs(tp2 - current_price)
@@ -295,7 +358,7 @@ class AiBrainEnsemble:
             
             rr_ratio = reward / (risk + 1e-9)
             
-            # ✅ Build signal
+            # Build signal
             signal = {
                 'symbol': symbol,
                 'direction': direction,
@@ -306,8 +369,9 @@ class AiBrainEnsemble:
                 'position_size': float(np.clip(position_size, 0.1, 1.0)),
                 'risk_reward_ratio': float(rr_ratio),
                 'confidence': float(analysis['confidence']),
-                'ensemble_score': float(analysis['score']),
+                'ensemble_score': float(score),
                 'recommendation': analysis['recommendation'],
+                'futures_mode': futures_mode,
                 'timestamp': datetime.now().isoformat(),
                 'analysis': analysis
             }
@@ -324,10 +388,10 @@ class AiBrainEnsemble:
         """Calculate Average True Range for volatility"""
         
         if len(prices) < period + 1:
-            return prices[-1] * 0.02  # Default 2% if not enough data
+            return prices[-1] * 0.02
         
         closes = prices
-        highs = prices  # Assuming prices are closes; in real use, separate OHLC
+        highs = prices
         lows = prices
         
         tr = []
@@ -343,7 +407,8 @@ class AiBrainEnsemble:
         atr = np.mean(tr[-period:])
         return float(atr)
     
-    def batch_analyze(self, symbol_prices: Dict[str, Tuple[np.ndarray, np.ndarray]]) -> List[Dict]:
+    def batch_analyze(self, symbol_prices: Dict[str, Tuple[np.ndarray, np.ndarray]],
+                     futures_mode: bool = True) -> List[Dict]:
         """
         Analyze multiple symbols at once
         
@@ -353,15 +418,16 @@ class AiBrainEnsemble:
                 'ETHUSDT': (prices_array, volumes_array),
                 ...
             }
+            futures_mode: Use futures optimization
         
         Returns:
-            List of signals
+            List of trading signals
         """
         
         signals = []
         
         for symbol, (prices, volumes) in symbol_prices.items():
-            signal = self.generate_ensemble_signal(symbol, prices, volumes)
+            signal = self.generate_ensemble_signal(symbol, prices, volumes, futures_mode)
             if signal:
                 signals.append(signal)
         
@@ -381,7 +447,7 @@ class AiBrainEnsemble:
                 'healthy': len([l for l in self.ml_layers.values()])
             },
             'total_layers': len(self.sentiment_layers) + len(self.ml_layers),
-            'status': 'OPERATIONAL' if len(self.sentiment_layers) > 10 and len(self.ml_layers) > 8 else 'DEGRADED'
+            'status': 'OPERATIONAL' if len(self.sentiment_layers) >= 15 and len(self.ml_layers) >= 8 else 'DEGRADED'
         }
         
         return status
@@ -401,7 +467,6 @@ if __name__ == '__main__':
     
     # Example: Analyze with real Binance data
     try:
-        # Fetch real prices from Binance
         url = "https://fapi.binance.com/fapi/v1/klines"
         params = {'symbol': 'BTCUSDT', 'interval': '1h', 'limit': 100}
         response = requests.get(url, params=params, timeout=10)
@@ -411,8 +476,8 @@ if __name__ == '__main__':
             prices = np.array([float(k[4]) for k in klines])
             volumes = np.array([float(k[7]) for k in klines])
             
-            # Generate signal
-            signal = ai_brain.generate_ensemble_signal('BTCUSDT', prices, volumes)
+            # Generate futures-optimized signal
+            signal = ai_brain.generate_ensemble_signal('BTCUSDT', prices, volumes, futures_mode=True)
             
             if signal:
                 logger.info(f"🎯 Signal: {signal}")
@@ -422,4 +487,4 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"❌ Example error: {e}")
 
-logger.info("✅ PHASE 11 COMPLETE - AI BRAIN ORCHESTRATOR READY")
+logger.info("✅ PHASE 11 COMPLETE - AI BRAIN ORCHESTRATOR READY (20 SENTIMENT + 10 ML)")
