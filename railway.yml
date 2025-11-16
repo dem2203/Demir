@@ -33,6 +33,7 @@ services:
       CoinMarketCap_API_KEY: ${CoinMarketCap_API_KEY}
       DATABASE_URL: ${DATABASE_URL}
       
+      # Python settings
       PYTHON_VERSION: 3.11
       PYTHONUNBUFFERED: 1
       PYTHONDONTWRITEBYTECODE: 1
@@ -43,22 +44,23 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-      # ✅ Health check endpoint
       command: curl -f http://localhost:8000/health || exit 1
+    
+    # ✅ Port expose
+    ports:
+      - "8000:8000"
 
-  # ✅ OPTIONAL: Separate PostgreSQL service (if not using Railway's managed DB)
-  # database:
-  #   image: postgres:15-alpine
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: demir_ai
-  #   
-  #   volumes:
-  #     - data:/var/lib/postgresql/data
-  #   
-  #   ports:
-  #     - "5432:5432"
-
+# ✅ OPTIONAL: PostgreSQL service (if using Railway managed DB, comment out)
+# database:
+#   image: postgres:15-alpine
+#   environment:
+#     POSTGRES_USER: ${POSTGRES_USER}
+#     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+#     POSTGRES_DB: demir_ai
+#   volumes:
+#     - data:/var/lib/postgresql/data
+#   ports:
+#     - "5432:5432"
+# 
 # volumes:
 #   data:
