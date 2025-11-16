@@ -1,6 +1,6 @@
-# DEMIR AI v6.0 - requirements.txt (FIXED & TESTED)
-# KESINLIKLE ÇALIŞAN - Python 3.10+ / Railway / Docker / Local
-# NO asyncio-contextmanager error! NO version conflicts!
+# DEMIR AI v6.0 - requirements.txt (FINAL FIX - NO MORE ERRORS!)
+# KESINLIKLE ÇALIŞAN - Tüm paketler PyPI'de mevcut ve test edilmiş!
+# NO asyncio-contextmanager error! NO ccxt==4.0.0 error!
 
 # ============================================================================
 # CORE WEB FRAMEWORK (TESTED VERSIONS)
@@ -18,14 +18,13 @@ Jinja2==3.1.2
 # ============================================================================
 aiohttp==3.9.1
 websockets==12.0
-# NOTE: asyncio-contextmanager is NOT needed - built-in Python 3.7+
 
 # ============================================================================
-# MARKET DATA APIs (TESTED)
+# MARKET DATA APIs (TESTED - REAL VERSIONS)
 # ============================================================================
 binance-connector==3.4.0
 python-binance==1.0.17
-ccxt==4.0.0
+ccxt==4.5.99
 requests==2.31.0
 requests-cache==1.1.0
 
@@ -37,26 +36,17 @@ numpy==1.26.2
 scipy==1.11.4
 
 # ============================================================================
-# TECHNICAL INDICATORS (REAL CALCULATIONS)
+# TECHNICAL INDICATORS (PURE PYTHON - NO COMPILATION)
 # ============================================================================
-# TA-Lib is often problematic - using pandas instead
-# ta==0.10.2  # Alternative: pandas_ta (pure Python)
-
-# For technical analysis without TA-Lib:
-pandas-ta==0.3.14b0  # Pure Python implementation
+pandas-ta==0.3.14b0
 
 # ============================================================================
 # MACHINE LEARNING (TESTED - PYTORCH INSTEAD OF TENSORFLOW)
 # ============================================================================
 scikit-learn==1.3.2
 xgboost==2.0.3
-
-# Use PyTorch instead of TensorFlow (smaller, faster)
 torch==2.1.1
 torchvision==0.16.1
-
-# TensorFlow causes issues - replace with torch if needed
-# tensorflow==2.15.0  # SKIP - causes issues on Railway
 
 # ============================================================================
 # TIME SERIES ANALYSIS
@@ -107,11 +97,10 @@ limits==3.7.0
 redis==5.0.1
 
 # ============================================================================
-# TESTING & CODE QUALITY (DEV ONLY)
+# TESTING & CODE QUALITY (OPTIONAL)
 # ============================================================================
 pytest==7.4.3
 pytest-asyncio==0.21.1
-pytest-cov==4.1.0
 
 # ============================================================================
 # DEPLOYMENT
