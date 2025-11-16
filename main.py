@@ -774,58 +774,39 @@ class DemirAISignalGenerator:
 @app.route('/')
 @app.route('/dashboard')
 def dashboard():
-    """Serve professional dashboard HTML - DEMIR AI v6.0 (ROOT FİXED)"""
+    """Serve professional dashboard HTML - DEMIR AI v6.0 (FIXED - ABSOLUTE PATH)"""
     try:
-        # ROOT LEVEL PATHS - dosyalar root'ta
+        # Get absolute path to app directory
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        
         possible_paths = [
-            'index.html',  # PRIMARY - ROOT
-            './index.html',
-            os.path.join(os.path.dirname(__file__), 'index.html'),
-            '/app/index.html',  # Railway
+            os.path.join(app_dir, 'index.html'),  # /app/index.html (ABSOLUTE)
+            os.path.abspath('index.html'),         # Current dir absolute
+            '/app/index.html',                      # Railway direct
         ]
-
-        logger.debug("🔍 Looking for index.html in ROOT...")
-
+        
+        logger.debug(f"🔍 App directory: {app_dir}")
+        logger.debug(f"🔍 Looking for index.html...")
+        
         for path in possible_paths:
-            if os.path.exists(path):
+            logger.debug(f"  Checking: {path} (exists: {os.path.exists(path)})")
+            if os.path.exists(path) and os.path.isfile(path):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         html_content = f.read()
-
+                    
                     if len(html_content) > 100:
-                        logger.info(f"✅ Dashboard served from ROOT: {path}")
+                        logger.info(f"✅ Dashboard served from: {path}")
                         return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
                 except Exception as e:
                     logger.warning(f"⚠️ Error reading {path}: {e}")
                     continue
-
-        # Fallback
-        logger.warning("⚠️ index.html not found in ROOT, serving minimal fallback")
-        fallback_html = """<!DOCTYPE html>
-<html>
-<head>
-    <title>DEMIR AI v6.0 - Dashboard</title>
-    <style>
-        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #10b981; font-family: 'Courier New', monospace; }
-        .container { text-align: center; padding: 50px; }
-        h1 { color: #10b981; font-size: 2.5em; margin-bottom: 30px; }
-        .status { background: #10b981; color: #0f172a; padding: 15px; margin: 20px 0; font-weight: bold; border-radius: 5px; }
-        .info { color: #10b981; margin: 10px 0; font-size: 1.1em; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 DEMIR AI v6.0</h1>
-        <div class="status">✅ BACKEND OPERATIONAL</div>
-        <p class="info">📊 PostgreSQL Connected (REAL)</p>
-        <p class="info">🧠 AI Brain v6.0 Active</p>
-        <p class="info">📡 Multi-Exchange Data</p>
-        <p class="info">⚠️ Dashboard HTML loading...</p>
-    </div>
-</body>
-</html>"""
+        
+        # Fallback if not found
+        logger.warning("⚠️ index.html not found, serving fallback")
+        fallback_html = """<!DOCTYPE html>...."""
         return fallback_html, 200, {'Content-Type': 'text/html; charset=utf-8'}
-
+        
     except Exception as e:
         logger.error(f"❌ Dashboard route error: {e}")
         return {"error": "Dashboard error", "message": str(e)}, 500
