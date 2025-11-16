@@ -6,7 +6,7 @@ RAILWAY_YML_CONTENT = """
 version: 0.1.0
 
 services:
-  backend:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
