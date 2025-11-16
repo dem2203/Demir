@@ -1,12 +1,9 @@
 """
-🚀 DEMIR AI v5.2 - MAIN.PY - PRODUCTION READY
-✅ 100% Real Data + Health Server + Strict Error Handling
+🚀 DEMIR AI v5.2 - MAIN.PY - FIXED SYNTAX ERROR
+✅ Removed emoji from bytes literal (line 73)
 
-FULL COMPLETE CODE - NO TRUNCATION
-
-Date: 2025-11-16 12:25 CET
-Status: PRODUCTION
-Rules: STRICT (No fallback, no mock data, no fake data)
+Date: 2025-11-16 12:30 CET
+Status: SYNTAX FIXED
 """
 
 import os
@@ -44,12 +41,12 @@ logger = logging.getLogger('DEMIR_AI_MAIN')
 
 # Print startup info
 print("\n" + "=" * 80)
-print("🚀 DEMIR AI v5.2 - PRODUCTION STARTUP")
+print("DEMIR AI v5.2 - PRODUCTION STARTUP")
 print("=" * 80)
-print(f"⏰ Start Time: {datetime.now().isoformat()}")
-print(f"🐍 Python: {sys.version}")
-print(f"📍 Working Dir: {os.getcwd()}")
-print(f"🔧 Env: PORT={os.getenv('PORT', 8000)}, DEBUG={os.getenv('DEBUG', 'False')}")
+print(f"Time: {datetime.now().isoformat()}")
+print(f"Python: {sys.version}")
+print(f"Working Dir: {os.getcwd()}")
+print(f"Env: PORT={os.getenv('PORT', 8000)}")
 
 # ============================================================================
 # HEALTH CHECK SERVER - RAILWAY SUPPORT
@@ -65,22 +62,23 @@ class HealthHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(b'OK')
-            logger.info("✅ Health check: PASS")
+            logger.info("Health check: PASS")
         elif self.path == '/':
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            html = b"""
+            # ✅ FIX: NO EMOJI IN BYTES LITERAL - use regular string
+            html = """
             <html>
             <head><title>DEMIR AI v5.2</title></head>
             <body style="font-family: Arial">
-            <h1>🚀 DEMIR AI v5.2</h1>
-            <p>✅ Production system running</p>
-            <p>📊 Health check: <a href="/health">/health</a></p>
+            <h1>DEMIR AI v5.2</h1>
+            <p>Production system running</p>
+            <p>Health check: <a href="/health">/health</a></p>
             </body>
             </html>
             """
-            self.wfile.write(html)
+            self.wfile.write(html.encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()
@@ -97,7 +95,7 @@ def start_health_server():
     try:
         PORT = int(os.getenv('PORT', 8000))
         
-        logger.info(f"🚀 Starting health server on 0.0.0.0:{PORT}...")
+        logger.info(f"Starting health server on 0.0.0.0:{PORT}...")
         
         # Bind to 0.0.0.0 to accept external connections
         server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
@@ -106,13 +104,13 @@ def start_health_server():
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         
-        logger.info(f"✅✅✅ Health server STARTED on 0.0.0.0:{PORT}")
-        logger.info(f"✅ Railway will check: http://localhost:{PORT}/health")
-        logger.info(f"✅ Dashboard: http://localhost:{PORT}/")
+        logger.info(f"Health server STARTED on 0.0.0.0:{PORT}")
+        logger.info(f"Railway will check: http://localhost:{PORT}/health")
+        logger.info(f"Dashboard: http://localhost:{PORT}/")
         return True
     
     except Exception as e:
-        logger.error(f"❌ Health server FAILED: {e}", exc_info=True)
+        logger.error(f"Health server FAILED: {e}", exc_info=True)
         return False
 
 # ============================================================================
@@ -129,12 +127,12 @@ class DatabaseMigration:
     def connect(self):
         """Connect to database"""
         try:
-            logger.info("📊 Connecting to PostgreSQL for migration...")
+            logger.info("Connecting to PostgreSQL for migration...")
             self.connection = psycopg2.connect(self.db_url)
-            logger.info("✅ Connected to PostgreSQL for migration")
+            logger.info("Connected to PostgreSQL for migration")
             return True
         except psycopg2.Error as e:
-            logger.error(f"❌ Migration connection error: {e}")
+            logger.error(f"Migration connection error: {e}")
             return False
     
     def run_migrations(self):
@@ -156,12 +154,12 @@ class DatabaseMigration:
             
             cursor.execute(migration_sql)
             self.connection.commit()
-            logger.info("✅ Migration completed: All columns verified")
+            logger.info("Migration completed: All columns verified")
             cursor.close()
             return True
         
         except psycopg2.Error as e:
-            logger.error(f"❌ Migration error: {e}")
+            logger.error(f"Migration error: {e}")
             self.connection.rollback()
             return False
     
@@ -169,7 +167,7 @@ class DatabaseMigration:
         """Close database connection"""
         if self.connection:
             self.connection.close()
-            logger.info("✅ Migration connection closed")
+            logger.info("Migration connection closed")
 
 # ============================================================================
 # ENVIRONMENT VALIDATION
@@ -194,7 +192,7 @@ class ConfigValidator:
     @staticmethod
     def validate():
         """Validate all required variables - STRICT"""
-        logger.info("🔍 Validating environment variables...")
+        logger.info("Validating environment variables...")
         
         missing = []
         for var in ConfigValidator.REQUIRED_VARS:
@@ -202,8 +200,8 @@ class ConfigValidator:
                 missing.append(var)
         
         if missing:
-            logger.critical(f"❌ MISSING REQUIRED ENV VARS: {missing}")
-            logger.critical("❌ Cannot start without these variables!")
+            logger.critical(f"MISSING REQUIRED ENV VARS: {missing}")
+            logger.critical("Cannot start without these variables!")
             raise ValueError(f"Missing required environment variables: {missing}")
         
         # Check optional vars
@@ -213,9 +211,9 @@ class ConfigValidator:
                 missing_optional.append(var)
         
         if missing_optional:
-            logger.warning(f"⚠️ Missing optional vars (system will degrade): {missing_optional}")
+            logger.warning(f"Missing optional vars (system will degrade): {missing_optional}")
         
-        logger.info("✅ All required environment variables set")
+        logger.info("All required environment variables set")
         return True
 
 # ============================================================================
@@ -233,12 +231,12 @@ class DatabaseManager:
     def connect(self):
         """Establish PostgreSQL connection"""
         try:
-            logger.info("📊 Connecting to PostgreSQL database...")
+            logger.info("Connecting to PostgreSQL database...")
             self.connection = psycopg2.connect(self.db_url)
-            logger.info("✅ Connected to PostgreSQL database")
+            logger.info("Connected to PostgreSQL database")
             return True
         except psycopg2.Error as e:
-            logger.error(f"❌ Database connection error: {e}")
+            logger.error(f"Database connection error: {e}")
             raise
     
     def insert_signal(self, signal_data: Dict) -> bool:
@@ -276,11 +274,11 @@ class DatabaseManager:
             self.connection.commit()
             cursor.close()
             
-            logger.info(f"✅ Signal saved: {signal_data['symbol']} {signal_data['direction']}")
+            logger.info(f"Signal saved: {signal_data['symbol']} {signal_data['direction']}")
             return True
         
         except psycopg2.Error as e:
-            logger.error(f"❌ Insert signal error: {e}")
+            logger.error(f"Insert signal error: {e}")
             self.connection.rollback()
             return False
     
@@ -288,7 +286,7 @@ class DatabaseManager:
         """Close database connection"""
         if self.connection:
             self.connection.close()
-            logger.info("✅ Database connection closed")
+            logger.info("Database connection closed")
 
 # ============================================================================
 # REAL-TIME DATA FETCHER - STRICT NO FALLBACK
@@ -301,7 +299,7 @@ class RealTimeDataFetcher:
         self.binance_url = 'https://fapi.binance.com'
         self.session = requests.Session()
         self.session.headers.update({'User-Agent': 'DEMIR-AI-v5.2'})
-        logger.info("✅ Real-time data fetcher initialized")
+        logger.info("Real-time data fetcher initialized")
     
     def get_binance_price(self, symbol: str) -> float:
         """Get real Binance futures price - THROWS if fails"""
@@ -315,11 +313,11 @@ class RealTimeDataFetcher:
             
             data = response.json()
             price = float(data['price'])
-            logger.debug(f"✅ Binance {symbol}: ${price}")
+            logger.debug(f"Binance {symbol}: ${price}")
             return price
         
         except Exception as e:
-            logger.error(f"❌ Binance price fetch failed: {e}")
+            logger.error(f"Binance price fetch failed: {e}")
             raise
     
     def get_ohlcv_data(self, symbol: str, timeframe: str = '1h', limit: int = 100) -> List[Dict]:
@@ -348,11 +346,11 @@ class RealTimeDataFetcher:
                     'volume': float(kline[7])
                 })
             
-            logger.info(f"✅ Fetched {len(ohlcv_data)} OHLCV candles for {symbol}")
+            logger.info(f"Fetched {len(ohlcv_data)} OHLCV candles for {symbol}")
             return ohlcv_data
         
         except Exception as e:
-            logger.error(f"❌ OHLCV fetch failed: {e}")
+            logger.error(f"OHLCV fetch failed: {e}")
             raise
 
 # ============================================================================
@@ -371,9 +369,9 @@ class TelegramNotificationEngine:
         self.worker_thread = None
         
         if self.api_url:
-            logger.info("✅ Telegram notifications configured")
+            logger.info("Telegram notifications configured")
         else:
-            logger.warning("⚠️ Telegram not configured (optional)")
+            logger.warning("Telegram not configured (optional)")
     
     def start(self):
         """Start notification worker thread"""
@@ -383,7 +381,7 @@ class TelegramNotificationEngine:
         self.running = True
         self.worker_thread = threading.Thread(target=self._worker, daemon=True)
         self.worker_thread.start()
-        logger.info("✅ Telegram notification engine started")
+        logger.info("Telegram notification engine started")
     
     def _worker(self):
         """Worker thread for async notifications"""
@@ -394,7 +392,7 @@ class TelegramNotificationEngine:
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.error(f"❌ Notification worker error: {e}")
+                logger.error(f"Notification worker error: {e}")
     
     def _send_message(self, message: str) -> bool:
         """Send message"""
@@ -409,10 +407,10 @@ class TelegramNotificationEngine:
             )
             
             if response.status_code == 200:
-                logger.info("✅ Telegram notification sent")
+                logger.info("Telegram notification sent")
                 return True
         except Exception as e:
-            logger.error(f"❌ Telegram send error: {e}")
+            logger.error(f"Telegram send error: {e}")
         
         return False
     
@@ -421,16 +419,17 @@ class TelegramNotificationEngine:
         if not self.api_url:
             return
         
+        direction_symbol = 'LONG' if signal['direction'] == 'LONG' else 'SHORT'
         message = f"""
-<b>🚀 YENİ SİNYAL - DEMIR AI v5.2</b>
+NEW SIGNAL - DEMIR AI v5.2
 
-📍 <b>Coin:</b> {signal['symbol']}
-🎯 <b>Yön:</b> {'🟢 LONG' if signal['direction'] == 'LONG' else '🔴 SHORT'}
-💰 <b>Giriş:</b> ${signal['entry_price']:.2f}
-📈 <b>TP1:</b> ${signal['tp1']:.2f}
-📈 <b>TP2:</b> ${signal['tp2']:.2f}
-❌ <b>SL:</b> ${signal['sl']:.2f}
-⏱️ <b>Zaman:</b> {signal['entry_time'].strftime('%Y-%m-%d %H:%M:%S')}
+Coin: {signal['symbol']}
+Direction: {direction_symbol}
+Entry: ${signal['entry_price']:.2f}
+TP1: ${signal['tp1']:.2f}
+TP2: ${signal['tp2']:.2f}
+SL: ${signal['sl']:.2f}
+Time: {signal['entry_time'].strftime('%Y-%m-%d %H:%M:%S')}
 """
         self.queue.put(message)
     
@@ -439,7 +438,7 @@ class TelegramNotificationEngine:
         self.running = False
         if self.worker_thread:
             self.worker_thread.join(timeout=5)
-        logger.info("✅ Telegram notification engine stopped")
+        logger.info("Telegram notification engine stopped")
 
 # ============================================================================
 # MAIN SIGNAL GENERATION ENGINE - STRICT VERSION
@@ -449,14 +448,14 @@ class DemirAISignalGenerator:
     """Main signal generator - STRICT NO FALLBACK VERSION"""
     
     def __init__(self):
-        logger.info("🚀 STRICT MODE: Initializing DEMIR AI v5.2...")
-        logger.info("⚠️ RULES: NO FALLBACK, NO MOCK, NO FAKE - ONLY 100% REAL DATA")
+        logger.info("STRICT MODE: Initializing DEMIR AI v5.2...")
+        logger.info("RULES: NO FALLBACK, NO MOCK, NO FAKE - ONLY 100% REAL DATA")
         
         # Validate environment
         ConfigValidator.validate()
         
         # Run database migration
-        logger.info("🔄 Starting database migration...")
+        logger.info("Starting database migration...")
         migration = DatabaseMigration(os.getenv('DATABASE_URL'))
         
         if migration.connect():
@@ -472,31 +471,31 @@ class DemirAISignalGenerator:
         try:
             from ai_brain_ensemble import AiBrainEnsemble
             self.ai_brain = AiBrainEnsemble()
-            logger.info("✅ AI Brain Ensemble initialized")
+            logger.info("AI Brain Ensemble initialized")
         except Exception as e:
-            logger.warning(f"⚠️ AI Brain initialization failed: {e}")
+            logger.warning(f"AI Brain initialization failed: {e}")
             self.ai_brain = None
         
         # Trading Executor (optional)
         try:
             from trading_executor import TradingExecutor
             self.executor = TradingExecutor()
-            logger.info("✅ Trading Executor initialized")
+            logger.info("Trading Executor initialized")
         except Exception as e:
-            logger.warning(f"⚠️ Trading Executor initialization failed: {e}")
+            logger.warning(f"Trading Executor initialization failed: {e}")
             self.executor = None
         
         # Configuration
         self.symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
         self.cycle_interval = 300
         
-        logger.info("✅ DEMIR AI READY - STRICT MODE ACTIVE")
+        logger.info("DEMIR AI READY - STRICT MODE ACTIVE")
     
     def start(self):
         """Start main signal generation loop"""
-        logger.info("🚀 Starting DEMIR AI v5.2 Signal Generation Loop")
-        logger.info(f"📊 Monitoring: {self.symbols}")
-        logger.info(f"⚠️ STRICT MODE: API errors → Retry → Alert → Skip (no fallback)")
+        logger.info("Starting DEMIR AI v5.2 Signal Generation Loop")
+        logger.info(f"Monitoring: {self.symbols}")
+        logger.info("STRICT MODE: API errors -> Retry -> Alert -> Skip (no fallback)")
         
         self.telegram.start()
         
@@ -513,23 +512,23 @@ class DemirAISignalGenerator:
                     try:
                         self._process_symbol(symbol)
                     except Exception as e:
-                        logger.error(f"❌ Error processing {symbol}: {e}")
+                        logger.error(f"Error processing {symbol}: {e}")
                 
-                logger.info(f"⏰ Next cycle in {self.cycle_interval} seconds...")
+                logger.info(f"Next cycle in {self.cycle_interval} seconds...")
                 time.sleep(self.cycle_interval)
         
         except KeyboardInterrupt:
-            logger.info("🛑 Signal generator stopped by user")
+            logger.info("Signal generator stopped by user")
         
         except Exception as e:
-            logger.critical(f"❌ Critical error in signal loop: {e}")
+            logger.critical(f"Critical error in signal loop: {e}")
         
         finally:
             self._cleanup()
     
     def _process_symbol(self, symbol: str):
         """Process single symbol - STRICT NO FALLBACK"""
-        logger.info(f"\n📍 Processing: {symbol}")
+        logger.info(f"\nProcessing: {symbol}")
         
         try:
             # Fetch real prices - WILL THROW if fails
@@ -565,14 +564,14 @@ class DemirAISignalGenerator:
                             'rr_ratio': ai_signal.get('rr_ratio', 1.0)
                         }
                         
-                        logger.info(f"✅ AI Signal: {signal['direction']} @ {signal['ensemble_score']:.0%} confidence")
+                        logger.info(f"AI Signal: {signal['direction']} @ {signal['ensemble_score']:.0%} confidence")
                 
                 except Exception as e:
-                    logger.error(f"❌ AI Brain analysis failed for {symbol}: {e}")
+                    logger.error(f"AI Brain analysis failed for {symbol}: {e}")
                     return
             
             if not signal:
-                logger.warning(f"⚠️ No signal generated for {symbol}")
+                logger.warning(f"No signal generated for {symbol}")
                 return
             
             # Save to database
@@ -591,19 +590,19 @@ class DemirAISignalGenerator:
             }
             
             if self.db.insert_signal(signal_data):
-                logger.info(f"✅ Signal saved to database")
+                logger.info(f"Signal saved to database")
                 self.telegram.queue_signal_notification(signal_data)
-                logger.info(f"✅ Telegram notification queued")
+                logger.info(f"Telegram notification queued")
         
         except Exception as e:
-            logger.error(f"❌ STRICT: {symbol} skipped due to error: {e}")
+            logger.error(f"STRICT: {symbol} skipped due to error: {e}")
     
     def _cleanup(self):
         """Graceful shutdown"""
-        logger.info("\n🛑 Cleaning up...")
+        logger.info("\nCleaning up...")
         self.telegram.stop()
         self.db.close()
-        logger.info("✅ Shutdown complete")
+        logger.info("Shutdown complete")
 
 # ============================================================================
 # MAIN ENTRY POINT
@@ -612,20 +611,20 @@ class DemirAISignalGenerator:
 if __name__ == '__main__':
     try:
         # START HEALTH SERVER FIRST - CRITICAL FOR RAILWAY
-        logger.info("🚀 STARTING HEALTH SERVER...")
+        logger.info("STARTING HEALTH SERVER...")
         if not start_health_server():
-            logger.error("❌ Failed to start health server - exiting")
+            logger.error("Failed to start health server - exiting")
             sys.exit(1)
         
         # Wait for health server to be ready
         time.sleep(1)
-        logger.info("✅ Health server is ready")
+        logger.info("Health server is ready")
         
         # Then start main generator
-        logger.info("🚀 STARTING MAIN GENERATOR...")
+        logger.info("STARTING MAIN GENERATOR...")
         generator = DemirAISignalGenerator()
         generator.start()
     
     except Exception as e:
-        logger.critical(f"❌ Fatal error: {e}", exc_info=True)
+        logger.critical(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
