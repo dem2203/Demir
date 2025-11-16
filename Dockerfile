@@ -2,21 +2,19 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install requirements WITHOUT hash verification
 COPY requirements.txt .
 RUN pip install --no-cache-dir --no-deps -r requirements.txt
 
-# Copy application files
 COPY main.py ai_brain_ensemble.py ./
-COPY . .
+COPY index.html app.js style.css ./
 
-# Create runtime directories
-RUN mkdir -p /app/logs /app/data
+RUN mkdir -p /app/logs /app/data /app/static
+
+RUN if [ -d static ]; then cp -r static/* /app/static/ 2>/dev/null; fi || true
 
 EXPOSE 8000
 ENV PYTHONUNBUFFERED=1 PORT=8000
