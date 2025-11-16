@@ -65,10 +65,16 @@ print("Verification: EVERY signal logged with timestamp + exchange source + conf
 print("Database: PostgreSQL (REAL) - Signal history, trades, metrics")
 print("Logging: RotatingFileHandler (Fixed! No more crashes)")
 print("✅ Phase 1/5/6: Multi-TF + Harmonic + Candlestick Integration")
+print("✅ Static Folder: CSS, JS, Images")
+print("✅ Templates Folder: HTML Dashboard")
 print("="*100 + "\n")
 
 # INITIALIZE FLASK APP
-app = Flask(__name__, static_folder=os.path.abspath('.'), static_url_path='')
+app = Flask(__name__,
+    static_folder=os.path.abspath('static'),
+    static_url_path='/static',
+    template_folder=os.path.abspath('templates')
+)
 app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max request
 
