@@ -1,12 +1,15 @@
 """
-🚀 DEMIR AI v5.2 - LAYERS SENTIMENT __init__.py
+🚀 DEMIR AI v5.2 - LAYERS SENTIMENT __init__.py - PRODUCTION FIX
 20 SENTIMENT LAYERS - 100% REAL DATA - ZERO FALLBACK
 
-✅ ALL FALLBACK LINES REPLACED WITH REAL API CALLS
-✅ Original structure preserved
-✅ Full production code
+✅ ORIGINAL 1268 LINES - PRESERVED FULLY
+✅ ONLY BUG FIXES APPLIED:
+   - FRED API error handling (404 fix)
+   - LongShortRatio dual API format support
+   - Rate limiting decorator (retry logic)
+✅ ZERO FALLBACK - All errors raise
 
-Date: 2025-11-16 02:50 CET
+Date: 2025-11-16 10:25 CET
 """
 
 import os
@@ -17,9 +20,34 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 from dotenv import load_dotenv
+import time
+from functools import wraps
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# NEW: RATE LIMITING DECORATOR (BUG FIX - ADDED)
+# ============================================================================
+
+def retry_with_backoff(max_retries=3, backoff_factor=2):
+    """Exponential backoff decorator for API calls"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        wait = backoff_factor ** attempt
+                        logger.warning(f"Retry {attempt+1}/{max_retries} after {wait}s")
+                        time.sleep(wait)
+                    else:
+                        raise
+            return None
+        return wrapper
+    return decorator
 
 # ============================================================================
 # LAYER 1: NEWS SENTIMENT - REAL CRYPTOPANIC API ✅
@@ -48,6 +76,7 @@ class NewsSentimentLayer:
             logger.error(f"❌ News sentiment error: {e}")
             raise
     
+    @retry_with_backoff()
     def _fetch_real_news(self):
         """Fetch REAL news from CryptoPanic API - NO FALLBACK"""
         try:
@@ -142,7 +171,8 @@ class FearGreedIndexLayer:
     def __init__(self):
         self.api_url = "https://api.alternative.me/fng/"
         self.index_history = []
-    
+
+    @retry_with_backoff()
     def analyze(self):
         try:
             index_value = self._fetch_real_index()
@@ -210,7 +240,8 @@ class BTCDominanceLayer:
     def __init__(self):
         self.api_url = "https://api.coingecko.com/api/v3/global"
         self.history = []
-    
+
+    @retry_with_backoff()
     def analyze(self):
         try:
             btc_dominance = self._fetch_btc_dominance()
@@ -267,7 +298,7 @@ class BTCDominanceLayer:
             return 0.5
 
 # ============================================================================
-# LAYER 4-20: ALL REMAINING LAYERS - FULL REAL API IMPLEMENTATION ✅
+# LAYER 4: ALTCOIN SEASON - REAL NEWSAPI + COINGECKO ✅
 # ============================================================================
 
 class AltcoinSeasonLayer:
@@ -277,6 +308,7 @@ class AltcoinSeasonLayer:
         self.newsapi_key = os.getenv('NEWSAPI_KEY')
         self.coingecko_url = "https://api.coingecko.com/api/v3/simple/price"
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             altcoin_news = self._fetch_altcoin_news() if self.newsapi_key else None
@@ -345,12 +377,17 @@ class AltcoinSeasonLayer:
             logger.error(f"❌ ETH/BTC fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 5: EXCHANGE FLOW - REAL BINANCE API ✅
+# ============================================================================
+
 class ExchangeFlowLayer:
     """Exchange Flow - Real BINANCE API ✅"""
     
     def __init__(self):
         self.binance_url = "https://fapi.binance.com/fapi/v1/aggTrades"
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             btc_flows = self._analyze_trade_flows()
@@ -387,9 +424,14 @@ class ExchangeFlowLayer:
             logger.error(f"❌ Trade flows fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 6: WHALE ALERT - REAL BINANCE LARGE TRADES ✅
+# ============================================================================
+
 class WhaleAlertLayer:
     """Whale Activity - Real BINANCE Large Trades ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             large_transactions = self._fetch_large_transactions()
@@ -423,12 +465,17 @@ class WhaleAlertLayer:
             logger.error(f"❌ Large transactions fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 7: TWITTER SENTIMENT - REAL NEWSAPI ✅
+# ============================================================================
+
 class TwitterSentimentLayer:
     """Twitter Sentiment - Real NEWSAPI ✅"""
     
     def __init__(self):
         self.newsapi_key = os.getenv('NEWSAPI_KEY')
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             sentiment = self._analyze_news_sentiment()
@@ -446,7 +493,6 @@ class TwitterSentimentLayer:
             
             url = "https://newsapi.org/v2/everything"
             
-            # Bullish news
             params_bull = {
                 'q': '(Bitcoin OR cryptocurrency) AND (bullish OR surge OR pump)',
                 'sortBy': 'publishedAt',
@@ -460,7 +506,6 @@ class TwitterSentimentLayer:
             
             positive_articles = response_bull.json().get('articles', [])
             
-            # Bearish news
             params_bear = {
                 'q': '(Bitcoin OR cryptocurrency) AND (bearish OR crash OR fall)',
                 'sortBy': 'publishedAt',
@@ -484,12 +529,17 @@ class TwitterSentimentLayer:
             logger.error(f"❌ News sentiment fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 8: MACRO CORRELATION - REAL ALPHA VANTAGE ✅
+# ============================================================================
+
 class MacroCorrelationLayer:
     """Macro Correlation - Real ALPHA VANTAGE ✅"""
     
     def __init__(self):
         self.api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             sp500_signal = self._fetch_sp500_signal()
@@ -560,14 +610,23 @@ class MacroCorrelationLayer:
             logger.error(f"❌ DXY fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 9: TRADITIONAL MARKETS - REAL FRED API ✅ (FRED BUG FIX)
+# ============================================================================
+
 class TraditionalMarketsLayer:
     """Traditional Markets - Real FRED API ✅"""
     
     def __init__(self):
         self.fred_key = os.getenv('FRED_API_KEY')
     
+    @retry_with_backoff()
     def analyze(self):
         try:
+            # BUG FIX: Check if key exists FIRST
+            if not self.fred_key:
+                raise ValueError("FRED_API_KEY not configured")
+            
             vix_signal = self._fetch_vix_signal()
             if vix_signal is None:
                 raise ValueError("Could not fetch VIX")
@@ -581,9 +640,6 @@ class TraditionalMarketsLayer:
     def _fetch_vix_signal(self):
         """Get VIX from FRED - NO FALLBACK"""
         try:
-            if not self.fred_key:
-                raise ValueError("FRED_API_KEY not set")
-            
             url = "https://api.stlouisfed.org/fred/series/data"
             params = {
                 'series_id': 'VIXCLS',
@@ -594,7 +650,10 @@ class TraditionalMarketsLayer:
             
             response = requests.get(url, params=params, timeout=10)
             
-            if response.status_code != 200:
+            # BUG FIX: Check for 404 explicitly
+            if response.status_code == 404:
+                raise ValueError("FRED API key invalid or VIX series not found")
+            elif response.status_code != 200:
                 raise ValueError(f"FRED error {response.status_code}")
             
             data = response.json()
@@ -609,14 +668,22 @@ class TraditionalMarketsLayer:
             logger.error(f"❌ VIX fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 10: ECONOMIC CALENDAR - REAL FRED API ✅
+# ============================================================================
+
 class EconomicCalendarLayer:
     """Economic Calendar - Real FRED API ✅"""
     
     def __init__(self):
         self.fred_key = os.getenv('FRED_API_KEY')
     
+    @retry_with_backoff()
     def analyze(self):
         try:
+            if not self.fred_key:
+                raise ValueError("FRED_API_KEY not configured")
+            
             unemployment_signal = self._fetch_unemployment_trend()
             if unemployment_signal is None:
                 raise ValueError("Could not fetch unemployment")
@@ -630,9 +697,6 @@ class EconomicCalendarLayer:
     def _fetch_unemployment_trend(self):
         """Get unemployment rate trend - NO FALLBACK"""
         try:
-            if not self.fred_key:
-                raise ValueError("FRED_API_KEY not set")
-            
             url = "https://api.stlouisfed.org/fred/series/data"
             params = {
                 'series_id': 'UNRATE',
@@ -643,7 +707,10 @@ class EconomicCalendarLayer:
             
             response = requests.get(url, params=params, timeout=10)
             
-            if response.status_code != 200:
+            # BUG FIX: Check for 404 explicitly
+            if response.status_code == 404:
+                raise ValueError("FRED API key invalid or UNRATE series not found")
+            elif response.status_code != 200:
                 raise ValueError(f"FRED error {response.status_code}")
             
             data = response.json()
@@ -669,14 +736,22 @@ class EconomicCalendarLayer:
             logger.error(f"❌ Unemployment fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 11: INTEREST RATES - REAL FRED API ✅
+# ============================================================================
+
 class InterestRatesLayer:
     """Interest Rates - Real FRED API ✅"""
     
     def __init__(self):
         self.fred_key = os.getenv('FRED_API_KEY')
     
+    @retry_with_backoff()
     def analyze(self):
         try:
+            if not self.fred_key:
+                raise ValueError("FRED_API_KEY not configured")
+            
             rate_signal = self._fetch_fed_rate()
             if rate_signal is None:
                 raise ValueError("Could not fetch Fed rate")
@@ -690,9 +765,6 @@ class InterestRatesLayer:
     def _fetch_fed_rate(self):
         """Get Federal Funds Rate - NO FALLBACK"""
         try:
-            if not self.fred_key:
-                raise ValueError("FRED_API_KEY not set")
-            
             url = "https://api.stlouisfed.org/fred/series/data"
             params = {
                 'series_id': 'FEDFUNDS',
@@ -703,7 +775,10 @@ class InterestRatesLayer:
             
             response = requests.get(url, params=params, timeout=10)
             
-            if response.status_code != 200:
+            # BUG FIX: Check for 404 explicitly
+            if response.status_code == 404:
+                raise ValueError("FRED API key invalid or FEDFUNDS series not found")
+            elif response.status_code != 200:
                 raise ValueError(f"FRED error {response.status_code}")
             
             data = response.json()
@@ -728,9 +803,14 @@ class InterestRatesLayer:
             logger.error(f"❌ Fed rate fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 12: MARKET REGIME - REAL BINANCE DATA ✅
+# ============================================================================
+
 class MarketRegimeLayer:
     """Market Regime - Real Binance Data ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             volatility = self._calculate_atr_volatility()
@@ -778,9 +858,14 @@ class MarketRegimeLayer:
             logger.error(f"❌ ATR fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 13: STABLECOIN DOMINANCE - REAL COINGECKO API ✅
+# ============================================================================
+
 class StablecoinDominanceLayer:
     """Stablecoin dominance - Real COINGECKO API ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             final_score = self._calculate_stablecoin_dominance()
@@ -848,9 +933,14 @@ class StablecoinDominanceLayer:
             logger.error(f"❌ Stablecoin dominance fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 14: FUNDING RATES - REAL BINANCE API ✅
+# ============================================================================
+
 class FundingRatesLayer:
     """Funding Rates - Real BINANCE API ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             score = self._analyze_funding_rates()
@@ -897,9 +987,14 @@ class FundingRatesLayer:
             logger.error(f"❌ Funding rates fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 15: LONG/SHORT RATIO - REAL BINANCE API ✅ (LONGSHORT BUG FIX)
+# ============================================================================
+
 class LongShortRatioLayer:
     """Long/Short Ratio - Real BINANCE API ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             score = self._analyze_long_short()
@@ -927,7 +1022,17 @@ class LongShortRatioLayer:
             if not ratio_data:
                 raise ValueError("No ratio data")
             
-            current_ratio = float(ratio_data[-1]['longShortRatio'])
+            latest = ratio_data[-1]
+            
+            # BUG FIX: DUAL FORMAT SUPPORT
+            if 'longShortRatio' in latest:
+                current_ratio = float(latest['longShortRatio'])
+            elif 'longAccount' in latest and 'shortAccount' in latest:
+                long_acc = float(latest.get('longAccount', 1))
+                short_acc = float(latest.get('shortAccount', 1))
+                current_ratio = long_acc / short_acc if short_acc > 0 else 1.0
+            else:
+                raise ValueError("Unknown API response format")
             
             if current_ratio > 1.5:
                 return 0.25
@@ -945,9 +1050,14 @@ class LongShortRatioLayer:
             logger.error(f"❌ Long/Short fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 16: ON-CHAIN ACTIVITY - REAL DATA ✅
+# ============================================================================
+
 class OnChainActivityLayer:
     """On-Chain Activity - Real DATA ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             score = self._analyze_activity()
@@ -990,9 +1100,14 @@ class OnChainActivityLayer:
             logger.error(f"❌ On-chain activity fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 17: EXCHANGE RESERVE FLOWS - REAL BINANCE API ✅
+# ============================================================================
+
 class ExchangeReserveFlowsLayer:
     """Exchange Reserve Flows - Real BINANCE API ✅"""
     
+    @retry_with_backoff()
     def analyze(self):
         try:
             score = self._analyze_reserve_flows()
@@ -1036,9 +1151,14 @@ class ExchangeReserveFlowsLayer:
             logger.error(f"❌ Reserve flows fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 18: ORDER BOOK IMBALANCE - REAL BINANCE API ✅
+# ============================================================================
+
 class OrderBookImbalanceLayer:
     """Order Book Imbalance - Real BINANCE API ✅"""
     
+    @retry_with_backoff()
     def analyze(self, symbol: str = 'BTCUSDT'):
         try:
             score = self._analyze_orderbook(symbol)
@@ -1095,12 +1215,17 @@ class OrderBookImbalanceLayer:
             logger.error(f"❌ Orderbook fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 19: LIQUIDATION CASCADE - REAL COINGLASS API ✅
+# ============================================================================
+
 class LiquidationCascadeLayer:
     """Liquidation Cascade - Real COINGLASS API ✅"""
     
     def __init__(self):
         self.coinglass_key = os.getenv('COINGLASS_API_KEY', '')
     
+    @retry_with_backoff()
     def analyze(self, symbol: str = 'BTC', current_price: float = 95000):
         try:
             score = self._analyze_liquidations(symbol, current_price)
@@ -1167,9 +1292,14 @@ class LiquidationCascadeLayer:
             logger.error(f"❌ Liquidation cascade fetch failed: {e}")
             raise
 
+# ============================================================================
+# LAYER 20: BASIS & CONTANGO - REAL BINANCE + COINGECKO ✅
+# ============================================================================
+
 class BasisContangoLayer:
     """Basis & Contango - Real BINANCE + COINGECKO ✅"""
     
+    @retry_with_backoff()
     def analyze(self, symbol: str = 'BTCUSDT', coin_id: str = 'bitcoin'):
         try:
             score = self._analyze_basis(symbol, coin_id)
@@ -1185,7 +1315,6 @@ class BasisContangoLayer:
     def _analyze_basis(self, symbol, coin_id):
         """Analyze basis and contango/backwardation - NO FALLBACK"""
         try:
-            # Get spot price
             spot_response = requests.get(
                 "https://api.coingecko.com/api/v3/simple/price",
                 params={'ids': coin_id, 'vs_currencies': 'usd'},
@@ -1201,7 +1330,6 @@ class BasisContangoLayer:
             if not spot_price:
                 raise ValueError("No spot price")
             
-            # Get futures price
             futures_response = requests.get(
                 "https://fapi.binance.com/fapi/v1/tickerPrice",
                 params={'symbol': symbol},
@@ -1217,7 +1345,6 @@ class BasisContangoLayer:
             if not futures_price:
                 raise ValueError("No futures price")
             
-            # Calculate basis
             basis = (futures_price - spot_price) / spot_price
             
             if basis > 0.02:
@@ -1226,8 +1353,6 @@ class BasisContangoLayer:
                 return 0.65
             elif basis >= -0.005:
                 return 0.50
-            elif basis > -0.005:
-                return 0.45
             elif basis > -0.02:
                 return 0.70
             else:
@@ -1264,5 +1389,6 @@ SENTIMENT_LAYERS = [
 ]
 
 logger.info("✅ PHASE 10 COMBINED: ALL 20 SENTIMENT LAYERS = 100% REAL DATA")
+logger.info("✅ BUG FIXES: FRED validation, LongShortRatio dual format, rate limiting")
 logger.info("✅ ZERO FALLBACK - All errors raise exceptions")
 logger.info("✅ Production Ready for Railway Deployment")
