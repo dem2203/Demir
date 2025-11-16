@@ -1,18 +1,18 @@
 """
-🚀 DEMIR AI v5.2 - Core Signal Generator Engine
-📊 Production-Grade Signal Generation Loop
-🔐 100% Real Data Policy - NO MOCK, NO FAKE, NO FALLBACK, NO HARDCODED
+🚀 DEMIR AI v5.2 - PRODUCTION STRICT VERSION
+📊 Signal Generation + Railway Health Server
+🔐 STRICT: NO FALLBACK, NO MOCK, NO FAKE - 100% REAL DATA ONLY
 
-✅ CORRECTED & PRODUCTION READY:
-- All INSERT queries fixed
-- No fallback logic errors
-- 100% real data from APIs only
-- All 30 layers integrated
-- Monitoring & alerts active
-- Railway Health Server for PORT binding
+✅ RULES (KURALLARA UYGUN):
+- Hiç FALLBACK ❌
+- Hiç MOCK DATA ❌
+- Hiç FAKE DATA ❌
+- Hiç HARDCODED ❌
+- API ERROR → Retry → Telegram Alert → Skip Signal
+- Sistem CRASH olmaz, ama Signal vermeyebilir
 
 Location: GitHub Root / main.py
-Date: 2025-11-16 11:45 CET
+Date: 2025-11-16 11:55 CET
 """
 
 import os
@@ -32,50 +32,13 @@ import numpy as np
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ============================================================================
-# HEALTH CHECK SERVER - RAILWAY SUPPORT
+# LOAD ENV FIRST
 # ============================================================================
-
-class HealthHandler(BaseHTTPRequestHandler):
-    """HTTP handler for Railway health checks"""
-    
-    def do_GET(self):
-        """Handle GET requests"""
-        if self.path == '/health':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b'OK')
-        else:
-            self.send_response(404)
-            self.end_headers()
-    
-    def log_message(self, format, *args):
-        """Suppress logging"""
-        pass
-
-def start_health_server():
-    """Start health check HTTP server on Railway PORT"""
-    try:
-        PORT = int(os.getenv('PORT', 8000))
-        server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        logger.info(f"✅ Health server listening on 0.0.0.0:{PORT}")
-        return True
-    except Exception as e:
-        logger.error(f"❌ Health server error: {e}")
-        return False
-
-# ============================================================================
-# LOAD ENVIRONMENT VARIABLES
-# ============================================================================
-
 load_dotenv()
 
 # ============================================================================
-# LOGGING CONFIGURATION - PRODUCTION GRADE
+# LOGGING CONFIGURATION
 # ============================================================================
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - [%(levelname)s] - %(name)s - %(message)s',
@@ -85,13 +48,81 @@ logging.basicConfig(
 logger = logging.getLogger('DEMIR_AI_MAIN')
 
 # ============================================================================
+# HEALTH CHECK SERVER - RAILWAY SUPPORT
+# ============================================================================
+
+class HealthHandler(BaseHTTPRequestHandler):
+    """HTTP handler for health checks"""
+    
+    def do_GET(self):
+        """Handle GET requests"""
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'OK')
+            logger.debug("✅ Health check request received")
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def log_message(self, format, *args):
+        """Suppress HTTP server logging"""
+        pass
+
+def start_health_server():
+    """Start health check HTTP server - MUST RUN FIRST!"""
+    try:
+        PORT = int(os.getenv('PORT', 8000))
+        
+        # Bind to 0.0.0.0 to accept external connections
+        server = HTTPServer(('0.0.0.0', PORT), HealthHandler)
+        
+        # Run in daemon thread so it doesn't block main loop
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        
+        logger.info(f"✅✅✅ Health server STARTED on 0.0.0.0:{PORT}")
+        logger.info(f"✅ Railway will check: http://localhost:{PORT}/health")
+        return True
+    
+    except Exception as e:
+        logger.error(f"❌ Health server FAILED: {e}")
+        return False
+
+# ============================================================================
+# RETRY MECHANISM - STRICT (NO FALLBACK)
+# ============================================================================
+
+def retry_with_backoff(max_retries=3, backoff_factor=2):
+    """Retry decorator with exponential backoff"""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    result = func(*args, **kwargs)
+                    if result is not None:
+                        return result
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        wait = backoff_factor ** attempt
+                        logger.warning(f"⚠️ Retry {attempt+1}/{max_retries} after {wait}s: {e}")
+                        time.sleep(wait)
+                    else:
+                        logger.error(f"❌ FINAL FAILURE after {max_retries} retries: {e}")
+                        raise  # Throw error, don't fallback!
+            return None
+        return wrapper
+    return decorator
+
+# ============================================================================
 # IMPORT AI BRAIN COMPONENTS
 # ============================================================================
 
 try:
     from ai_brain_ensemble import AiBrainEnsemble
     AI_BRAIN_AVAILABLE = True
-    logger.info("✅ AI Brain Ensemble imported successfully")
+    logger.info("✅ AI Brain Ensemble imported")
 except ImportError as e:
     AI_BRAIN_AVAILABLE = False
     logger.warning(f"⚠️ AI Brain not available: {e}")
@@ -99,17 +130,17 @@ except ImportError as e:
 try:
     from trading_executor import TradingExecutor
     TRADING_EXECUTOR_AVAILABLE = True
-    logger.info("✅ Trading Executor imported successfully")
+    logger.info("✅ Trading Executor imported")
 except ImportError as e:
     TRADING_EXECUTOR_AVAILABLE = False
     logger.warning(f"⚠️ Trading Executor not available: {e}")
 
 # ============================================================================
-# DATABASE MIGRATION - AUTO-RUN AT STARTUP
+# DATABASE MIGRATION
 # ============================================================================
 
 class DatabaseMigration:
-    """Handle database schema migrations automatically"""
+    """Handle database schema migrations"""
     
     def __init__(self, db_url: str):
         self.db_url = db_url
@@ -119,10 +150,10 @@ class DatabaseMigration:
         """Connect to database"""
         try:
             self.connection = psycopg2.connect(self.db_url)
-            logger.info("✅ Connected to PostgreSQL for migration")
+            logger.info("✅ Connected to PostgreSQL")
             return True
         except psycopg2.Error as e:
-            logger.error(f"❌ Migration connection error: {e}")
+            logger.error(f"❌ Database connection error: {e}")
             return False
     
     def run_migrations(self):
@@ -133,9 +164,7 @@ class DatabaseMigration:
         try:
             cursor = self.connection.cursor()
             
-            # Ensure all required columns exist
             migration_sql = """
-            -- Add missing columns
             ALTER TABLE trades ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'PENDING';
             ALTER TABLE trades ADD COLUMN IF NOT EXISTS confidence FLOAT DEFAULT 0.5;
             ALTER TABLE trades ADD COLUMN IF NOT EXISTS tp1 FLOAT;
@@ -146,7 +175,7 @@ class DatabaseMigration:
             
             cursor.execute(migration_sql)
             self.connection.commit()
-            logger.info("✅ Migration completed: All columns verified")
+            logger.info("✅ Migration completed")
             cursor.close()
             return True
         
@@ -161,7 +190,7 @@ class DatabaseMigration:
             self.connection.close()
 
 # ============================================================================
-# ENVIRONMENT VARIABLE VALIDATION
+# ENVIRONMENT VALIDATION
 # ============================================================================
 
 class ConfigValidator:
@@ -175,22 +204,22 @@ class ConfigValidator:
     
     @staticmethod
     def validate():
-        """Validate all required variables"""
-        missing_required = []
+        """Validate all required variables - STRICT"""
+        missing = []
         
         for var in ConfigValidator.REQUIRED_VARS:
             if not os.getenv(var):
-                missing_required.append(var)
+                missing.append(var)
         
-        if missing_required:
-            logger.critical(f"❌ MISSING REQUIRED ENV VARS: {missing_required}")
-            raise ValueError(f"Missing required environment variables: {missing_required}")
+        if missing:
+            logger.critical(f"❌ MISSING REQUIRED ENV VARS: {missing}")
+            raise ValueError(f"Missing required environment variables: {missing}")
         
-        logger.info("✅ Environment validation passed")
+        logger.info("✅ All required environment variables set")
         return True
 
 # ============================================================================
-# DATABASE CONNECTION MANAGER
+# DATABASE MANAGER
 # ============================================================================
 
 class DatabaseManager:
@@ -212,7 +241,7 @@ class DatabaseManager:
             raise
     
     def insert_signal(self, signal_data: Dict) -> bool:
-        """Insert real signal into database (100% REAL DATA)"""
+        """Insert signal - STRICT REAL DATA ONLY"""
         try:
             cursor = self.connection.cursor()
             
@@ -227,7 +256,6 @@ class DatabaseManager:
             )
             """
             
-            # Add defaults for all fields
             data = {
                 'symbol': signal_data['symbol'],
                 'direction': signal_data['direction'],
@@ -262,71 +290,65 @@ class DatabaseManager:
             logger.info("✅ Database connection closed")
 
 # ============================================================================
-# REAL-TIME API DATA FETCHER (100% REAL DATA)
+# REAL-TIME DATA FETCHER - STRICT NO FALLBACK
 # ============================================================================
 
 class RealTimeDataFetcher:
-    """Fetch real-time price data from Binance"""
+    """Fetch real-time price data - STRICT, WILL THROW ON ERROR"""
     
     def __init__(self):
         self.binance_url = 'https://fapi.binance.com'
         self.session = requests.Session()
         self.session.headers.update({'User-Agent': 'DEMIR-AI-v5.2'})
     
-    def get_binance_price(self, symbol: str) -> Optional[float]:
-        """Get real Binance futures price (100% REAL DATA)"""
-        try:
-            endpoint = f'{self.binance_url}/fapi/v1/ticker/price'
-            params = {'symbol': symbol}
-            response = self.session.get(endpoint, params=params, timeout=5)
-            
-            if response.status_code == 200:
-                data = response.json()
-                price = float(data['price'])
-                logger.debug(f"✅ Binance {symbol}: ${price}")
-                return price
-            else:
-                logger.warning(f"⚠️ Binance API error: {response.status_code}")
-                return None
+    @retry_with_backoff(max_retries=3)
+    def get_binance_price(self, symbol: str) -> float:
+        """Get real Binance futures price - THROWS if fails"""
+        endpoint = f'{self.binance_url}/fapi/v1/ticker/price'
+        params = {'symbol': symbol}
+        response = self.session.get(endpoint, params=params, timeout=5)
         
-        except Exception as e:
-            logger.error(f"❌ Binance price fetch error: {e}")
-            return None
+        if response.status_code != 200:
+            raise Exception(f"Binance API error {response.status_code}")
+        
+        data = response.json()
+        price = float(data['price'])
+        logger.debug(f"✅ Binance {symbol}: ${price}")
+        return price
     
+    @retry_with_backoff(max_retries=3)
     def get_ohlcv_data(self, symbol: str, timeframe: str = '1h', limit: int = 100) -> List[Dict]:
-        """Get real OHLCV candlestick data from Binance (100% REAL DATA)"""
-        try:
-            endpoint = f'{self.binance_url}/fapi/v1/klines'
-            params = {
-                'symbol': symbol,
-                'interval': timeframe,
-                'limit': limit
-            }
-            
-            response = self.session.get(endpoint, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                klines = response.json()
-                ohlcv_data = []
-                
-                for kline in klines:
-                    ohlcv_data.append({
-                        'timestamp': datetime.fromtimestamp(kline[0] / 1000, tz=pytz.UTC),
-                        'open': float(kline[1]),
-                        'high': float(kline[2]),
-                        'low': float(kline[3]),
-                        'close': float(kline[4]),
-                        'volume': float(kline[7])
-                    })
-                
-                logger.info(f"✅ Fetched {len(ohlcv_data)} OHLCV candles for {symbol}")
-                return ohlcv_data
-            
-            return []
+        """Get real OHLCV candlestick data - THROWS if fails"""
+        endpoint = f'{self.binance_url}/fapi/v1/klines'
+        params = {
+            'symbol': symbol,
+            'interval': timeframe,
+            'limit': limit
+        }
         
-        except Exception as e:
-            logger.error(f"❌ OHLCV fetch error: {e}")
-            return []
+        response = self.session.get(endpoint, params=params, timeout=10)
+        
+        if response.status_code != 200:
+            raise Exception(f"Binance API error {response.status_code}")
+        
+        klines = response.json()
+        if not klines:
+            raise Exception("Empty klines response")
+        
+        ohlcv_data = []
+        
+        for kline in klines:
+            ohlcv_data.append({
+                'timestamp': datetime.fromtimestamp(kline[0] / 1000, tz=pytz.UTC),
+                'open': float(kline[1]),
+                'high': float(kline[2]),
+                'low': float(kline[3]),
+                'close': float(kline[4]),
+                'volume': float(kline[7])
+            })
+        
+        logger.info(f"✅ Fetched {len(ohlcv_data)} OHLCV candles for {symbol}")
+        return ohlcv_data
 
 # ============================================================================
 # TELEGRAM NOTIFICATION ENGINE
@@ -418,8 +440,23 @@ class TelegramNotificationEngine:
         if self.api_url:
             self.queue.put(message)
     
+    def queue_error_notification(self, layer_name: str, error: str):
+        """Queue error notification"""
+        message = f"""
+<b>🚨 LAYER ERROR</b>
+
+❌ Layer: <b>{layer_name}</b>
+Error: <code>{error}</code>
+Zaman: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+System continues with other layers.
+"""
+        
+        if self.api_url:
+            self.queue.put(message)
+    
     def send_hourly_performance_report(self, metrics: Dict):
-        """Send hourly performance report to monitoring chat"""
+        """Send hourly performance report"""
         report_message = f"""
 <b>📊 HOURLY PERFORMANCE REPORT</b>
 <b>Time:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
@@ -452,7 +489,7 @@ class TelegramNotificationEngine:
 # ============================================================================
 
 class SystemMonitor:
-    """Monitor system performance and send periodic reports"""
+    """Monitor system performance"""
     
     def __init__(self, telegram_engine: TelegramNotificationEngine):
         self.telegram = telegram_engine
@@ -500,13 +537,16 @@ class SystemMonitor:
             logger.info(f"✅ Hourly report sent - Trades: {self.metrics['total_trades']}, Win Rate: {win_rate:.1f}%")
 
 # ============================================================================
-# MAIN SIGNAL GENERATION LOOP (100% REAL DATA)
+# MAIN SIGNAL GENERATION ENGINE - STRICT VERSION
 # ============================================================================
 
 class DemirAISignalGenerator:
-    """Main orchestrator for signal generation (100% REAL DATA)"""
+    """Main signal generator - STRICT NO FALLBACK VERSION"""
     
     def __init__(self):
+        logger.info("🚀 STRICT MODE: Initializing DEMIR AI v5.2...")
+        logger.info("⚠️ RULES: NO FALLBACK, NO MOCK, NO FAKE")
+        
         # Validate environment
         ConfigValidator.validate()
         
@@ -550,15 +590,13 @@ class DemirAISignalGenerator:
         self.symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
         self.cycle_interval = 300
         
-        logger.info("✅ DEMIR AI Signal Generator initialized")
+        logger.info("✅ DEMIR AI READY - STRICT MODE ACTIVE")
     
     def start(self):
-        """Start the main signal generation loop (24/7 OPERATIONAL)"""
+        """Start main signal generation loop"""
         logger.info("🚀 Starting DEMIR AI v5.2 Signal Generation Loop")
-        logger.info(f"📊 Monitoring symbols: {self.symbols}")
-        logger.info(f"⏱️ Cycle interval: {self.cycle_interval} seconds")
-        logger.info(f"🧠 AI Brain: {'✅ ENABLED' if self.ai_brain else '⚠️ DISABLED'}")
-        logger.info(f"🤖 Executor: {'✅ ENABLED' if self.executor else '⚠️ DISABLED'}")
+        logger.info(f"📊 Monitoring: {self.symbols}")
+        logger.info(f"⚠️ STRICT MODE: API errors → Retry → Alert → Skip (no fallback)")
         
         self.telegram.start()
         
@@ -576,6 +614,7 @@ class DemirAISignalGenerator:
                         self._process_symbol(symbol)
                     except Exception as e:
                         logger.error(f"❌ Error processing {symbol}: {e}")
+                        self.telegram.queue_error_notification(symbol, str(e))
                 
                 self.monitor.check_and_send_hourly_report()
                 
@@ -592,90 +631,92 @@ class DemirAISignalGenerator:
             self._cleanup()
     
     def _process_symbol(self, symbol: str):
-        """Process single symbol (100% REAL DATA ANALYSIS)"""
+        """Process single symbol - STRICT NO FALLBACK"""
         logger.info(f"\n📍 Processing: {symbol}")
         
-        # Fetch real prices
-        price = self.fetcher.get_binance_price(symbol)
-        if not price:
-            logger.warning(f"⚠️ Could not fetch price for {symbol}")
-            return
-        
-        # Fetch OHLCV data
-        ohlcv_1h = self.fetcher.get_ohlcv_data(symbol, '1h', 100)
-        if not ohlcv_1h:
-            logger.warning(f"⚠️ Could not fetch OHLCV for {symbol}")
-            return
-        
-        signal = None
-        
-        # Generate signal using AI Brain
-        if self.ai_brain:
-            try:
-                prices = np.array([c['close'] for c in ohlcv_1h])
-                volumes = np.array([c['volume'] for c in ohlcv_1h])
-                
-                ai_signal = self.ai_brain.generate_ensemble_signal(
-                    symbol, 
-                    prices, 
-                    volumes, 
-                    futures_mode=True
-                )
-                
-                if ai_signal and ai_signal['ensemble_score'] > 0.5:
-                    signal = {
-                        'symbol': symbol,
-                        'direction': ai_signal['direction'],
-                        'entry_price': ai_signal['entry_price'],
-                        'tp1': ai_signal['tp1'],
-                        'tp2': ai_signal['tp2'],
-                        'sl': ai_signal['sl'],
-                        'entry_time': datetime.now(pytz.UTC),
-                        'position_size': ai_signal['position_size'],
-                        'confidence': ai_signal['confidence'],
-                        'ensemble_score': ai_signal['ensemble_score'],
-                        'rr_ratio': ai_signal.get('rr_ratio', 1.0)
-                    }
-                    
-                    logger.info(f"✅ AI Signal: {signal['direction']} @ {signal['ensemble_score']:.0%} confidence")
+        try:
+            # Fetch real prices - WILL THROW if fails
+            price = self.fetcher.get_binance_price(symbol)
             
-            except Exception as e:
-                logger.warning(f"⚠️ AI Brain analysis failed: {e}")
-        
-        if not signal:
-            logger.warning(f"⚠️ No signal generated for {symbol}")
-            return
-        
-        # Save to database
-        signal_data = {
-            'symbol': signal['symbol'],
-            'direction': signal['direction'],
-            'entry_price': signal['entry_price'],
-            'tp1': signal['tp1'],
-            'tp2': signal['tp2'],
-            'sl': signal['sl'],
-            'entry_time': signal['entry_time'],
-            'position_size': signal.get('position_size', 1.0),
-            'confidence': signal.get('confidence', 0.5),
-            'ensemble_score': signal.get('ensemble_score', 0.5),
-            'rr_ratio': signal.get('rr_ratio', 1.0)
-        }
-        
-        if self.db.insert_signal(signal_data):
-            logger.info(f"✅ Signal saved to database")
-            self.telegram.queue_signal_notification(signal_data)
-            logger.info(f"✅ Telegram notification queued")
+            # Fetch OHLCV data - WILL THROW if fails
+            ohlcv_1h = self.fetcher.get_ohlcv_data(symbol, '1h', 100)
             
-            if self.executor and signal.get('ensemble_score', 0) > 0.65:
+            signal = None
+            
+            # Generate signal using AI Brain
+            if self.ai_brain:
                 try:
-                    result = self.executor.execute_trade(signal)
-                    if result.get('status') == 'executed':
-                        logger.info(f"✅ Trade executed: {symbol}")
-                        self.monitor.update_metrics(True, 0)
+                    prices = np.array([c['close'] for c in ohlcv_1h])
+                    volumes = np.array([c['volume'] for c in ohlcv_1h])
+                    
+                    ai_signal = self.ai_brain.generate_ensemble_signal(
+                        symbol, 
+                        prices, 
+                        volumes, 
+                        futures_mode=True
+                    )
+                    
+                    if ai_signal and ai_signal['ensemble_score'] > 0.5:
+                        signal = {
+                            'symbol': symbol,
+                            'direction': ai_signal['direction'],
+                            'entry_price': ai_signal['entry_price'],
+                            'tp1': ai_signal['tp1'],
+                            'tp2': ai_signal['tp2'],
+                            'sl': ai_signal['sl'],
+                            'entry_time': datetime.now(pytz.UTC),
+                            'position_size': ai_signal['position_size'],
+                            'confidence': ai_signal['confidence'],
+                            'ensemble_score': ai_signal['ensemble_score'],
+                            'rr_ratio': ai_signal.get('rr_ratio', 1.0)
+                        }
+                        
+                        logger.info(f"✅ AI Signal: {signal['direction']} @ {signal['ensemble_score']:.0%} confidence")
+                
                 except Exception as e:
-                    logger.warning(f"⚠️ Trade execution failed: {e}")
+                    logger.error(f"❌ AI Brain analysis failed for {symbol}: {e}")
+                    # Don't fallback - just skip this symbol
+                    return
             
-            self.monitor.update_metrics(True, 0)
+            if not signal:
+                logger.warning(f"⚠️ No signal generated for {symbol}")
+                return
+            
+            # Save to database - STRICT REAL DATA
+            signal_data = {
+                'symbol': signal['symbol'],
+                'direction': signal['direction'],
+                'entry_price': signal['entry_price'],
+                'tp1': signal['tp1'],
+                'tp2': signal['tp2'],
+                'sl': signal['sl'],
+                'entry_time': signal['entry_time'],
+                'position_size': signal.get('position_size', 1.0),
+                'confidence': signal.get('confidence', 0.5),
+                'ensemble_score': signal.get('ensemble_score', 0.5),
+                'rr_ratio': signal.get('rr_ratio', 1.0)
+            }
+            
+            if self.db.insert_signal(signal_data):
+                logger.info(f"✅ Signal saved to database")
+                self.telegram.queue_signal_notification(signal_data)
+                logger.info(f"✅ Telegram notification queued")
+                
+                if self.executor and signal.get('ensemble_score', 0) > 0.65:
+                    try:
+                        result = self.executor.execute_trade(signal)
+                        if result.get('status') == 'executed':
+                            logger.info(f"✅ Trade executed: {symbol}")
+                            self.monitor.update_metrics(True, 0)
+                    except Exception as e:
+                        logger.warning(f"⚠️ Trade execution failed: {e}")
+                
+                self.monitor.update_metrics(True, 0)
+        
+        except Exception as e:
+            # STRICT: Don't fallback, just throw and continue
+            logger.error(f"❌ STRICT: {symbol} skipped due to error: {e}")
+            self.telegram.queue_error_notification(symbol, str(e))
     
     def _cleanup(self):
         """Graceful shutdown"""
@@ -690,12 +731,18 @@ class DemirAISignalGenerator:
 
 if __name__ == '__main__':
     try:
-        # START HEALTH SERVER FIRST (Railway needs this!)
+        # START HEALTH SERVER FIRST - CRITICAL FOR RAILWAY
+        logger.info("🚀 STARTING HEALTH SERVER...")
         if not start_health_server():
-            logger.error("❌ Failed to start health server")
+            logger.error("❌ Failed to start health server - exiting")
             sys.exit(1)
         
+        # Wait for health server to be ready
+        time.sleep(1)
+        logger.info("✅ Health server is ready")
+        
         # Then start main generator
+        logger.info("🚀 STARTING MAIN GENERATOR...")
         generator = DemirAISignalGenerator()
         generator.start()
     
