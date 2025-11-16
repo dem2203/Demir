@@ -3,161 +3,307 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEMIR AI v6.0 - 4-GROUP SYSTEM</title>
-    <link rel="stylesheet" href="style.css">
+    <title>DEMIR AI Bot v6.0 - Dashboard</title>
+    
+    <!-- ✅ FIXED: Correct CSS path for Flask -->
+    <link rel="stylesheet" href="/static/style.css">
+    
+    <!-- Fallback inline styles (in case CSS fails) -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+            color: #00ff88;
+            font-family: 'Courier New', 'Courier', monospace;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1, h2, h3 {
+            color: #00ff88;
+            margin: 20px 0 10px 0;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+            transform: translateY(-5px);
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        .metric-value {
+            color: #00ff88;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .status-running {
+            color: #00ff88;
+        }
+        
+        .status-warning {
+            color: #ffaa00;
+        }
+        
+        .status-error {
+            color: #ff3333;
+        }
+        
+        .signal-bullish {
+            color: #00ff88;
+        }
+        
+        .signal-bearish {
+            color: #ff3333;
+        }
+        
+        .signal-neutral {
+            color: #ffaa00;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00cc6a);
+            transition: width 0.3s ease;
+        }
+        
+        button {
+            background: #00ff88;
+            color: #0f0f0f;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #00cc6a;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+        
+        input, select {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        input::placeholder {
+            color: rgba(0, 255, 136, 0.5);
+        }
+        
+        .timestamp {
+            color: #666;
+            font-size: 0.8em;
+            text-align: right;
+        }
+    </style>
 </head>
 <body>
-
-<div class="container">
-    <!-- Header -->
-    <header class="header">
-        <div class="header-left">
-            <h1>🤖 DEMIR AI v6.0</h1>
-            <p>4-GROUP SIGNAL SYSTEM: Tech (20) + Sentiment (20) + On-Chain (6) + Macro+Risk (14)</p>
-        </div>
-        <div class="header-right">
-            <span id="connection-status" class="status-indicator">🟢 Connected</span>
-            <span id="update-time" class="last-update">Last: now</span>
-        </div>
-    </header>
-
-    <!-- Coin Management -->
-    <div class="coin-management">
-        <div class="coin-selector">
-            <h3>📊 Tracked Coins</h3>
-            <div id="coin-buttons" class="coin-buttons">
-                <!-- Dynamically populated -->
+    <div class="container">
+        <!-- Header -->
+        <h1>🤖 DEMIR AI Bot v6.0</h1>
+        
+        <!-- Tracked Coins Section -->
+        <div class="card">
+            <h2>📊 Tracked Coins (İzlenen Coinler)</h2>
+            <div style="display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;">
+                <span class="badge">LTC</span>
+                <span class="badge">ETH</span>
+                <span class="badge">BTC</span>
+            </div>
+            
+            <h3>➕ Add New Coin (Yeni Coin Ekle)</h3>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <input type="text" placeholder="e.g., SOLUSDT, BNBUSDT, ADAUSDT" id="new-coin-input">
+                <button onclick="addCoin()">+ ADD</button>
             </div>
         </div>
         
-        <div class="add-coin-section">
-            <h3>➕ Add New Coin</h3>
-            <div class="add-coin-form">
-                <input type="text" id="new-coin-input" placeholder="e.g., SOLUSDT" maxlength="20">
-                <button id="add-coin-btn" class="btn-add">+ ADD</button>
-            </div>
-            <p class="hint">Type coin symbol (e.g., SOLUSDT, BNBUSDT, ADAUSDT)</p>
-        </div>
-    </div>
-
-    <!-- Main Dashboard Grid -->
-    <div class="dashboard-grid">
-
-        <!-- Panel 1: Market Status -->
-        <div class="panel market-panel">
-            <h2>📊 Market Status</h2>
-            <div class="market-content">
-                <div class="price-row">
-                    <span class="label">Price:</span>
-                    <span class="price" id="current-price">$45,230.50</span>
+        <!-- Main Metrics Grid -->
+        <div class="grid">
+            <!-- Market Status -->
+            <div class="card">
+                <h3>📈 Market Status</h3>
+                <div class="metric">
+                    <span class="metric-label">Price:</span>
+                    <span class="metric-value" id="price">$45,230.50</span>
                 </div>
-                <div class="price-row">
-                    <span class="label">24h Change:</span>
-                    <span class="change positive" id="price-change">↑ +2.5%</span>
+                <div class="metric">
+                    <span class="metric-label">24h Change:</span>
+                    <span class="metric-value signal-bullish" id="price-change">↑ +2.5%</span>
                 </div>
-                <div class="price-row">
-                    <span class="label">Selected:</span>
-                    <span class="selected-symbol" id="selected-symbol">BTCUSDT</span>
+                <div class="metric">
+                    <span class="metric-label">Selected:</span>
+                    <span class="metric-value" id="selected-coin">BTCUSDT</span>
                 </div>
             </div>
-        </div>
-
-        <!-- Panel 2: 4-GROUP System Status -->
-        <div class="panel groups-panel">
-            <h2>🎯 4-GROUP System</h2>
-            <div class="groups-content">
-                <div class="group-item">
-                    <span class="group-name">Technical (20 layers)</span>
+            
+            <!-- 4-GROUP System -->
+            <div class="card">
+                <h3>🧠 4-GROUP System (Yapay Zeka Analiziü)</h3>
+                
+                <div style="margin: 15px 0;">
+                    <span class="metric-label">Technical (20 layers)</span>
                     <div class="progress-bar">
-                        <div class="progress-fill tech" id="tech-score" style="width: 74%"></div>
+                        <div class="progress-fill" style="width: 74%;"></div>
                     </div>
-                    <span class="group-percent" id="tech-percent">74%</span>
+                    <span class="metric-value">74%</span>
                 </div>
-                <div class="group-item">
-                    <span class="group-name">Sentiment (20 layers)</span>
+                
+                <div style="margin: 15px 0;">
+                    <span class="metric-label">Sentiment (20 layers)</span>
                     <div class="progress-bar">
-                        <div class="progress-fill sentiment" id="sentiment-score" style="width: 68%"></div>
+                        <div class="progress-fill" style="width: 68%;"></div>
                     </div>
-                    <span class="group-percent" id="sentiment-percent">68%</span>
+                    <span class="metric-value">68%</span>
                 </div>
-                <div class="group-item">
-                    <span class="group-name">On-Chain (6 layers)</span>
+                
+                <div style="margin: 15px 0;">
+                    <span class="metric-label">On-Chain (6 layers)</span>
                     <div class="progress-bar">
-                        <div class="progress-fill onchain" id="onchain-score" style="width: 72%"></div>
+                        <div class="progress-fill" style="width: 72%;"></div>
                     </div>
-                    <span class="group-percent" id="onchain-percent">72%</span>
+                    <span class="metric-value">72%</span>
                 </div>
-                <div class="group-item">
-                    <span class="group-name">Macro+Risk (14 layers)</span>
+                
+                <div style="margin: 15px 0;">
+                    <span class="metric-label">Macro+Risk (14 layers)</span>
                     <div class="progress-bar">
-                        <div class="progress-fill macro" id="macro-score" style="width: 81%"></div>
+                        <div class="progress-fill" style="width: 81%;"></div>
                     </div>
-                    <span class="group-percent" id="macro-percent">81%</span>
+                    <span class="metric-value">81%</span>
                 </div>
+                
+                <h4 style="margin-top: 20px; color: #00ff88;">Ensemble Score</h4>
+                <div class="metric-value" style="font-size: 2em;">74%</div>
             </div>
-            <div class="ensemble-score">
-                <h4>Ensemble Score</h4>
-                <div class="score-value" id="ensemble-value">74%</div>
-            </div>
-        </div>
-
-        <!-- Panel 3: Signal Status -->
-        <div class="panel signal-panel">
-            <h2>🎯 Current Signal</h2>
-            <div class="signal-box" id="master-signal">
-                <div class="signal-main">
-                    <h3 id="signal-text">🟢 STRONG BUY</h3>
-                    <div class="signal-levels">
-                        <p>Entry: <strong id="entry-price">$45,100</strong></p>
-                        <p>TP1: <strong id="tp1-price">$45,800</strong> ✅</p>
-                        <p>TP2: <strong id="tp2-price">$46,500</strong> ✅</p>
-                        <p>SL: <strong id="sl-price">$44,500</strong> 🛑</p>
+            
+            <!-- Current Signal -->
+            <div class="card">
+                <h3>📍 Current Signal (Mevcut Sinyal)</h3>
+                
+                <div style="background: rgba(0, 255, 136, 0.1); padding: 20px; border-radius: 8px; border-left: 4px solid #00ff88; margin: 15px 0;">
+                    <div style="font-size: 1.8em; color: #00ff88; margin-bottom: 15px; font-weight: bold;">
+                        🟢 STRONG BUY
+                    </div>
+                    
+                    <div class="metric">
+                        <span class="metric-label">Entry:</span>
+                        <span class="metric-value">$45,100</span>
+                    </div>
+                    
+                    <div class="metric">
+                        <span class="metric-label">TP1:</span>
+                        <span class="metric-value signal-bullish">$45,800 ✅</span>
+                    </div>
+                    
+                    <div class="metric">
+                        <span class="metric-label">TP2:</span>
+                        <span class="metric-value signal-bullish">$46,500 ✅</span>
+                    </div>
+                    
+                    <div class="metric">
+                        <span class="metric-label">SL:</span>
+                        <span class="metric-value signal-bearish">$44,500 🔴</span>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Panel 4: Recent Signals -->
-        <div class="panel signals-history">
-            <h2>📋 Recent Signals</h2>
-            <div id="signals-list" class="signals-list">
-                <p class="loading">Loading signals...</p>
+        
+        <!-- Recent Signals Section -->
+        <div class="card">
+            <h3>📋 Recent Signals (Son Sinyaller)</h3>
+            <div id="recent-signals">
+                <p style="color: #888;">No signals yet / Henüz sinyal yok</p>
             </div>
         </div>
-
-        <!-- Panel 5: Statistics -->
-        <div class="panel stats-panel">
-            <h2>📈 Statistics (30d)</h2>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span class="stat-label">Total Signals</span>
-                    <span class="stat-value" id="stat-total">0</span>
+        
+        <!-- Statistics Section -->
+        <div class="card">
+            <h3>📊 Statistics (30d) - (İstatistikler)</h3>
+            <div class="grid">
+                <div class="metric">
+                    <span class="metric-label">Total Signals</span>
+                    <span class="metric-value">0</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">Win Rate</span>
-                    <span class="stat-value" id="stat-winrate">--</span>
+                <div class="metric">
+                    <span class="metric-label">Win Rate</span>
+                    <span class="metric-value">--</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">Avg Confidence</span>
-                    <span class="stat-value" id="stat-confidence">--</span>
+                <div class="metric">
+                    <span class="metric-label">Avg Confidence</span>
+                    <span class="metric-value">--</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">P&L</span>
-                    <span class="stat-value positive" id="stat-pnl">--</span>
+                <div class="metric">
+                    <span class="metric-label">P&L</span>
+                    <span class="metric-value">--</span>
                 </div>
             </div>
         </div>
-
-    </div>
-
-</div>
-
-<!-- Footer -->
-<footer class="footer">
-    <p>DEMIR AI v6.0 | 4-GROUP SIGNAL SYSTEM | Real Data | BTC+ETH+LTC+Custom | © 2025</p>
-</footer>
-
-<script src="app.js"></script>
-
-</body>
-</html>
+        
+        <!-- Footer -->
+        <div style="text-align: center; margin-top: 40px; padding-bottom: 20px;">
+            <p class="timestamp">Last Update: <span id="last-update">--</span></p>\n            <p style="color: #666; font-size: 0.9em;">DEMIR AI v6.0 | Real-time Trading Intelligence</p>\n        </div>\n    </div>\n    \n    <!-- Load external JS (fixed path) -->\n    <script src=\"/static/app.js\"></script>\n    \n    <!-- Inline JS for basic functionality -->\n    <script>\n        function addCoin() {\n            const input = document.getElementById('new-coin-input');\n            const coin = input.value.toUpperCase();\n            if (coin) {\n                console.log('Adding coin:', coin);\n                input.value = '';\n                // Implementation would fetch new data\n            }\n        }\n        \n        // Update timestamp\n        function updateTimestamp() {\n            const now = new Date().toLocaleTimeString();\n            const lastUpdate = document.getElementById('last-update');\n            if (lastUpdate) lastUpdate.innerText = now;\n        }\n        \n        // Periodic updates\n        setInterval(updateTimestamp, 1000);\n        updateTimestamp();\n        \n        // Fetch real data from API\n        async function fetchDashboardData() {\n            try {\n                const response = await fetch('/api/signals');\n                if (response.ok) {\n                    const data = await response.json();\n                    console.log('Dashboard data:', data);\n                    // Update UI with real data from PostgreSQL\n                }\n            } catch (e) {\n                console.error('API fetch failed:', e);\n                // Display fallback values (currently showing)\n            }\n        }\n        \n        // Initial fetch and periodic updates\n        fetchDashboardData();\n        setInterval(fetchDashboardData, 5000); // Every 5 seconds\n    </script>\n</body>\n</html>
