@@ -2,31 +2,32 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System dependencies
-RUN apt-get update && apt-get install -y \
+# ✅ Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     gcc \
-    postgresql-client \
+    libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# ✅ Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application
+# ✅ Copy application code
 COPY . .
 
-# Environment
+# ✅ Set environment variables
+ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV PORT=8000
 
-# Create logs directory
-RUN mkdir -p logs
+# ✅ Expose port (Railway will override if needed)
+EXPOSE 8000
 
-# Health check - Keep container alive for Railway
+# ✅ CRITICAL: Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || python -c "import sys; sys.exit(1)" || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Run application with proper port exposure
+# ✅ CRITICAL: Start command (must be last)
 CMD ["python", "main.py"]
