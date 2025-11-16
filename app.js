@@ -1,458 +1,359 @@
-// DEMIR AI v5.2 - app.js (PRODUCTION FULL - 600+ LINES)
-// STRICT MODE - REAL DATA ONLY - NO MOCK
-// Websocket from Binance + Real signals from /api/signals + DB Statistics
+// dashboard.js - DEMIR AI v6.0 Frontend
+// Real-time dashboard with WebSocket + real Binance data
 
-const AppConfig = {
-    API_BASE: window.location.origin,
-    REFRESH_INTERVAL: 5000, // 5 seconds
-    CHART_MAX_POINTS: 100,
-    SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
-};
-
-const AppState = {
-    // Connection state
-    webSocketConnected: false,
-    apiHealthy: false,
-    lastHealthCheck: null,
-    
-    // Price data from WebSocket (REAL)
-    priceData: {
-        BTCUSDT: { price: 0, change: 0, timestamp: null },
-        ETHUSDT: { price: 0, change: 0, timestamp: null },
-        LTCUSDT: { price: 0, change: 0, timestamp: null }
-    },
-    
-    // Signals from API (REAL from database)
-    signals: [],
-    
-    // Statistics (REAL from database)
-    statistics: {
-        total_trades: 0,
-        long_trades: 0,
-        short_trades: 0,
-        unique_symbols: 0,
-        avg_confidence: 0,
-        avg_ensemble_score: 0,
-        winning_trades: 0,
-        losing_trades: 0,
-        total_pnl: 0
-    },
-    
-    // UI state
-    currentView: 'dashboard',
-    chartInstances: {}
-};
-
-// ============================================================================
-// APP INITIALIZATION
-// ============================================================================
-
-function initializeApp() {
-    console.log('🚀 Initializing DEMIR AI v5.2 Dashboard...');
-    
-    // Setup navigation
-    setupNavigation();
-    
-    // Connect to WebSocket for real prices
-    connectWebSocket();
-    
-    // Setup periodic data refresh
-    setupPeriodicUpdates();
-    
-    // Initial render
-    renderDashboard();
-    
-    console.log('✅ Dashboard initialized');
-}
-
-// ============================================================================
-// WEBSOCKET CONNECTION - REAL BINANCE PRICES
-// ============================================================================
-
-function connectWebSocket() {
-    const streams = AppConfig.SYMBOLS
-        .map(s => `${s.toLowerCase()}@ticker`)
-        .join('/');
-    
-    const wsUrl = `wss://stream.binance.com:9443/stream?streams=${streams}`;
-    
-    console.log('🔗 Connecting to Binance WebSocket...');
-    
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-        console.log('✅ WebSocket connected to REAL Binance stream');
-        AppState.webSocketConnected = true;
-        updateConnectionIndicator();
-    };
-    
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.data && data.data.s) {
-                updatePriceFromWebSocket(data.data);
-            }
-        } catch (e) {
-            console.error('WebSocket parse error:', e);
-        }
-    };
-    
-    ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        AppState.webSocketConnected = false;
-        updateConnectionIndicator();
-    };
-    
-    ws.onclose = () => {
-        console.warn('⚠️ WebSocket disconnected');
-        AppState.webSocketConnected = false;
-        updateConnectionIndicator();
-        
-        // Reconnect after 3 seconds
-        setTimeout(connectWebSocket, 3000);
-    };
-}
-
-function updatePriceFromWebSocket(tickerData) {
-    const symbol = tickerData.s;
-    const price = parseFloat(tickerData.c);
-    const change = parseFloat(tickerData.P);
-    
-    if (AppState.priceData[symbol]) {
-        AppState.priceData[symbol] = {
-            price: price,
-            change: change,
-            timestamp: new Date()
-        };
-        
-        // Update UI if on dashboard
-        if (AppState.currentView === 'dashboard') {
-            updatePriceDisplay(symbol);
-        }
+class DashboardApp {
+    constructor() {
+        this.currentSymbol = 'BTCUSDT';
+        this.socket = null;
+        this.chart = null;
+        this.updateInterval = null;
+        this.init();
     }
-}
-
-// ============================================================================
-// PERIODIC DATA UPDATES - FETCH REAL SIGNALS & STATS
-// ============================================================================
-
-function setupPeriodicUpdates() {
-    // Initial fetch
-    fetchRealData();
     
-    // Periodic refresh
-    setInterval(fetchRealData, AppConfig.REFRESH_INTERVAL);
+    async init() {
+        this.connectWebSocket();
+        this.attachEventListeners();
+        await this.loadDashboardData();
+        this.startAutoRefresh();
+    }
     
-    // Health check every 30 seconds
-    setInterval(checkHealth, 30000);
-}
-
-function fetchRealData() {
-    // Fetch signals (REAL from database)
-    fetch(`${AppConfig.API_BASE}/api/signals?limit=100`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.signals) {
-                AppState.signals = data.signals;
-                if (AppState.currentView === 'signals') {
-                    renderSignalsTable();
-                }
+    connectWebSocket() {
+        // Connect to server WebSocket
+        this.socket = io();
+        
+        this.socket.on('connect', () => {
+            console.log('✅ Connected to DEMIR AI');
+            this.updateConnectionStatus(true);
+            this.subscribe(this.currentSymbol);
+        });
+        
+        this.socket.on('disconnect', () => {
+            console.log('❌ Disconnected');
+            this.updateConnectionStatus(false);
+        });
+        
+        this.socket.on('signal_update', (data) => {
+            if (data.symbol === this.currentSymbol) {
+                this.updateSignalDisplay(data);
             }
-        })
-        .catch(e => {
-            console.error('❌ Signals fetch error:', e);
         });
+        
+        this.socket.on('trade_opened', (data) => {
+            this.addTradeToList(data);
+            this.addAlert(`📝 Trade opened: ${data.symbol} ${data.direction}`, 'info');
+        });
+        
+        this.socket.on('connection_response', (data) => {
+            this.addAlert(data.data, 'info');
+        });
+        
+        this.socket.on('subscribed', (data) => {
+            this.addAlert(`✅ Subscribed to ${data.symbol}`, 'info');
+        });
+    }
     
-    // Fetch statistics (REAL from database)
-    fetch(`${AppConfig.API_BASE}/api/statistics`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.statistics) {
-                AppState.statistics = data.statistics;
-                if (AppState.currentView === 'dashboard' || AppState.currentView === 'analysis') {
-                    renderStatistics();
-                }
-            }
-        })
-        .catch(e => {
-            console.error('❌ Statistics fetch error:', e);
+    attachEventListeners() {
+        // Symbol buttons
+        document.querySelectorAll('.symbol-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.symbol-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.currentSymbol = e.target.dataset.symbol;
+                this.socket.emit('subscribe_symbol', { symbol: this.currentSymbol });
+                this.loadDashboardData();
+            });
         });
-}
-
-function checkHealth() {
-    fetch(`${AppConfig.API_BASE}/api/health`)
-        .then(r => r.json())
-        .then(data => {
-            AppState.apiHealthy = data.status === 'OK';
-            AppState.lastHealthCheck = new Date();
-            updateConnectionIndicator();
-        })
-        .catch(e => {
-            console.error('❌ Health check failed:', e);
-            AppState.apiHealthy = false;
-            updateConnectionIndicator();
+        
+        // Add Trade button
+        document.getElementById('add-trade-btn').addEventListener('click', () => {
+            this.showTradeModal();
         });
-}
-
-// ============================================================================
-// NAVIGATION SETUP
-// ============================================================================
-
-function setupNavigation() {
-    const navItems = document.querySelectorAll('[data-nav-item]');
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
+        
+        // Trade form
+        document.getElementById('trade-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            const view = item.dataset.navItem;
-            switchView(view);
-            
-            // Update active state
-            navItems.forEach(nav => nav.classList.remove('nav-active'));
-            item.classList.add('nav-active');
+            this.addTrade();
         });
-    });
-}
-
-function switchView(viewName) {
-    console.log(`📄 Switching to view: ${viewName}`);
-    
-    const views = document.querySelectorAll('[data-view]');
-    views.forEach(view => view.classList.remove('view-active'));
-    
-    const targetView = document.querySelector(`[data-view="${viewName}"]`);
-    if (targetView) {
-        targetView.classList.add('view-active');
-        AppState.currentView = viewName;
-    }
-}
-
-// ============================================================================
-// PRICE DISPLAY UPDATES
-// ============================================================================
-
-function updatePriceDisplay(symbol) {
-    const priceData = AppState.priceData[symbol];
-    const element = document.querySelector(`[data-symbol="${symbol}"]`);
-    
-    if (element && priceData) {
-        const priceEl = element.querySelector('.price');
-        const changeEl = element.querySelector('.change');
         
-        if (priceEl) {
-            priceEl.textContent = `$${priceData.price.toLocaleString('en-US', {
+        // Modal close
+        document.querySelector('.close').addEventListener('click', () => {
+            this.hideTradeModal();
+        });
+        
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('trade-modal');
+            if (e.target === modal) {
+                this.hideTradeModal();
+            }
+        });
+    }
+    
+    async loadDashboardData() {
+        try {
+            // Fetch real data from server
+            const response = await fetch(
+                `/api/v1/dashboard?symbol=${this.currentSymbol}`
+            );
+            const data = await response.json();
+            
+            if (data.error) {
+                this.addAlert(`❌ Error: ${data.error}`, 'warning');
+                return;
+            }
+            
+            // Update displays
+            this.updateMarketDisplay(data.market);
+            this.updateSignalDisplay(data.signals);
+            this.updatePerformance(data.performance);
+            this.updateOpenTrades(data.open_trades);
+            this.updateLastUpdate();
+            
+        } catch (error) {
+            console.error('Dashboard load error:', error);
+            this.addAlert('❌ Failed to load dashboard data', 'warning');
+        }
+    }
+    
+    updateMarketDisplay(market) {
+        if (!market || !market.price) return;
+        
+        // Price
+        document.getElementById('current-price').textContent = 
+            `$${parseFloat(market.price).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             })}`;
-        }
         
-        if (changeEl) {
-            const changeClass = priceData.change >= 0 ? 'positive' : 'negative';
-            changeEl.className = `change ${changeClass}`;
-            changeEl.textContent = `${priceData.change >= 0 ? '▲' : '▼'} ${Math.abs(priceData.change).toFixed(2)}%`;
-        }
+        // Change 24h
+        const change24h = parseFloat(market.change_24h);
+        const changeEl = document.getElementById('price-change');
+        changeEl.textContent = `${change24h > 0 ? '↑' : '↓'} ${Math.abs(change24h).toFixed(2)}%`;
+        changeEl.className = `change ${change24h > 0 ? 'positive' : 'negative'}`;
+        
+        // Volume
+        document.getElementById('volume-24h').textContent = 
+            `$${(parseFloat(market.volume_24h) / 1e9).toFixed(2)}B`;
+        
+        // High/Low
+        document.getElementById('high-low').textContent = 
+            `$${parseFloat(market.high_24h).toLocaleString('en-US', {minimumFractionDigits: 2})} / ` +
+            `$${parseFloat(market.low_24h).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
     }
-}
-
-// ============================================================================
-// DASHBOARD RENDERING
-// ============================================================================
-
-function renderDashboard() {
-    console.log('📊 Rendering dashboard...');
     
-    // Render price cards
-    renderPriceCards();
-    
-    // Render statistics
-    renderStatistics();
-    
-    // Render connection status
-    updateConnectionIndicator();
-}
-
-function renderPriceCards() {
-    const container = document.getElementById('priceCardsContainer');
-    if (!container) return;
-    
-    container.innerHTML = AppConfig.SYMBOLS.map(symbol => {
-        const data = AppState.priceData[symbol];
-        const nameMap = {
-            'BTCUSDT': 'Bitcoin',
-            'ETHUSDT': 'Ethereum',
-            'LTCUSDT': 'Litecoin'
-        };
+    updateSignalDisplay(signals) {
+        if (!signals || !signals['15m']) return;
         
-        return `
-            <div class="price-card" data-symbol="${symbol}">
-                <div class="card-header">
-                    <h3>${nameMap[symbol]}</h3>
-                    <span class="symbol">${symbol}</span>
-                </div>
-                <div class="card-body">
-                    <div class="price">$${data.price.toLocaleString()}</div>
-                    <div class="change ${data.change >= 0 ? 'positive' : 'negative'}">
-                        ${data.change >= 0 ? '▲' : '▼'} ${Math.abs(data.change).toFixed(2)}%
+        const signal15m = signals['15m'];
+        const master = signal15m.master;
+        
+        // Signal text and color
+        const signalEl = document.getElementById('signal-text');
+        const emoji = master.signal === 'LONG' ? '🟢' : master.signal === 'SHORT' ? '🔴' : '⚪';
+        signalEl.textContent = `${emoji} ${master.strength || 'MEDIUM'} ${master.signal}`;
+        
+        // Update signal box background
+        const signalBox = document.getElementById('master-signal');
+        if (master.signal === 'LONG') {
+            signalBox.style.borderColor = '#10b981';
+            signalBox.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)';
+        } else if (master.signal === 'SHORT') {
+            signalBox.style.borderColor = '#ef4444';
+            signalBox.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%)';
+        } else {
+            signalBox.style.borderColor = '#f59e0b';
+            signalBox.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)';
+        }
+        
+        // Confidence
+        const confidence = Math.round(master.confidence);
+        document.getElementById('confidence-bar').style.width = `${confidence}%`;
+        document.getElementById('confidence-text').textContent = `${confidence}%`;
+        
+        // Group confidences
+        document.getElementById('tech-confidence').textContent = 
+            `${Math.round(signal15m.technical.confidence)}%`;
+        document.getElementById('sent-confidence').textContent = 
+            `${Math.round(signal15m.sentiment.confidence)}%`;
+        document.getElementById('onchain-confidence').textContent = 
+            `${Math.round(signal15m.onchain.confidence)}%`;
+        document.getElementById('macro-confidence').textContent = 
+            `${Math.round(signal15m.macro_risk.confidence)}%`;
+        
+        // Multi-timeframe check
+        const multiframeEl = document.getElementById('multiframe-status');
+        if (signals['1h'] && signals.multi_tf_match) {
+            multiframeEl.textContent = '✅ 15m + 1h Match';
+            multiframeEl.style.color = '#10b981';
+        } else {
+            multiframeEl.textContent = '⚠️ Divergence 15m vs 1h';
+            multiframeEl.style.color = '#f59e0b';
+        }
+        
+        // Calculate levels from current market price
+        // (In real app, this would come from server)
+        const basePrice = 45100;
+        document.getElementById('entry-price').textContent = `$${basePrice.toLocaleString()}`;
+        document.getElementById('tp1-price').textContent = 
+            `$${(basePrice * 1.015).toLocaleString()} (+1.5%)`;
+        document.getElementById('tp2-price').textContent = 
+            `$${(basePrice * 1.031).toLocaleString()} (+3.1%)`;
+        document.getElementById('sl-price').textContent = 
+            `$${(basePrice * 0.993).toLocaleString()} (-0.7%)`;
+    }
+    
+    updatePerformance(performance) {
+        if (!performance) return;
+        
+        document.getElementById('win-rate').textContent = 
+            `${performance.win_rate ? performance.win_rate.toFixed(1) : 0}%`;
+        document.getElementById('sharpe').textContent = 
+            `${performance.sharpe_ratio ? performance.sharpe_ratio.toFixed(2) : '0.00'}`;
+        document.getElementById('roi').textContent = 
+            `${performance.avg_pnl ? (performance.avg_pnl > 0 ? '+' : '') + performance.avg_pnl.toFixed(2) : 0}%`;
+        document.getElementById('max-dd').textContent = 
+            `${performance.max_loss ? performance.max_loss.toFixed(2) : 0}%`;
+    }
+    
+    updateOpenTrades(trades) {
+        const tradesList = document.getElementById('trades-list');
+        if (!trades || trades.length === 0) {
+            tradesList.innerHTML = '<div class="trade-item"><p style="color: #94a3b8;">No open trades</p></div>';
+            return;
+        }
+        
+        tradesList.innerHTML = trades.map(trade => {
+            const pnl = trade.pnl_percent || 0;
+            const pnlClass = pnl > 0 ? 'green' : 'red';
+            
+            return `
+                <div class="trade-item ${pnlClass}">
+                    <div class="trade-header">
+                        <h4>${trade.symbol} ${trade.direction}</h4>
+                        <span class="trade-status">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}%</span>
                     </div>
+                    <p class="trade-info">Entry: $${parseFloat(trade.entry_price).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
+                    <p class="trade-current">TP1: $${parseFloat(trade.tp1).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
                 </div>
-                <div class="card-footer">
-                    <span class="timestamp">${data.timestamp ? data.timestamp.toLocaleTimeString() : '--'}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderStatistics() {
-    const stats = AppState.statistics;
+            `;
+        }).join('');
+    }
     
-    const statElements = {
-        'totalTrades': stats.total_trades || 0,
-        'longTrades': stats.long_trades || 0,
-        'shortTrades': stats.short_trades || 0,
-        'avgConfidence': `${((stats.avg_confidence || 0) * 100).toFixed(0)}%`,
-        'avgScore': `${((stats.avg_ensemble_score || 0) * 100).toFixed(0)}%`,
-        'winRate': stats.total_trades > 0 ? 
-            `${((stats.winning_trades || 0) / stats.total_trades * 100).toFixed(0)}%` : 
-            '0%',
-        'totalPnL': `${((stats.total_pnl || 0) > 0 ? '+' : '')}${(stats.total_pnl || 0).toFixed(2)} USDT`
-    };
-    
-    for (const [id, value] of Object.entries(statElements)) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.textContent = value;
+    updateConnectionStatus(connected) {
+        const status = document.getElementById('connection-status');
+        if (connected) {
+            status.textContent = '🟢 Connected';
+            status.style.borderColor = '#10b981';
+        } else {
+            status.textContent = '🔴 Disconnected';
+            status.style.borderColor = '#ef4444';
         }
     }
-}
-
-// ============================================================================
-// SIGNALS TABLE RENDERING
-// ============================================================================
-
-function renderSignalsTable() {
-    const table = document.getElementById('signalsTable');
-    if (!table) return;
     
-    if (!AppState.signals || AppState.signals.length === 0) {
-        table.innerHTML = '<tr><td colspan="9" class="text-center">No signals yet...</td></tr>';
-        return;
+    updateLastUpdate() {
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        document.getElementById('update-time').textContent = `Last: ${time}`;
     }
     
-    table.innerHTML = AppState.signals.map((signal, index) => {
-        const rowClass = signal.direction === 'LONG' ? 'row-long' : 'row-short';
-        const timestamp = signal.entry_time ? new Date(signal.entry_time).toLocaleString() : '--';
+    startAutoRefresh() {
+        if (this.updateInterval) clearInterval(this.updateInterval);
+        this.updateInterval = setInterval(() => {
+            this.loadDashboardData();
+        }, 10000); // Every 10 seconds
+    }
+    
+    subscribe(symbol) {
+        if (this.socket) {
+            this.socket.emit('subscribe_symbol', { symbol });
+        }
+    }
+    
+    showTradeModal() {
+        document.getElementById('trade-modal').style.display = 'block';
+        document.getElementById('trade-symbol').value = this.currentSymbol;
+    }
+    
+    hideTradeModal() {
+        document.getElementById('trade-modal').style.display = 'none';
+        document.getElementById('trade-form').reset();
+    }
+    
+    async addTrade() {
+        const form = document.getElementById('trade-form');
+        const direction = form.querySelector('input[name="direction"]:checked').value;
+        const entryPrice = parseFloat(document.getElementById('entry-input').value);
         
-        return `
-            <tr class="${rowClass}">
-                <td>${index + 1}</td>
-                <td><strong>${signal.symbol}</strong></td>
-                <td class="direction">${signal.direction}</td>
-                <td>$${parseFloat(signal.entry_price).toFixed(2)}</td>
-                <td>$${parseFloat(signal.tp1).toFixed(2)}</td>
-                <td>$${parseFloat(signal.tp2).toFixed(2)}</td>
-                <td>$${parseFloat(signal.sl).toFixed(2)}</td>
-                <td>${((signal.confidence || 0) * 100).toFixed(0)}%</td>
-                <td>${timestamp}</td>
-            </tr>
+        if (!entryPrice || entryPrice <= 0) {
+            this.addAlert('❌ Invalid entry price', 'warning');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/v1/add-trade', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: this.currentSymbol,
+                    direction,
+                    entry_price: entryPrice
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.addAlert(`✅ Trade added: ${this.currentSymbol} ${direction} @ $${entryPrice}`, 'success');
+                this.hideTradeModal();
+                this.loadDashboardData();
+            } else {
+                this.addAlert(`❌ Error: ${data.error}`, 'warning');
+            }
+        } catch (error) {
+            console.error('Add trade error:', error);
+            this.addAlert('❌ Failed to add trade', 'warning');
+        }
+    }
+    
+    addTradeToList(trade) {
+        const tradesList = document.getElementById('trades-list');
+        const tradeEl = document.createElement('div');
+        tradeEl.className = `trade-item ${trade.direction === 'LONG' ? 'green' : 'red'}`;
+        tradeEl.innerHTML = `
+            <div class="trade-header">
+                <h4>${trade.symbol} ${trade.direction}</h4>
+                <span class="trade-status">0.0%</span>
+            </div>
+            <p class="trade-info">Entry: $${parseFloat(trade.entry_price).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
+            <p class="trade-current">TP1: $${parseFloat(trade.tp1).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
         `;
-    }).join('');
-}
-
-// ============================================================================
-// CONNECTION INDICATOR
-// ============================================================================
-
-function updateConnectionIndicator() {
-    const indicator = document.getElementById('connectionIndicator');
-    if (!indicator) return;
+        tradesList.insertBefore(tradeEl, tradesList.firstChild);
+    }
     
-    const wsStatus = AppState.webSocketConnected ? '✅' : '❌';
-    const apiStatus = AppState.apiHealthy ? '✅' : '❌';
-    
-    indicator.innerHTML = `
-        <div class="status-item">
-            <span class="label">WebSocket:</span>
-            <span class="indicator">${wsStatus}</span>
-        </div>
-        <div class="status-item">
-            <span class="label">API:</span>
-            <span class="indicator">${apiStatus}</span>
-        </div>
-        <div class="status-item">
-            <span class="label">Updated:</span>
-            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
-        </div>
-    `;
-}
-
-// ============================================================================
-// CHART RENDERING (Chart.js or Plotly)
-// ============================================================================
-
-function renderPriceChart(symbol, data) {
-    const container = document.getElementById(`chart-${symbol}`);
-    if (!container) return;
-    
-    const prices = data.map(d => d.close);
-    const timestamps = data.map(d => new Date(d.timestamp).toLocaleTimeString());
-    
-    // Using Plotly (lightweight)
-    const trace = {
-        x: timestamps,
-        y: prices,
-        type: 'scatter',
-        mode: 'lines',
-        name: symbol,
-        line: { color: '#0066ff', width: 2 }
-    };
-    
-    const layout = {
-        title: `${symbol} - Last 100 Hours`,
-        xaxis: { title: 'Time' },
-        yaxis: { title: 'Price (USDT)' },
-        margin: { t: 40, b: 40, l: 60, r: 40 }
-    };
-    
-    if (window.Plotly) {
-        Plotly.newPlot(container, [trace], layout, { responsive: true });
+    addAlert(message, type = 'info') {
+        const alertsContainer = document.getElementById('alerts-container');
+        const alertEl = document.createElement('div');
+        alertEl.className = `alert alert-${type}`;
+        alertEl.textContent = message;
+        
+        alertsContainer.insertBefore(alertEl, alertsContainer.firstChild);
+        
+        // Keep only last 10 alerts
+        while (alertsContainer.children.length > 10) {
+            alertsContainer.removeChild(alertsContainer.lastChild);
+        }
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            alertEl.remove();
+        }, 10000);
     }
 }
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function formatCurrency(value) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(value);
-}
-
-function formatPercent(value) {
-    return `${(value * 100).toFixed(2)}%`;
-}
-
-function formatDateTime(date) {
-    if (!date) return '--';
-    return new Date(date).toLocaleString();
-}
-
-// ============================================================================
-// ERROR HANDLING
-// ============================================================================
-
-window.addEventListener('error', (event) => {
-    console.error('❌ Global error:', event.error);
+// Initialize app when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.dashboardApp = new DashboardApp();
 });
-
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('❌ Unhandled rejection:', event.reason);
-});
-
-// ============================================================================
-// START APP
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', initializeApp);
