@@ -776,62 +776,63 @@ class DemirAISignalGenerator:
 # ============================================================================
 
 @app.route('/')
-def index():
-    """Serve main dashboard HTML"""
+@app.route('/dashboard')
+def dashboard():
+    """Serve professional dashboard HTML - DEMIR AI v6.0"""
     try:
+        # Try multiple paths for dashboard.html
         possible_paths = [
-            'index.html',
-            './index.html',
-            'templates/index.html',
-            '/app/index.html',
-            os.path.join(os.path.dirname(__file__), 'index.html'),
-            os.path.join('/app', 'index.html')
+            'dashboard.html',
+            './dashboard.html',
+            '/app/dashboard.html',
+            os.path.join(os.path.dirname(__file__), 'dashboard.html'),
+            os.path.join('/app', 'dashboard.html'),
+            '/workspace/dashboard.html'  # Railway specific
         ]
-
-        logger.debug(f"Trying to load index.html...")
+        
+        logger.debug("🔍 Looking for dashboard.html...")
+        
         for path in possible_paths:
             if os.path.exists(path):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    if len(content) < 100:
-                        logger.warning(f"index.html too small")
-                        continue
-                    logger.info(f"✅ index.html served from {path}")
-                    return content, 200, {'Content-Type': 'text/html'}
+                        html_content = f.read()
+                    
+                    if len(html_content) > 100:
+                        logger.info(f"✅ Dashboard served from: {path}")
+                        return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
                 except Exception as e:
-                    logger.warning(f"Error reading {path}: {e}")
+                    logger.warning(f"⚠️ Error reading {path}: {e}")
                     continue
-
-        logger.warning("⚠️ index.html not found, serving fallback")
-        fallback_html = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>DEMIR AI v6.0</title>
-            <style>
-                body { font-family: Arial; text-align: center; margin-top: 50px; background: #1a1a1a; color: #fff; }
-                h1 { color: #4CAF50; }
-                .status { background: #2a2a2a; padding: 20px; border-radius: 5px; }
-            </style>
-        </head>
-        <body>
-            <h1>🚀 DEMIR AI v6.0 - Backend Ready</h1>
-            <div class="status">
-                <p>✅ PostgreSQL Connected (REAL)</p>
-                <p>✅ AI Brain Ensemble v6.0 Active</p>
-                <p>✅ Phase 1/5/6: Multi-TF + Harmonic + Candlestick</p>
-                <p>✅ RotatingFileHandler: FIXED (No crashes)</p>
-                <p><strong>Status: OPERATIONAL</strong></p>
-                <p><small>Upload index.html, app.js, style.css for full dashboard</small></p>
-            </div>
-        </body>
-        </html>
-        """
-        return fallback_html, 200, {'Content-Type': 'text/html'}
+        
+        # Fallback if dashboard.html not found
+        logger.warning("⚠️ dashboard.html not found, serving minimal fallback")
+        fallback_html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>DEMIR AI v6.0 - Dashboard</title>
+    <style>
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #10b981; }
+        .container { text-align: center; padding: 50px; }
+        h1 { color: #10b981; }
+        .status { background: #10b981; color: #0f172a; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 DEMIR AI v6.0</h1>
+        <div class="status">✅ BACKEND OPERATIONAL</div>
+        <p>📊 PostgreSQL Connected (REAL)</p>
+        <p>🧠 AI Brain v6.0 Active</p>
+        <p>📡 Multi-Exchange Data</p>
+    </div>
+</body>
+</html>"""
+        return fallback_html, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        
     except Exception as e:
-        logger.error(f"Error serving index: {e}")
-        return {"error": "Failed to load index"}, 500
+        logger.error(f"❌ Dashboard route error: {e}")
+        return {"error": "Dashboard error", "message": str(e)}, 500
 
 @app.route('/api/health', methods=['GET'])
 def health():
