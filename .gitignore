@@ -94,7 +94,7 @@ database_url.txt
 *~
 .#*
 
-# Node modules (if using any JS tools)
+# Node modules
 node_modules/
 npm-debug.log
 
@@ -112,7 +112,12 @@ models/*.pkl
 models/*.joblib
 models/*.h5
 
-# Keep important files
+# ============================================================================
+# ✅ FORCE INCLUDE - DASHBOARD FILES (MUST BE COMMITTED!)
+# ============================================================================
+!index.html
+!app.js
+!style.css
 !.gitkeep
 !requirements.txt
 !.gitignore
