@@ -1,359 +1,266 @@
-// dashboard.js - DEMIR AI v6.0 Frontend
-// Real-time dashboard with WebSocket + real Binance data
+// DEMIR AI v6.0 - app.js (Full JavaScript)
+// 4-GROUP SYSTEM + ADD COIN FEATURE
 
-class DashboardApp {
+class DemirAIDashboard {
     constructor() {
         this.currentSymbol = 'BTCUSDT';
-        this.socket = null;
-        this.chart = null;
-        this.updateInterval = null;
+        this.trackedCoins = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT'];
+        this.apiBaseUrl = '/api';
+        this.refreshInterval = 5000; // 5 seconds
         this.init();
     }
-    
+
     async init() {
-        this.connectWebSocket();
+        console.log('🤖 DEMIR AI v6.0 Dashboard initializing...');
+        
+        await this.loadTrackedCoins();
+        this.renderCoinButtons();
         this.attachEventListeners();
-        await this.loadDashboardData();
-        this.startAutoRefresh();
+        
+        // Initial data load
+        await this.refreshDashboard();
+        
+        // Auto-refresh every 5 seconds
+        setInterval(() => this.refreshDashboard(), this.refreshInterval);
+        
+        console.log('✅ Dashboard initialized');
     }
-    
-    connectWebSocket() {
-        // Connect to server WebSocket
-        this.socket = io();
-        
-        this.socket.on('connect', () => {
-            console.log('✅ Connected to DEMIR AI');
-            this.updateConnectionStatus(true);
-            this.subscribe(this.currentSymbol);
-        });
-        
-        this.socket.on('disconnect', () => {
-            console.log('❌ Disconnected');
-            this.updateConnectionStatus(false);
-        });
-        
-        this.socket.on('signal_update', (data) => {
-            if (data.symbol === this.currentSymbol) {
-                this.updateSignalDisplay(data);
-            }
-        });
-        
-        this.socket.on('trade_opened', (data) => {
-            this.addTradeToList(data);
-            this.addAlert(`📝 Trade opened: ${data.symbol} ${data.direction}`, 'info');
-        });
-        
-        this.socket.on('connection_response', (data) => {
-            this.addAlert(data.data, 'info');
-        });
-        
-        this.socket.on('subscribed', (data) => {
-            this.addAlert(`✅ Subscribed to ${data.symbol}`, 'info');
-        });
-    }
-    
-    attachEventListeners() {
-        // Symbol buttons
-        document.querySelectorAll('.symbol-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.symbol-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.currentSymbol = e.target.dataset.symbol;
-                this.socket.emit('subscribe_symbol', { symbol: this.currentSymbol });
-                this.loadDashboardData();
-            });
-        });
-        
-        // Add Trade button
-        document.getElementById('add-trade-btn').addEventListener('click', () => {
-            this.showTradeModal();
-        });
-        
-        // Trade form
-        document.getElementById('trade-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.addTrade();
-        });
-        
-        // Modal close
-        document.querySelector('.close').addEventListener('click', () => {
-            this.hideTradeModal();
-        });
-        
-        window.addEventListener('click', (e) => {
-            const modal = document.getElementById('trade-modal');
-            if (e.target === modal) {
-                this.hideTradeModal();
-            }
-        });
-    }
-    
-    async loadDashboardData() {
+
+    async loadTrackedCoins() {
         try {
-            // Fetch real data from server
-            const response = await fetch(
-                `/api/v1/dashboard?symbol=${this.currentSymbol}`
-            );
+            const response = await fetch(`${this.apiBaseUrl}/coins`);
             const data = await response.json();
             
-            if (data.error) {
-                this.addAlert(`❌ Error: ${data.error}`, 'warning');
-                return;
+            if (data.status === 'success' && data.coins.length > 0) {
+                this.trackedCoins = data.coins;
+                console.log('📊 Tracked coins:', this.trackedCoins);
             }
-            
-            // Update displays
-            this.updateMarketDisplay(data.market);
-            this.updateSignalDisplay(data.signals);
-            this.updatePerformance(data.performance);
-            this.updateOpenTrades(data.open_trades);
-            this.updateLastUpdate();
-            
         } catch (error) {
-            console.error('Dashboard load error:', error);
-            this.addAlert('❌ Failed to load dashboard data', 'warning');
+            console.error('❌ Load coins error:', error);
         }
     }
-    
-    updateMarketDisplay(market) {
-        if (!market || !market.price) return;
+
+    renderCoinButtons() {
+        const container = document.getElementById('coin-buttons');
+        container.innerHTML = '';
         
-        // Price
-        document.getElementById('current-price').textContent = 
-            `$${parseFloat(market.price).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-        
-        // Change 24h
-        const change24h = parseFloat(market.change_24h);
-        const changeEl = document.getElementById('price-change');
-        changeEl.textContent = `${change24h > 0 ? '↑' : '↓'} ${Math.abs(change24h).toFixed(2)}%`;
-        changeEl.className = `change ${change24h > 0 ? 'positive' : 'negative'}`;
-        
-        // Volume
-        document.getElementById('volume-24h').textContent = 
-            `$${(parseFloat(market.volume_24h) / 1e9).toFixed(2)}B`;
-        
-        // High/Low
-        document.getElementById('high-low').textContent = 
-            `$${parseFloat(market.high_24h).toLocaleString('en-US', {minimumFractionDigits: 2})} / ` +
-            `$${parseFloat(market.low_24h).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        this.trackedCoins.forEach(symbol => {
+            const btn = document.createElement('button');
+            btn.className = `coin-btn ${symbol === this.currentSymbol ? 'active' : ''}`;
+            btn.textContent = symbol.replace('USDT', '');
+            btn.onclick = () => this.selectCoin(symbol);
+            container.appendChild(btn);
+        });
     }
-    
-    updateSignalDisplay(signals) {
-        if (!signals || !signals['15m']) return;
+
+    selectCoin(symbol) {
+        this.currentSymbol = symbol;
+        document.getElementById('selected-symbol').textContent = symbol;
         
-        const signal15m = signals['15m'];
-        const master = signal15m.master;
+        // Update active button
+        document.querySelectorAll('.coin-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
         
-        // Signal text and color
-        const signalEl = document.getElementById('signal-text');
-        const emoji = master.signal === 'LONG' ? '🟢' : master.signal === 'SHORT' ? '🔴' : '⚪';
-        signalEl.textContent = `${emoji} ${master.strength || 'MEDIUM'} ${master.signal}`;
-        
-        // Update signal box background
-        const signalBox = document.getElementById('master-signal');
-        if (master.signal === 'LONG') {
-            signalBox.style.borderColor = '#10b981';
-            signalBox.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)';
-        } else if (master.signal === 'SHORT') {
-            signalBox.style.borderColor = '#ef4444';
-            signalBox.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%)';
-        } else {
-            signalBox.style.borderColor = '#f59e0b';
-            signalBox.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)';
-        }
-        
-        // Confidence
-        const confidence = Math.round(master.confidence);
-        document.getElementById('confidence-bar').style.width = `${confidence}%`;
-        document.getElementById('confidence-text').textContent = `${confidence}%`;
-        
-        // Group confidences
-        document.getElementById('tech-confidence').textContent = 
-            `${Math.round(signal15m.technical.confidence)}%`;
-        document.getElementById('sent-confidence').textContent = 
-            `${Math.round(signal15m.sentiment.confidence)}%`;
-        document.getElementById('onchain-confidence').textContent = 
-            `${Math.round(signal15m.onchain.confidence)}%`;
-        document.getElementById('macro-confidence').textContent = 
-            `${Math.round(signal15m.macro_risk.confidence)}%`;
-        
-        // Multi-timeframe check
-        const multiframeEl = document.getElementById('multiframe-status');
-        if (signals['1h'] && signals.multi_tf_match) {
-            multiframeEl.textContent = '✅ 15m + 1h Match';
-            multiframeEl.style.color = '#10b981';
-        } else {
-            multiframeEl.textContent = '⚠️ Divergence 15m vs 1h';
-            multiframeEl.style.color = '#f59e0b';
-        }
-        
-        // Calculate levels from current market price
-        // (In real app, this would come from server)
-        const basePrice = 45100;
-        document.getElementById('entry-price').textContent = `$${basePrice.toLocaleString()}`;
-        document.getElementById('tp1-price').textContent = 
-            `$${(basePrice * 1.015).toLocaleString()} (+1.5%)`;
-        document.getElementById('tp2-price').textContent = 
-            `$${(basePrice * 1.031).toLocaleString()} (+3.1%)`;
-        document.getElementById('sl-price').textContent = 
-            `$${(basePrice * 0.993).toLocaleString()} (-0.7%)`;
+        // Refresh dashboard
+        this.refreshDashboard();
     }
-    
-    updatePerformance(performance) {
-        if (!performance) return;
-        
-        document.getElementById('win-rate').textContent = 
-            `${performance.win_rate ? performance.win_rate.toFixed(1) : 0}%`;
-        document.getElementById('sharpe').textContent = 
-            `${performance.sharpe_ratio ? performance.sharpe_ratio.toFixed(2) : '0.00'}`;
-        document.getElementById('roi').textContent = 
-            `${performance.avg_pnl ? (performance.avg_pnl > 0 ? '+' : '') + performance.avg_pnl.toFixed(2) : 0}%`;
-        document.getElementById('max-dd').textContent = 
-            `${performance.max_loss ? performance.max_loss.toFixed(2) : 0}%`;
+
+    attachEventListeners() {
+        // Add coin button
+        document.getElementById('add-coin-btn').addEventListener('click', () => {
+            this.addNewCoin();
+        });
+
+        // Enter key in input
+        document.getElementById('new-coin-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.addNewCoin();
+            }
+        });
     }
-    
-    updateOpenTrades(trades) {
-        const tradesList = document.getElementById('trades-list');
-        if (!trades || trades.length === 0) {
-            tradesList.innerHTML = '<div class="trade-item"><p style="color: #94a3b8;">No open trades</p></div>';
+
+    async addNewCoin() {
+        const input = document.getElementById('new-coin-input');
+        let symbol = input.value.trim().toUpperCase();
+        
+        if (!symbol) {
+            alert('❌ Please enter a symbol');
             return;
         }
-        
-        tradesList.innerHTML = trades.map(trade => {
-            const pnl = trade.pnl_percent || 0;
-            const pnlClass = pnl > 0 ? 'green' : 'red';
+
+        // Add USDT suffix if not present
+        if (!symbol.endsWith('USDT')) {
+            symbol += 'USDT';
+        }
+
+        // Check if already tracked
+        if (this.trackedCoins.includes(symbol)) {
+            alert(`✅ ${symbol} already tracked!`);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/coins/add`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ symbol })
+            });
+
+            const data = await response.json();
             
+            if (data.status === 'success') {
+                console.log(`✅ ${symbol} added!`);
+                input.value = '';
+                
+                await this.loadTrackedCoins();
+                this.renderCoinButtons();
+                
+                // Select newly added coin
+                this.selectCoin(symbol);
+            } else {
+                alert(`❌ Error: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('❌ Add coin error:', error);
+            alert('❌ Failed to add coin');
+        }
+    }
+
+    async refreshDashboard() {
+        try {
+            // Fetch signals
+            const signalsResponse = await fetch(`${this.apiBaseUrl}/signals`);
+            const signalsData = await signalsResponse.json();
+            
+            if (signalsData.status === 'success') {
+                this.updateSignalsDisplay(signalsData.data);
+            }
+
+            // Fetch statistics
+            const statsResponse = await fetch(`${this.apiBaseUrl}/statistics`);
+            const statsData = await statsResponse.json();
+            
+            if (statsData.status === 'success') {
+                this.updateStatistics(statsData.data);
+            }
+
+            // Update connection status
+            this.updateConnectionStatus(true);
+            
+        } catch (error) {
+            console.error('❌ Refresh error:', error);
+            this.updateConnectionStatus(false);
+        }
+    }
+
+    updateSignalsDisplay(signals) {
+        if (!signals || signals.length === 0) {
+            document.getElementById('signals-list').innerHTML = '<p class="loading">No signals yet</p>';
+            return;
+        }
+
+        const html = signals.slice(0, 10).map(signal => {
+            const date = new Date(signal.entry_time).toLocaleString();
+            const direction = signal.direction === 'LONG' ? '🟢 LONG' : '🔴 SHORT';
+            const tech = (signal.tech_group_score * 100).toFixed(0);
+            const sentiment = (signal.sentiment_group_score * 100).toFixed(0);
+            const onchain = (signal.onchain_group_score * 100).toFixed(0);
+            const macro = (signal.macro_risk_group_score * 100).toFixed(0);
+            const ensemble = (signal.ensemble_score * 100).toFixed(0);
+
             return `
-                <div class="trade-item ${pnlClass}">
-                    <div class="trade-header">
-                        <h4>${trade.symbol} ${trade.direction}</h4>
-                        <span class="trade-status">${pnl > 0 ? '+' : ''}${pnl.toFixed(2)}%</span>
+                <div class="signal-row ${signal.direction === 'LONG' ? 'long' : 'short'}">
+                    <div class="signal-info">
+                        <span class="symbol">${signal.symbol}</span>
+                        <span class="direction">${direction}</span>
+                        <span class="time">${date}</span>
                     </div>
-                    <p class="trade-info">Entry: $${parseFloat(trade.entry_price).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
-                    <p class="trade-current">TP1: $${parseFloat(trade.tp1).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
+                    <div class="signal-scores">
+                        <span class="badge" title="Technical">T:${tech}%</span>
+                        <span class="badge" title="Sentiment">S:${sentiment}%</span>
+                        <span class="badge" title="On-Chain">O:${onchain}%</span>
+                        <span class="badge" title="Macro+Risk">M:${macro}%</span>
+                    </div>
+                    <div class="signal-ensemble">
+                        <span class="ensemble">E:${ensemble}%</span>
+                    </div>
                 </div>
             `;
         }).join('');
+
+        document.getElementById('signals-list').innerHTML = html;
     }
-    
+
+    updateStatistics(stats) {
+        if (!stats) return;
+
+        document.getElementById('stat-total').textContent = stats.total_trades || 0;
+        
+        if (stats.total_trades && stats.winning_trades) {
+            const winRate = ((stats.winning_trades / stats.total_trades) * 100).toFixed(1);
+            document.getElementById('stat-winrate').textContent = `${winRate}%`;
+        }
+        
+        if (stats.avg_confidence) {
+            document.getElementById('stat-confidence').textContent = 
+                `${(stats.avg_confidence * 100).toFixed(0)}%`;
+        }
+        
+        if (stats.total_pnl !== undefined) {
+            document.getElementById('stat-pnl').textContent = 
+                `${stats.total_pnl > 0 ? '+' : ''}${stats.total_pnl.toFixed(2)}%`;
+        }
+
+        // Update 4-GROUP display
+        if (stats.avg_tech_group) {
+            const techPercent = (stats.avg_tech_group * 100).toFixed(0);
+            document.getElementById('tech-score').style.width = `${techPercent}%`;
+            document.getElementById('tech-percent').textContent = `${techPercent}%`;
+        }
+
+        if (stats.avg_sentiment_group) {
+            const sentPercent = (stats.avg_sentiment_group * 100).toFixed(0);
+            document.getElementById('sentiment-score').style.width = `${sentPercent}%`;
+            document.getElementById('sentiment-percent').textContent = `${sentPercent}%`;
+        }
+
+        if (stats.avg_onchain_group) {
+            const onchainPercent = (stats.avg_onchain_group * 100).toFixed(0);
+            document.getElementById('onchain-score').style.width = `${onchainPercent}%`;
+            document.getElementById('onchain-percent').textContent = `${onchainPercent}%`;
+        }
+
+        if (stats.avg_macro_risk_group) {
+            const macroPercent = (stats.avg_macro_risk_group * 100).toFixed(0);
+            document.getElementById('macro-score').style.width = `${macroPercent}%`;
+            document.getElementById('macro-percent').textContent = `${macroPercent}%`;
+        }
+
+        if (stats.avg_ensemble_score) {
+            const ensemblePercent = (stats.avg_ensemble_score * 100).toFixed(0);
+            document.getElementById('ensemble-value').textContent = `${ensemblePercent}%`;
+        }
+    }
+
     updateConnectionStatus(connected) {
         const status = document.getElementById('connection-status');
         if (connected) {
             status.textContent = '🟢 Connected';
-            status.style.borderColor = '#10b981';
+            status.style.color = '#10b981';
         } else {
             status.textContent = '🔴 Disconnected';
-            status.style.borderColor = '#ef4444';
+            status.style.color = '#ef4444';
         }
-    }
-    
-    updateLastUpdate() {
-        const now = new Date();
-        const time = now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        document.getElementById('update-time').textContent = `Last: ${time}`;
-    }
-    
-    startAutoRefresh() {
-        if (this.updateInterval) clearInterval(this.updateInterval);
-        this.updateInterval = setInterval(() => {
-            this.loadDashboardData();
-        }, 10000); // Every 10 seconds
-    }
-    
-    subscribe(symbol) {
-        if (this.socket) {
-            this.socket.emit('subscribe_symbol', { symbol });
-        }
-    }
-    
-    showTradeModal() {
-        document.getElementById('trade-modal').style.display = 'block';
-        document.getElementById('trade-symbol').value = this.currentSymbol;
-    }
-    
-    hideTradeModal() {
-        document.getElementById('trade-modal').style.display = 'none';
-        document.getElementById('trade-form').reset();
-    }
-    
-    async addTrade() {
-        const form = document.getElementById('trade-form');
-        const direction = form.querySelector('input[name="direction"]:checked').value;
-        const entryPrice = parseFloat(document.getElementById('entry-input').value);
-        
-        if (!entryPrice || entryPrice <= 0) {
-            this.addAlert('❌ Invalid entry price', 'warning');
-            return;
-        }
-        
-        try {
-            const response = await fetch('/api/v1/add-trade', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    symbol: this.currentSymbol,
-                    direction,
-                    entry_price: entryPrice
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                this.addAlert(`✅ Trade added: ${this.currentSymbol} ${direction} @ $${entryPrice}`, 'success');
-                this.hideTradeModal();
-                this.loadDashboardData();
-            } else {
-                this.addAlert(`❌ Error: ${data.error}`, 'warning');
-            }
-        } catch (error) {
-            console.error('Add trade error:', error);
-            this.addAlert('❌ Failed to add trade', 'warning');
-        }
-    }
-    
-    addTradeToList(trade) {
-        const tradesList = document.getElementById('trades-list');
-        const tradeEl = document.createElement('div');
-        tradeEl.className = `trade-item ${trade.direction === 'LONG' ? 'green' : 'red'}`;
-        tradeEl.innerHTML = `
-            <div class="trade-header">
-                <h4>${trade.symbol} ${trade.direction}</h4>
-                <span class="trade-status">0.0%</span>
-            </div>
-            <p class="trade-info">Entry: $${parseFloat(trade.entry_price).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
-            <p class="trade-current">TP1: $${parseFloat(trade.tp1).toLocaleString('en-US', {maximumFractionDigits: 8})}</p>
-        `;
-        tradesList.insertBefore(tradeEl, tradesList.firstChild);
-    }
-    
-    addAlert(message, type = 'info') {
-        const alertsContainer = document.getElementById('alerts-container');
-        const alertEl = document.createElement('div');
-        alertEl.className = `alert alert-${type}`;
-        alertEl.textContent = message;
-        
-        alertsContainer.insertBefore(alertEl, alertsContainer.firstChild);
-        
-        // Keep only last 10 alerts
-        while (alertsContainer.children.length > 10) {
-            alertsContainer.removeChild(alertsContainer.lastChild);
-        }
-        
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            alertEl.remove();
-        }, 10000);
+
+        const updateTime = document.getElementById('update-time');
+        const now = new Date().toLocaleTimeString();
+        updateTime.textContent = `Last: ${now}`;
     }
 }
 
-// Initialize app when DOM is ready
+// Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    window.dashboardApp = new DashboardApp();
+    window.dashboard = new DemirAIDashboard();
 });
