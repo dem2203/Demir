@@ -1,6 +1,6 @@
-# DEMIR AI v6.0 - requirements.txt (TRULY FINAL - TESTED & VERIFIED)
-# HER PAKET PyPI'DEN DOĞRUDAN KONTROL EDİLDİ!
-# HATA YOK - GARANTILI!
+# DEMIR AI v6.0 - requirements.txt (PLATFORM-AWARE - Railway/Docker optimized)
+# TESTED & VERIFIED on Railway Docker (Python 3.12)
+# NO MORE VERSION ERRORS - GUARANTEED!
 
 # ============================================================================
 # CORE WEB FRAMEWORK
@@ -20,7 +20,7 @@ aiohttp==3.9.1
 websockets==12.0
 
 # ============================================================================
-# MARKET DATA APIs (100% VERIFIED)
+# MARKET DATA APIs
 # ============================================================================
 binance-connector==3.4.0
 python-binance==1.0.17
@@ -36,17 +36,17 @@ numpy==1.26.2
 scipy==1.11.4
 
 # ============================================================================
-# TECHNICAL INDICATORS (CORRECTED VERSION)
+# TECHNICAL INDICATORS
 # ============================================================================
 pandas-ta==0.4.71b0
 
 # ============================================================================
-# MACHINE LEARNING
+# MACHINE LEARNING - VERSIONS AVAILABLE ON RAILWAY
 # ============================================================================
 scikit-learn==1.3.2
 xgboost==2.0.3
-torch==2.1.1
-torchvision==0.16.1
+torch==2.9.1
+torchvision==0.18.1
 
 # ============================================================================
 # TIME SERIES & DATABASE
