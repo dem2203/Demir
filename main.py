@@ -1,12 +1,9 @@
 """
-🚀 DEMIR AI v5.2 - MAIN.PY - WITH HTML DASHBOARD
-✅ Full integration: Backend (Python) + Frontend (HTML/CSS/JS)
+🚀 DEMIR AI v5.2 - MAIN.PY - FIXED DASHBOARD SERVING
+✅ Properly serves HTML/CSS/JS dashboard files
 
-COMPLETE PRODUCTION READY CODE
-
-Location: GitHub Root / main.py
-Date: 2025-11-16 12:50 CET
-Size: ~900 lines (FULL)
+Date: 2025-11-16 13:13 CET
+Purpose: Serve your existing index.html with Flask + Backend API
 """
 
 import os
@@ -26,7 +23,7 @@ from dotenv import load_dotenv
 import numpy as np
 
 # Flask for web server + API
-from flask import Flask, render_template_string, jsonify, request
+from flask import Flask, send_file, jsonify, request, render_template_string
 import queue
 
 # ============================================================================
@@ -57,7 +54,7 @@ print(f"PORT: {os.getenv('PORT', 8000)}")
 # FLASK APP INITIALIZATION
 # ============================================================================
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=os.path.abspath('.'), static_url_path='')
 app.config['JSON_SORT_KEYS'] = False
 
 # ============================================================================
@@ -445,40 +442,93 @@ class DemirAISignalGenerator:
         return None
 
 # ============================================================================
-# FLASK ROUTES - API
+# FLASK ROUTES - DASHBOARD & API
 # ============================================================================
 
 @app.route('/')
 def index():
-    """Serve main dashboard - YOU NEED TO CREATE THIS HTML FILE"""
+    """Serve main dashboard - reads index.html from disk"""
     try:
-        with open('index.html', 'r', encoding='utf-8') as f:
-            html = f.read()
-        return html
-    except FileNotFoundError:
-        logger.warning("index.html not found, serving basic dashboard")
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>DEMIR AI v5.2</title>
-            <style>
-                body { font-family: Arial; margin: 20px; background: #0a0e27; color: #fff; }
-                h1 { color: #00d4ff; }
-                .status { background: #1a1e3f; padding: 20px; border-radius: 8px; }
-                .section { margin: 20px 0; }
-            </style>
-        </head>
-        <body>
-            <h1>DEMIR AI v5.2 Dashboard</h1>
-            <div class="status">
-                <p>Production system running</p>
-                <p><strong>Status:</strong> Online</p>
-                <p><a href="/api/health">Health Check</a></p>
-            </div>
-        </body>
-        </html>
-        """
+        # Try to read index.html from root directory
+        if os.path.exists('index.html'):
+            logger.info("Serving index.html from root")
+            with open('index.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        else:
+            logger.warning("index.html not found in root")
+            # Fallback: serve basic HTML
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>DEMIR AI v5.2</title>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0; 
+                        padding: 20px; 
+                        background: #0a0e27; 
+                        color: #fff; 
+                    }
+                    h1 { color: #00d4ff; }
+                    .container { max-width: 1200px; margin: 0 auto; }
+                    .status { 
+                        background: #1a1e3f; 
+                        padding: 20px; 
+                        border-radius: 8px; 
+                        margin: 20px 0;
+                    }
+                    .error {
+                        background: #3f1a1a;
+                        padding: 10px;
+                        color: #ff6b6b;
+                        border-radius: 4px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>DEMIR AI v5.2 Dashboard</h1>
+                    <div class="status">
+                        <p><strong>Status:</strong> Online</p>
+                        <p><strong>System:</strong> Running</p>
+                    </div>
+                    <div class="error">
+                        <strong>Note:</strong> index.html not found. 
+                        Please ensure index.html exists in the root directory.
+                    </div>
+                    <p><a href="/api/health">Health Check</a></p>
+                </div>
+            </body>
+            </html>
+            """
+    except Exception as e:
+        logger.error(f"Error serving index.html: {e}")
+        return f"<h1>Error</h1><p>{str(e)}</p>", 500
+
+@app.route('/style.css')
+def style_css():
+    """Serve CSS file"""
+    try:
+        if os.path.exists('style.css'):
+            with open('style.css', 'r', encoding='utf-8') as f:
+                return f.read(), 200, {'Content-Type': 'text/css'}
+    except Exception as e:
+        logger.error(f"Error serving style.css: {e}")
+    return "", 404
+
+@app.route('/app.js')
+def app_js():
+    """Serve JavaScript file"""
+    try:
+        if os.path.exists('app.js'):
+            with open('app.js', 'r', encoding='utf-8') as f:
+                return f.read(), 200, {'Content-Type': 'application/javascript'}
+    except Exception as e:
+        logger.error(f"Error serving app.js: {e}")
+    return "", 404
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -539,24 +589,6 @@ def get_price(symbol: str):
     except Exception as e:
         logger.error(f"Get price error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
-# ============================================================================
-# STATIC FILES
-# ============================================================================
-
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    """Serve static files"""
-    try:
-        if filename.endswith('.css'):
-            with open(f'static/{filename}', 'r') as f:
-                return f.read(), 200, {'Content-Type': 'text/css'}
-        elif filename.endswith('.js'):
-            with open(f'static/{filename}', 'r') as f:
-                return f.read(), 200, {'Content-Type': 'application/javascript'}
-    except FileNotFoundError:
-        logger.warning(f"Static file not found: {filename}")
-        return 'Not found', 404
 
 # ============================================================================
 # INITIALIZATION & START
