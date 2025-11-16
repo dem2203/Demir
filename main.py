@@ -784,19 +784,17 @@ class DemirAISignalGenerator:
 @app.route('/')
 @app.route('/dashboard')
 def dashboard():
-    """Serve professional dashboard HTML - DEMIR AI v6.0 (FIXED - uses templates/index.html)"""
+    """Serve professional dashboard HTML - DEMIR AI v6.0 (ROOT FİXED)"""
     try:
-        # Try multiple paths - index.html in templates folder
+        # ROOT LEVEL PATHS - dosyalar root'ta
         possible_paths = [
-            os.path.join(app.template_folder, 'index.html'),  # PRIMARY: templates/index.html
-            'templates/index.html',
-            './templates/index.html',
-            '/app/templates/index.html',
-            os.path.join(os.path.dirname(__file__), 'templates', 'index.html'),
-            '/workspace/templates/index.html'  # Railway specific
+            'index.html',  # PRIMARY - ROOT
+            './index.html',
+            os.path.join(os.path.dirname(__file__), 'index.html'),
+            '/app/index.html',  # Railway
         ]
         
-        logger.debug("🔍 Looking for templates/index.html...")
+        logger.debug("🔍 Looking for index.html in ROOT...")
         
         for path in possible_paths:
             if os.path.exists(path):
@@ -805,14 +803,14 @@ def dashboard():
                         html_content = f.read()
                     
                     if len(html_content) > 100:
-                        logger.info(f"✅ Dashboard served from: {path}")
+                        logger.info(f"✅ Dashboard served from ROOT: {path}")
                         return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
                 except Exception as e:
                     logger.warning(f"⚠️ Error reading {path}: {e}")
                     continue
         
-        # Fallback if index.html not found
-        logger.warning("⚠️ templates/index.html not found, serving minimal fallback")
+        # Fallback
+        logger.warning("⚠️ index.html not found in ROOT, serving minimal fallback")
         fallback_html = """<!DOCTYPE html>
 <html>
 <head>
