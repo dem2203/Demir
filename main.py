@@ -784,19 +784,19 @@ class DemirAISignalGenerator:
 @app.route('/')
 @app.route('/dashboard')
 def dashboard():
-    """Serve professional dashboard HTML - DEMIR AI v6.0"""
+    """Serve professional dashboard HTML - DEMIR AI v6.0 (FIXED - uses templates/index.html)"""
     try:
-        # Try multiple paths for dashboard.html
+        # Try multiple paths - index.html in templates folder
         possible_paths = [
-            'dashboard.html',
-            './dashboard.html',
-            '/app/dashboard.html',
-            os.path.join(os.path.dirname(__file__), 'dashboard.html'),
-            os.path.join('/app', 'dashboard.html'),
-            '/workspace/dashboard.html'  # Railway specific
+            os.path.join(app.template_folder, 'index.html'),  # PRIMARY: templates/index.html
+            'templates/index.html',
+            './templates/index.html',
+            '/app/templates/index.html',
+            os.path.join(os.path.dirname(__file__), 'templates', 'index.html'),
+            '/workspace/templates/index.html'  # Railway specific
         ]
         
-        logger.debug("🔍 Looking for dashboard.html...")
+        logger.debug("🔍 Looking for templates/index.html...")
         
         for path in possible_paths:
             if os.path.exists(path):
@@ -811,26 +811,28 @@ def dashboard():
                     logger.warning(f"⚠️ Error reading {path}: {e}")
                     continue
         
-        # Fallback if dashboard.html not found
-        logger.warning("⚠️ dashboard.html not found, serving minimal fallback")
+        # Fallback if index.html not found
+        logger.warning("⚠️ templates/index.html not found, serving minimal fallback")
         fallback_html = """<!DOCTYPE html>
 <html>
 <head>
     <title>DEMIR AI v6.0 - Dashboard</title>
     <style>
-        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #10b981; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #10b981; font-family: 'Courier New', monospace; }
         .container { text-align: center; padding: 50px; }
-        h1 { color: #10b981; }
-        .status { background: #10b981; color: #0f172a; padding: 15px; margin: 20px 0; }
+        h1 { color: #10b981; font-size: 2.5em; margin-bottom: 30px; }
+        .status { background: #10b981; color: #0f172a; padding: 15px; margin: 20px 0; font-weight: bold; border-radius: 5px; }
+        .info { color: #10b981; margin: 10px 0; font-size: 1.1em; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🚀 DEMIR AI v6.0</h1>
         <div class="status">✅ BACKEND OPERATIONAL</div>
-        <p>📊 PostgreSQL Connected (REAL)</p>
-        <p>🧠 AI Brain v6.0 Active</p>
-        <p>📡 Multi-Exchange Data</p>
+        <p class="info">📊 PostgreSQL Connected (REAL)</p>
+        <p class="info">🧠 AI Brain v6.0 Active</p>
+        <p class="info">📡 Multi-Exchange Data</p>
+        <p class="info">⚠️ Dashboard HTML loading...</p>
     </div>
 </body>
 </html>"""
