@@ -4,9 +4,6 @@
 📊 Mock/Fake/Fallback Data Detector
 
 Location: GitHub Root / core/signal_validator.py (NEW FILE - CREATE FOLDER IF NOT EXISTS)
-Size: ~800 lines
-Author: AI Research Agent
-Date: 2025-11-15
 """
 
 import os
@@ -341,7 +338,7 @@ class SignalValidator:
             results['overall_status'] = '✅ SIGNAL VALID - 100% REAL DATA'
             logger.info("🟢 ✅ SIGNAL VALIDATION PASSED - 100% REAL DATA COMPLIANCE")
         else:
-            results['overall_status'] = f'❌ SIGNAL INVALID - {len(results[\"errors\"])} errors'
+            results['overall_status'] = f'❌ SIGNAL INVALID - {len(results["errors"])} errors'
             logger.error(f"🔴 ❌ SIGNAL VALIDATION FAILED - {len(results['errors'])} errors")
         
         return results
@@ -368,7 +365,7 @@ class SignalValidator:
         report.append("")
         report.append("=" * 80)
         
-        return "\\n".join(report)
+        return "\n".join(report)
 
 # ============================================================================
 # MAIN ENTRY POINT - USAGE EXAMPLE
