@@ -2,7 +2,6 @@
 🚀 DEMIR AI v5.2 - Enhanced Configuration (Based on Your config.py)
 ⚙️ Your existing config + Production upgrades
 🔐 100% Real Data Policy - KURALLARA UYGUN
-
 Location: GitHub Root / config.py (UPGRADE - REPLACE YOUR FILE)
 Size: ~400 lines
 Author: AI Research Agent (Based on user's existing config.py)
