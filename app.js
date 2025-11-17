@@ -1,39 +1,82 @@
-// DEMIR AI v6.0 - Professional Trader Dashboard JavaScript
-// Real-Time Signals + Türkçe Yorumlar + AI Comments
+/**
+ * DEMIR AI v6.0 - Professional Trader Dashboard - Phase 4
+ * Real-Time WebSocket + Advanced Analytics + Turkish UI
+ * Dark Theme + 4-GROUP Signal System + Position Management
+ * Production-Grade Frontend
+ */
 
+// ========== CONFIGURATION ==========
 const API_BASE = 'http://localhost:8000/api';
+const WS_URL = 'ws://localhost:8000/ws';
+
 let currentCoin = 'BTCUSDT';
 let signals = {};
-let tradeHistory = [];
+let positions = {};
 let charts = {};
+let websocket = null;
+let updateInterval = null;
+
+const COLORS = {
+    long: '#00ff88',
+    short: '#ff3366',
+    neutral: '#ffaa00',
+    tech: '#00d4ff',
+    sentiment: '#ff00ff',
+    onchain: '#00ff88',
+    macro: '#ffaa00',
+    buy: '#00ff88',
+    sell: '#ff3366'
+};
 
 // ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DEMIR AI v6.0 Frontend Initializing...');
+    
     setupEventListeners();
     loadInitialData();
-    startRealTimeUpdates();
+    initializeWebSocket();
     setupCharts();
     loadTradeHistory();
     setupTelegramMonitoring();
+    
+    // Main update loop
+    updateInterval = setInterval(updateRealTime, 5000);
+    
+    console.log('✅ Dashboard Ready');
 });
 
+
+// ========== EVENT LISTENERS ==========
 function setupEventListeners() {
+    // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => switchTab(e.target.dataset.tab));
     });
-
+    
+    // Coin switching
     document.querySelectorAll('.coin-btn').forEach(btn => {
         btn.addEventListener('click', (e) => switchCoin(e.target.dataset.coin));
     });
-
-    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-    document.getElementById('addCoinBtn').addEventListener('click', openAddCoinModal);
-    document.getElementById('actionButton').addEventListener('click', openTradeModal);
-
+    
+    // Theme toggle
+    document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+    
+    // Add coin
+    document.getElementById('addCoinBtn')?.addEventListener('click', openAddCoinModal);
+    
+    // Action buttons
+    document.getElementById('openLongBtn')?.addEventListener('click', () => openTradeModal('LONG'));
+    document.getElementById('openShortBtn')?.addEventListener('click', () => openTradeModal('SHORT'));
+    document.getElementById('closeAllBtn')?.addEventListener('click', closeAllPositions);
+    
+    // Settings
     document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', () => localStorage.setItem('settings', JSON.stringify(getSettings())));
+        cb.addEventListener('change', () => {
+            localStorage.setItem('settings', JSON.stringify(getSettings()));
+        });
     });
 }
+
 
 // ========== DATA LOADING ==========
 async function loadInitialData() {
@@ -41,18 +84,21 @@ async function loadInitialData() {
         updateStatus('online');
         
         // Get signals for all coins
-        const response = await axios.get(`${API_BASE}/signals`);
-        signals = response.data.data || [];
-        
-        // Get statistics
-        const statsResp = await axios.get(`${API_BASE}/statistics`);
-        updateStatistics(statsResp.data.data);
+        const signalResp = await axios.get(`${API_BASE}/signals`);
+        signals = signalResp.data.data || [];
         
         // Get tracked coins
         const coinsResp = await axios.get(`${API_BASE}/coins`);
-        updateTrackedCoins(coinsResp.data.coins);
+        const coins = coinsResp.data.coins || ['BTCUSDT', 'ETHUSDT', 'LTCUSDT'];
+        updateTrackedCoinsList(coins);
+        
+        // Get positions
+        const posResp = await axios.get(`${API_BASE}/positions`);
+        positions = posResp.data.data || [];
         
         updateSignalDisplay(currentCoin);
+        updatePositionsDisplay();
+        
         logger('✅ Veriler yüklendi');
     } catch (e) {
         logger(`❌ Veri yüklenirken hata: ${e.message}`, 'error');
@@ -60,10 +106,68 @@ async function loadInitialData() {
     }
 }
 
-function startRealTimeUpdates() {
-    setInterval(loadInitialData, 30000); // Her 30 saniye güncelle
-    setInterval(sendHourlyStatusTelegram, 3600000); // Her saat durum gönder
+
+// ========== WEBSOCKET INITIALIZATION ==========
+function initializeWebSocket() {
+    try {
+        websocket = new WebSocket(WS_URL);
+        
+        websocket.onopen = () => {
+            logger('✅ WebSocket bağlandı');
+            updateStatus('connected');
+        };
+        
+        websocket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'signal') {
+                    updateSignalDisplay(data.signal.symbol);
+                    playNotificationSound();
+                } else if (data.type === 'position') {
+                    positions[data.position.id] = data.position;
+                    updatePositionsDisplay();
+                } else if (data.type === 'price') {
+                    updatePriceDisplay(data.coin, data.price);
+                }
+            } catch (e) {
+                logger(`WebSocket parse error: ${e.message}`, 'debug');
+            }
+        };
+        
+        websocket.onerror = (error) => {
+            logger(`❌ WebSocket hatası: ${error}`, 'error');
+            updateStatus('error');
+        };
+        
+        websocket.onclose = () => {
+            logger('⚠️ WebSocket bağlantısı kesildi');
+            updateStatus('offline');
+            // Reconnect in 5 seconds
+            setTimeout(initializeWebSocket, 5000);
+        };
+    } catch (e) {
+        logger(`WebSocket init error: ${e.message}`, 'error');
+    }
 }
+
+
+// ========== REAL-TIME UPDATES ==========
+async function updateRealTime() {
+    try {
+        // Refresh signals
+        const resp = await axios.get(`${API_BASE}/signals?limit=50`);
+        signals = resp.data.data || [];
+        
+        // Update current coin display
+        updateSignalDisplay(currentCoin);
+        updatePositionsDisplay();
+        
+    } catch (e) {
+        logger(`Update error: ${e.message}`, 'debug');
+    }
+}
+
 
 // ========== SIGNAL DISPLAY ==========
 function updateSignalDisplay(coin) {
@@ -73,119 +177,210 @@ function updateSignalDisplay(coin) {
         resetSignalDisplay();
         return;
     }
-
-    // TECHNICAL GROUP
-    updateGroupDisplay('technical', {
-        direction: signal.direction || 'NEUTRAL',
-        strength: signal.tech_group_score || 0,
-        confidence: signal.confidence || 0,
-        layers: signal.active_layers || 0
-    });
-
-    // SENTIMENT GROUP
-    updateGroupDisplay('sentiment', {
-        direction: signal.direction || 'NEUTRAL',
-        strength: signal.sentiment_group_score || 0,
-        confidence: signal.confidence || 0,
-        layers: 20
-    });
-
-    // ONCHAIN GROUP
-    updateGroupDisplay('onchain', {
-        direction: signal.direction || 'NEUTRAL',
-        strength: signal.onchain_group_score || 0,
-        confidence: signal.confidence || 0,
-        layers: 6
-    });
-
-    // MACRO RISK GROUP
-    updateGroupDisplay('macro', {
-        direction: signal.direction || 'NEUTRAL',
-        strength: signal.macro_risk_group_score || 0,
-        confidence: signal.confidence || 0,
-        layers: 14
-    });
-
-    // CONSENSUS
-    updateConsensus(signal);
     
-    // AI COMMENT
-    updateAIComment(signal, coin);
-    
-    // RISK & POSITION
-    updateRiskMetrics(signal, coin);
-    
-    // DATA SOURCE
-    document.getElementById('dataSource').textContent = `Veri kaynağı: ${signal.data_source || 'Kontrol edileniyor...'}`;
-    document.getElementById('currentPrice').textContent = `$${(signal.entry_price || 0).toFixed(2)}`;
+    try {
+        // Current price
+        const priceEl = document.getElementById('currentPrice');
+        if (priceEl) priceEl.textContent = `$${signal.entry_price.toFixed(2)}`;
+        
+        // 4-GROUP Display
+        updateGroupDisplay('technical', {
+            direction: signal.direction || 'NEUTRAL',
+            strength: signal.tech_group_score || 0,
+            confidence: signal.confidence || 0,
+            layers: 28
+        });
+        
+        updateGroupDisplay('sentiment', {
+            direction: signal.direction || 'NEUTRAL',
+            strength: signal.sentiment_group_score || 0,
+            confidence: signal.confidence || 0,
+            layers: 20
+        });
+        
+        updateGroupDisplay('onchain', {
+            direction: signal.direction || 'NEUTRAL',
+            strength: signal.onchain_group_score || 0,
+            confidence: signal.confidence || 0,
+            layers: 6
+        });
+        
+        updateGroupDisplay('macro', {
+            direction: signal.direction || 'NEUTRAL',
+            strength: signal.macro_risk_group_score || 0,
+            confidence: signal.confidence || 0,
+            layers: 14
+        });
+        
+        // Consensus
+        updateConsensusDisplay(signal);
+        
+        // Risk metrics
+        updateRiskDisplay(signal, coin);
+        
+        // Data source
+        const sourceEl = document.getElementById('dataSource');
+        if (sourceEl) sourceEl.textContent = `📊 Veri: ${signal.data_source || 'Unknown'}`;
+        
+        // AI Comment
+        updateAIComment(signal, coin);
+        
+    } catch (e) {
+        logger(`Signal display error: ${e.message}`, 'error');
+    }
 }
+
 
 function updateGroupDisplay(group, data) {
-    const direction = data.direction === 'LONG' ? '📈 LONG' : data.direction === 'SHORT' ? '📉 SHORT' : '⏸️ NEUTRAL';
-    const directionClass = data.direction.toLowerCase();
+    const directionText = {
+        'LONG': '📈 LONG',
+        'SHORT': '📉 SHORT',
+        'NEUTRAL': '⏸️ NEUTRAL'
+    }[data.direction] || '❓ ?';
     
-    const directionEl = document.getElementById(`${group}Direction`);
-    directionEl.textContent = direction;
-    directionEl.className = `signal-direction ${directionClass}`;
+    const directionColor = {
+        'LONG': COLORS.long,
+        'SHORT': COLORS.short,
+        'NEUTRAL': COLORS.neutral
+    }[data.direction] || COLORS.neutral;
     
+    // Direction
+    const dirEl = document.getElementById(`${group}Direction`);
+    if (dirEl) {
+        dirEl.textContent = directionText;
+        dirEl.style.color = directionColor;
+    }
+    
+    // Strength
     const strength = Math.round(data.strength * 100);
+    const strengthEl = document.getElementById(`${group}Strength`);
+    if (strengthEl) strengthEl.textContent = `${strength}%`;
+    
+    const strengthBar = document.getElementById(`${group}StrengthBar`);
+    if (strengthBar) {
+        strengthBar.style.width = `${strength}%`;
+        strengthBar.style.backgroundColor = directionColor;
+    }
+    
+    // Confidence
     const confidence = Math.round(data.confidence * 100);
+    const confEl = document.getElementById(`${group}Confidence`);
+    if (confEl) confEl.textContent = `${confidence}%`;
     
-    document.getElementById(`${group}Strength`).textContent = `${strength}%`;
-    document.getElementById(`${group}StrengthBar`).style.width = `${strength}%`;
+    const confBar = document.getElementById(`${group}ConfidenceBar`);
+    if (confBar) {
+        confBar.style.width = `${confidence}%`;
+        confBar.style.backgroundColor = directionColor;
+    }
     
-    document.getElementById(`${group}Confidence`).textContent = `${confidence}%`;
-    document.getElementById(`${group}ConfidenceBar`).style.width = `${confidence}%`;
+    // Layers
+    const layersEl = document.getElementById(`${group}Layers`);
+    if (layersEl) layersEl.textContent = `${data.layers} Layer`;
     
-    document.getElementById(`${group}Layers`).textContent = `Aktif Layer: ${data.layers}`;
-    
-    // Turkish explanation
-    document.getElementById(`${group}Explanation`).textContent = getGroupExplanation(group, data);
+    // Explanation
+    updateGroupExplanation(group, data);
 }
 
-function getGroupExplanation(group, data) {
+
+function updateGroupExplanation(group, data) {
     const strength = Math.round(data.strength * 100);
     const confidence = Math.round(data.confidence * 100);
+    
+    let explanation = '';
     
     if (group === 'technical') {
         if (data.direction === 'LONG' && strength > 70) {
-            return `RSI, MACD ve Bollinger Bands alım sinyali veriyor. Fiyat ${data.layers} technical indicator ile destek bulmuş durumda.`;
+            explanation = `RSI, MACD ve Bollinger Bands alım sinyali veriyor. Fiyat ${data.layers} teknik gösterge ile destek bulmuş.`;
         } else if (data.direction === 'SHORT' && strength > 70) {
-            return `Teknik göstergeler satış baskısı gösteriyor. ${data.layers} layer dirençte uyarı veriyor.`;
+            explanation = `Teknik göstergeler satış baskısı gösteriyor. ${data.layers} layer dirençte uyarı veriyor.`;
         } else {
-            return `Teknik göstergeler karışık sinyal veriyor. Konsolidasyon dönemindeyiz.`;
+            explanation = `Teknik göstergeler karışık sinyal veriyor. Konsolidasyon dönemindeyiz.`;
         }
-    } else if (group === 'sentiment') {
-        if (strength > 60) return `Pazar duyarlılığı ${data.direction === 'LONG' ? 'pozitif' : 'negatif'}. Sosyal medya ve haber akışı ${data.direction === 'LONG' ? 'alımı' : 'satışı'} destekliyor.`;
-        return `Pazar duyarlılığı nötr. İnsanlar bekleme modunda.`;
-    } else if (group === 'onchain') {
-        if (strength > 65) return `Zincir analizi: Büyük işlemler ${data.direction === 'LONG' ? 'birikim' : 'dağılım'} gösteriyor. Whale hareketleri ${data.direction === 'LONG' ? 'pozitif' : 'negatif'}.`;
-        return `Zincir aktivitesi normal seviyede. Büyük işlem beklentisi yok.`;
-    } else if (group === 'macro') {
-        if (strength > 70) return `Makro çerçeve ${data.direction === 'LONG' ? 'yükseliş' : 'düşüş'} gösteriyor. Volatilite ${confidence > 75 ? 'yüksek' : 'orta'} seviyede.`;
-        return `Makro ortam belirsiz. Risk yönetimi çok önemli.`;
+    } 
+    else if (group === 'sentiment') {
+        if (strength > 60) {
+            explanation = `Pazar duyarlılığı ${data.direction === 'LONG' ? 'pozitif' : 'negatif'}. Sosyal medya ${data.direction === 'LONG' ? 'alımı' : 'satışı'} destekliyor.`;
+        } else {
+            explanation = `Pazar duyarlılığı nötr. İnsanlar bekleme modunda.`;
+        }
+    }
+    else if (group === 'onchain') {
+        if (strength > 65) {
+            explanation = `Zincir analizi: Büyük işlemler ${data.direction === 'LONG' ? 'birikim' : 'dağılım'} gösteriyor. Whale hareketleri ${data.direction === 'LONG' ? 'pozitif' : 'negatif'}.`;
+        } else {
+            explanation = `Zincir aktivitesi normal. Büyük işlem beklentisi yok.`;
+        }
+    }
+    else if (group === 'macro') {
+        if (strength > 70) {
+            explanation = `Makro çerçeve ${data.direction === 'LONG' ? 'yükseliş' : 'düşüş'} gösteriyor. Volatilite ${confidence > 75 ? 'yüksek' : 'orta'} seviyede.`;
+        } else {
+            explanation = `Makro ortam belirsiz. Risk yönetimi çok önemli.`;
+        }
     }
     
-    return '-';
+    const exEl = document.getElementById(`${group}Explanation`);
+    if (exEl) exEl.textContent = explanation;
 }
 
-function updateConsensus(signal) {
+
+function updateConsensusDisplay(signal) {
     const score = signal.ensemble_score || 0;
     const direction = signal.direction || 'NEUTRAL';
     
-    document.getElementById('consensusDirection').textContent = direction;
-    document.getElementById('consensusStrength').textContent = `${Math.round(score * 100)}%`;
-    document.getElementById('consensusStrengthBar').style.width = `${score * 100}%`;
-    document.getElementById('consensusConfidence').textContent = `${Math.round(signal.confidence * 100)}%`;
-    document.getElementById('consensusConfidenceBar').style.width = `${signal.confidence * 100}%`;
+    // Direction
+    const dirEl = document.getElementById('consensusDirection');
+    if (dirEl) {
+        dirEl.textContent = direction;
+        dirEl.style.color = COLORS[direction.toLowerCase()];
+    }
     
-    // Enable action button
-    if (score > 0.5) {
-        document.getElementById('actionButton').disabled = false;
-        document.getElementById('actionButton').textContent = direction === 'LONG' ? '+ LONG AC' : '+ SHORT AC';
-        document.getElementById('actionButton').style.background = direction === 'LONG' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 51, 102, 0.1)';
+    // Strength
+    const strengthEl = document.getElementById('consensusStrength');
+    if (strengthEl) strengthEl.textContent = `${Math.round(score * 100)}%`;
+    
+    const strengthBar = document.getElementById('consensusStrengthBar');
+    if (strengthBar) {
+        strengthBar.style.width = `${score * 100}%`;
+        strengthBar.style.backgroundColor = COLORS[direction.toLowerCase()];
+    }
+    
+    // Confidence
+    const confEl = document.getElementById('consensusConfidence');
+    if (confEl) confEl.textContent = `${Math.round(signal.confidence * 100)}%`;
+    
+    const confBar = document.getElementById('consensusConfidenceBar');
+    if (confBar) {
+        confBar.style.width = `${signal.confidence * 100}%`;
+        confBar.style.backgroundColor = COLORS[direction.toLowerCase()];
+    }
+    
+    // Action button
+    const actionBtn = document.getElementById('actionButton');
+    if (actionBtn) {
+        if (score > 0.5) {
+            actionBtn.disabled = false;
+            actionBtn.textContent = direction === 'LONG' ? '📈 LONG AC' : '📉 SHORT AC';
+            actionBtn.style.backgroundColor = COLORS[direction.toLowerCase()];
+        } else {
+            actionBtn.disabled = true;
+            actionBtn.textContent = 'Bekleniyor...';
+        }
     }
 }
+
+
+function updateRiskDisplay(signal, coin) {
+    const riskScoreEl = document.getElementById('riskScore');
+    if (riskScoreEl) riskScoreEl.textContent = `${Math.round((signal.risk_score || 0.5) * 100)}%`;
+    
+    const rrEl = document.getElementById('riskRewardRatio');
+    if (rrEl) rrEl.textContent = `${(signal.risk_reward_ratio || 2.0).toFixed(2)}:1`;
+    
+    const posEl = document.getElementById('recommendedPosition');
+    if (posEl) posEl.textContent = `${signal.position_size || 1.0} kontrat`;
+}
+
 
 function updateAIComment(signal, coin) {
     const tech = Math.round(signal.tech_group_score * 100);
@@ -194,257 +389,305 @@ function updateAIComment(signal, coin) {
     const macro = Math.round(signal.macro_risk_group_score * 100);
     const ensemble = Math.round(signal.ensemble_score * 100);
     
-    let comment = `<strong>${coin} Analiz</strong>\n\n`;
+    let comment = `\n🤖 **${coin} AI Analizi**\n\n`;
     comment += `📊 Teknik: ${tech}% (${tech > 65 ? 'güçlü' : tech > 35 ? 'orta' : 'zayıf'})\n`;
     comment += `💭 Duygu: ${sentiment}% (${sentiment > 65 ? 'pozitif' : sentiment > 35 ? 'nötr' : 'negatif'})\n`;
-    comment += `⛓️ Zincir: ${onchain}% (${onchain > 65 ? 'alım baskısı' : onchain > 35 ? 'dengeli' : 'satış baskısı'})\n`;
-    comment += `⚠️ Makro: ${macro}% risk (${macro > 70 ? 'YÜKSEK' : macro > 40 ? 'ORTA' : 'DÜŞÜK'})\n\n`;
-    comment += `🤖 Yapay Zeka Tavsiyesi: `;
+    comment += `⛓️ Zincir: ${onchain}% (${onchain > 65 ? 'alım' : onchain > 35 ? 'dengeli' : 'satış'})\n`;
+    comment += `⚠️ Makro: ${macro}% (${macro > 70 ? 'YÜKSEK RISK' : macro > 40 ? 'ORTA' : 'DÜŞÜK'})\n\n`;
     
+    comment += `🎯 **Tavsiye:** `;
     if (ensemble > 75) {
-        comment += `${signal.direction} sinyali YAGLI. Tüm göstergeler uyuşuyor. Başlangıç saat en iyi zamanı.`;
+        comment += `${signal.direction} sinyali YAGLI! Tüm göstergeler uyuşuyor.`;
     } else if (ensemble > 50) {
-        comment += `${signal.direction} yönü favori ama tam güven yok. Pozisyon aç ama dikkatli ol.`;
+        comment += `${signal.direction} yönü favori ama tam güven yok. Pozisyon aç ama dikkatli.`;
     } else {
-        comment += `Sinyal karışık. Bekleme yaparak şartlar netleşene kadar beklemeyi öner.`;
+        comment += `Sinyal karışık. Bekleme yaparak şartlar netleşene kadar sabırlı.`;
     }
     
-    comment += `\n\n💡 Pozisyon boyutu: ${getPositionSize(coin, signal)}`;
-    
-    document.getElementById('aiComment').textContent = comment;
+    const aiEl = document.getElementById('aiComment');
+    if (aiEl) aiEl.textContent = comment;
 }
 
-function updateRiskMetrics(signal, coin) {
-    const leverages = { 'BTCUSDT': 80, 'ETHUSDT': 70, 'LTCUSDT': 50 };
-    const amounts = { 'BTCUSDT': 60, 'ETHUSDT': 45, 'LTCUSDT': 45 };
+
+// ========== POSITIONS DISPLAY ==========
+function updatePositionsDisplay() {
+    const container = document.getElementById('positionsContainer');
+    if (!container) return;
     
-    const lev = leverages[coin] || 50;
-    const amount = amounts[coin] || 50;
+    if (!positions || Object.keys(positions).length === 0) {
+        container.innerHTML = '<div class="no-data">📭 Açık pozisyon yok</div>';
+        return;
+    }
     
-    document.getElementById('recommendedPosition').textContent = `${amount} USDT @ ${lev}x`;
-    document.getElementById('maxLoss').textContent = `${(amount / lev).toFixed(2)} USDT (%0.5)`;
-    document.getElementById('kellyFraction').textContent = `${(0.25 * (1 - Math.abs(signal.tech_group_score - 0.5) * 2)).toFixed(2)}`;
+    let html = '<div class="positions-grid">';
+    
+    for (const [id, pos] of Object.entries(positions)) {
+        if (pos.status === 'open' || pos.status === 'partially_closed') {
+            const pnl = (pos.current_price - pos.entry_price) * pos.quantity;
+            const pnlPercent = (pnl / (pos.entry_price * pos.quantity)) * 100;
+            const pnlColor = pnl >= 0 ? COLORS.buy : COLORS.sell;
+            
+            html += `
+                <div class="position-card" style="border-left: 4px solid ${pnlColor}">
+                    <div class="pos-header">
+                        <h4>${pos.symbol}</h4>
+                        <span class="pos-side ${pos.side}">${pos.side === 'long' ? '📈' : '📉'} ${pos.side.toUpperCase()}</span>
+                    </div>
+                    <div class="pos-details">
+                        <div>Entry: $${pos.entry_price.toFixed(2)}</div>
+                        <div>Current: $${pos.current_price.toFixed(2)}</div>
+                        <div>Qty: ${pos.quantity.toFixed(4)}</div>
+                    </div>
+                    <div class="pos-levels">
+                        <div>TP: $${pos.take_profit.toFixed(2)}</div>
+                        <div>SL: $${pos.stop_loss.toFixed(2)}</div>
+                    </div>
+                    <div class="pos-pnl" style="color: ${pnlColor}">
+                        <strong>P&L: $${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)</strong>
+                    </div>
+                    <button onclick="closePosition('${id}')" class="btn btn-danger">Kapat</button>
+                </div>
+            `;
+        }
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-function getPositionSize(coin, signal) {
-    const amounts = { 'BTCUSDT': '60 USD', 'ETHUSDT': '40-50 USD', 'LTCUSDT': '40-50 USD' };
-    return amounts[coin] || '50 USD';
-}
 
-// ========== CHARTS SETUP ==========
+// ========== CHARTS ==========
 function setupCharts() {
-    const colors = {
-        tech: '#00d4ff',
-        sentiment: '#ff00ff',
-        onchain: '#00ff88',
-        macro: '#ffaa00'
-    };
-    
-    // 4-Group Bar Chart
     const groupCtx = document.getElementById('groupChart');
-    if (groupCtx) {
-        charts.groupChart = new Chart(groupCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Teknik', 'Duygu', 'Zincir', 'Makro'],
-                datasets: [{
-                    label: 'Sinyal Güçleri (%)',
-                    data: [65, 52, 71, 60],
-                    backgroundColor: [colors.tech, colors.sentiment, colors.onchain, colors.macro],
-                    borderRadius: 5
-                }]
+    if (!groupCtx) return;
+    
+    charts.groupChart = new Chart(groupCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Teknik', 'Duygu', 'Zincir', 'Makro'],
+            datasets: [{
+                label: 'Sinyal Gücü (%)',
+                data: [65, 52, 71, 60],
+                backgroundColor: [COLORS.tech, COLORS.sentiment, COLORS.onchain, COLORS.macro],
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { color: '#a0a0a0' },
+                    grid: { color: '#1a1f3a' }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { color: '#a0a0a0' }, grid: { color: '#1a1f3a' } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
+            plugins: { legend: { display: false } }
+        }
+    });
 }
+
 
 // ========== UTILITIES ==========
 function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
     document.getElementById(tabName)?.classList.add('active');
     event.target.classList.add('active');
 }
+
 
 function switchCoin(coin) {
     currentCoin = coin;
     document.querySelectorAll('.coin-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
-    document.getElementById('selectedCoin').textContent = coin;
+    
     updateSignalDisplay(coin);
 }
+
 
 function toggleTheme() {
     document.body.classList.toggle('light-theme');
     localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
-    document.getElementById('themeToggle').textContent = document.body.classList.contains('light-theme') ? '🌞 Light' : '🌙 Dark';
 }
+
 
 function updateStatus(status) {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     
-    if (status === 'online') {
-        dot.classList.add('online');
+    if (status === 'online' || status === 'connected') {
+        dot.className = 'status-dot online';
         text.textContent = '🟢 Bağlı';
-    } else {
-        dot.classList.remove('online');
+    } else if (status === 'offline') {
+        dot.className = 'status-dot offline';
         text.textContent = '🔴 Çevrimdışı';
+    } else {
+        dot.className = 'status-dot error';
+        text.textContent = '🟠 Hata';
     }
 }
 
-function updateStatistics(stats) {
-    if (stats.total_trades) {
-        document.getElementById('statTotalTrades').textContent = stats.total_trades;
-        document.getElementById('statWinning').textContent = stats.winning_trades || 0;
-        document.getElementById('statLosing').textContent = (stats.total_trades - (stats.winning_trades || 0));
-        document.getElementById('statWinRate').textContent = stats.win_rate ? `${(stats.win_rate * 100).toFixed(1)}%` : '0%';
-    }
-}
 
-function updateTrackedCoins(coins) {
-    const settings = document.getElementById('trackedCoinsSettings');
-    if (settings) {
-        settings.innerHTML = coins.map(coin => `
-            <div class="coin-setting-item">
-                ${coin}
-                <button class="btn-remove-coin" onclick="removeCoin('${coin}')">Sil</button>
-            </div>
-        `).join('');
-    }
-}
-
-function logger(msg, type = 'info') {
-    console.log(`[${new Date().toLocaleTimeString('tr-TR')}] ${msg}`);
-}
-
-// ========== MODALS ==========
-function openAddCoinModal() {
-    document.getElementById('addCoinModal').style.display = 'flex';
-    document.getElementById('addCoinInput').focus();
-}
-
-function closeModal() {
-    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-}
-
-async function confirmAddCoin() {
-    const coin = document.getElementById('addCoinInput').value.toUpperCase();
-    if (!coin || !coin.endsWith('USDT')) {
-        alert('Geçersiz coin! Örn: SOLUSDT');
-        return;
-    }
+function updateTrackedCoinsList(coins) {
+    const container = document.getElementById('trackedCoins');
+    if (!container) return;
     
-    try {
-        await axios.post(`${API_BASE}/coins/add`, { symbol: coin });
-        alert(`✅ ${coin} eklendi!`);
-        closeModal();
-        loadInitialData();
-    } catch (e) {
-        alert(`❌ Hata: ${e.message}`);
-    }
-}
-
-function openTradeModal() {
-    document.getElementById('tradeModal').style.display = 'flex';
-}
-
-function confirmTradeOpen() {
-    const signal = signals.find(s => s.symbol === currentCoin);
-    if (signal) {
-        tradeHistory.push({
-            ...signal,
-            opened_at: new Date(),
-            status: 'OPEN',
-            entry_timestamp: Date.now()
-        });
-        localStorage.setItem('tradeHistory', JSON.stringify(tradeHistory));
-        alert(`✅ ${currentCoin} işlem kaydedildi. AI takibi başlandı!`);
-        closeModal();
-        loadTradeHistory();
-        sendTelegramNotification(`✅ İşlem Açıldı: ${currentCoin} ${signal.direction} @ $${signal.entry_price.toFixed(2)}`);
-    }
-}
-
-function loadTradeHistory() {
-    tradeHistory = JSON.parse(localStorage.getItem('tradeHistory')) || [];
-    const tbody = document.getElementById('historyBody');
+    container.innerHTML = coins.map(coin => 
+        `<button class="coin-btn ${coin === currentCoin ? 'active' : ''}" data-coin="${coin}">${coin}</button>`
+    ).join('');
     
-    if (tradeHistory.length === 0) return;
-    
-    tbody.innerHTML = tradeHistory.map((trade, i) => `
-        <tr>
-            <td>${trade.symbol}</td>
-            <td>${trade.direction}</td>
-            <td>$${trade.entry_price.toFixed(2)}</td>
-            <td>${trade.pnl ? `$${trade.pnl.toFixed(2)}` : '-'}</td>
-            <td>${trade.pnl ? (trade.pnl > 0 ? '+' : '') + trade.pnl.toFixed(2) + '%' : '-'}</td>
-            <td>${trade.status}</td>
-            <td>${new Date(trade.opened_at).toLocaleDateString('tr-TR')}</td>
-            <td><button onclick="closeTradeHistory(${i})">Kapat</button></td>
-        </tr>
-    `).join('');
+    // Re-attach listeners
+    document.querySelectorAll('.coin-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => switchCoin(e.target.dataset.coin));
+    });
 }
 
-function closeTradeHistory(index) {
-    // TP/SL kontrolü ve kapanış
-    const trade = tradeHistory[index];
-    tradeHistory[index].status = 'CLOSED';
-    tradeHistory[index].closed_at = new Date();
-    localStorage.setItem('tradeHistory', JSON.stringify(tradeHistory));
-    loadTradeHistory();
-}
-
-// ========== TELEGRAM ==========
-function setupTelegramMonitoring() {
-    if (document.getElementById('telegramEnabled').checked) {
-        logger('✅ Telegram monitoring aktif');
-    }
-}
-
-async function sendTelegramNotification(message) {
-    logger(`📧 Telegram: ${message}`);
-}
-
-async function sendHourlyStatusTelegram() {
-    if (!document.getElementById('hourlyStatusEnabled').checked) return;
-    
-    const prices = await Promise.all([
-        fetchPrice('BTCUSDT'),
-        fetchPrice('ETHUSDT'),
-        fetchPrice('LTCUSDT')
-    ]);
-    
-    const msg = `🤖 DEMIR AI v6.0 - Saatlik Rapor\n\n📊 Live Fiyatlar:\n₿ BTC: $${prices[0]}\nΞ ETH: $${prices[1]}\nŁ LTC: $${prices[2]}\n\n✅ Sistem aktif ve çalışıyor!`;
-    sendTelegramNotification(msg);
-}
-
-async function fetchPrice(coin) {
-    try {
-        const resp = await axios.get(`${API_BASE}/signals`);
-        const signal = resp.data.data.find(s => s.symbol === coin);
-        return signal?.entry_price.toFixed(2) || '-';
-    } catch {
-        return '-';
-    }
-}
 
 function resetSignalDisplay() {
-    document.getElementById('consensusDirection').textContent = 'HOLD';
-    document.getElementById('actionButton').disabled = true;
-    document.getElementById('actionButton').textContent = 'BEKLEME...';
+    document.getElementById('currentPrice').textContent = '-';
+    document.querySelectorAll('.group-direction').forEach(el => el.textContent = '❓');
+    document.getElementById('aiComment').textContent = 'Sinyal bekleniyor...';
 }
 
-// Load theme
-if (localStorage.getItem('theme') === 'light') {
-    document.body.classList.add('light-theme');
-    document.getElementById('themeToggle').textContent = '🌞 Light';
+
+function openAddCoinModal() {
+    const coin = prompt('Coin sembolü girin (örn: BNBUSDT):');
+    if (coin) {
+        addCoin(coin.toUpperCase());
+    }
 }
+
+
+async function addCoin(symbol) {
+    try {
+        const resp = await axios.post(`${API_BASE}/coins/add`, { symbol });
+        logger(`✅ ${symbol} eklendi`);
+        loadInitialData();
+    } catch (e) {
+        logger(`❌ Hata: ${e.response?.data?.message || e.message}`, 'error');
+    }
+}
+
+
+function openTradeModal(direction) {
+    const modal = document.getElementById('tradeModal');
+    if (!modal) return;
+    
+    document.getElementById('tradeDirection').value = direction;
+    document.getElementById('tradeSymbol').value = currentCoin;
+    modal.style.display = 'block';
+}
+
+
+async function executeTrade(direction) {
+    try {
+        const symbol = document.getElementById('tradeSymbol')?.value || currentCoin;
+        const amount = parseFloat(document.getElementById('tradeAmount')?.value || 0);
+        
+        if (!amount || amount <= 0) {
+            logger('❌ Geçerli miktar girin', 'error');
+            return;
+        }
+        
+        const resp = await axios.post(`${API_BASE}/positions/open`, {
+            symbol,
+            side: direction.toLowerCase(),
+            amount,
+            leverage: parseInt(document.getElementById('tradeLeverage')?.value || 1)
+        });
+        
+        logger(`✅ Pozisyon açıldı: ${direction} ${amount} USDT`);
+        loadInitialData();
+        
+        document.getElementById('tradeModal').style.display = 'none';
+    } catch (e) {
+        logger(`❌ Hata: ${e.response?.data?.message || e.message}`, 'error');
+    }
+}
+
+
+async function closePosition(positionId) {
+    try {
+        await axios.post(`${API_BASE}/positions/close`, { position_id: positionId });
+        logger('✅ Pozisyon kapatıldı');
+        loadInitialData();
+    } catch (e) {
+        logger(`❌ Hata: ${e.message}`, 'error');
+    }
+}
+
+
+async function closeAllPositions() {
+    if (!confirm('Tüm pozisyonları kapatmak istediğinizden emin misiniz?')) return;
+    
+    try {
+        await axios.post(`${API_BASE}/positions/close-all`);
+        logger('✅ Tüm pozisyonlar kapatıldı');
+        loadInitialData();
+    } catch (e) {
+        logger(`❌ Hata: ${e.message}`, 'error');
+    }
+}
+
+
+function loadTradeHistory() {
+    // Placeholder
+}
+
+
+function setupTelegramMonitoring() {
+    // Placeholder
+}
+
+
+function logger(msg, level = 'info') {
+    const timestamp = new Date().toLocaleTimeString('tr-TR');
+    console.log(`[${timestamp}] ${msg}`);
+    
+    const logContainer = document.getElementById('logContainer');
+    if (logContainer) {
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-${level}`;
+        logEntry.textContent = `${timestamp} ${msg}`;
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+}
+
+
+function playNotificationSound() {
+    // Play notification - uses Web Audio API
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 1000;
+    oscillator.type = 'sine';
+    
+    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+}
+
+
+function getSettings() {
+    return {
+        autoTrade: document.getElementById('autoTradeCheck')?.checked || false,
+        notifications: document.getElementById('notificationsCheck')?.checked || true,
+        darkTheme: !document.body.classList.contains('light-theme')
+    };
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (websocket) websocket.close();
+    if (updateInterval) clearInterval(updateInterval);
+});
