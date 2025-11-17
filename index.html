@@ -189,11 +189,11 @@
                 <h3>📈 Market Status</h3>
                 <div class="metric">
                     <span class="metric-label">Price:</span>
-                    <span class="metric-value" id="price">$45,230.50</span>
+                    <span class="metric-value" id="price">--</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">24h Change:</span>
-                    <span class="metric-value signal-bullish" id="price-change">↑ +2.5%</span>
+                    <span class="metric-value signal-bullish" id="price-change">--</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">Selected:</span>
@@ -306,4 +306,86 @@
         
         <!-- Footer -->
         <div style="text-align: center; margin-top: 40px; padding-bottom: 20px;">
-            <p class="timestamp">Last Update: <span id="last-update">--</span></p>\n            <p style="color: #666; font-size: 0.9em;">DEMIR AI v6.0 | Real-time Trading Intelligence</p>\n        </div>\n    </div>\n    \n    <!-- Load external JS (fixed path) -->\n    <script src=\"/static/app.js\"></script>\n    \n    <!-- Inline JS for basic functionality -->\n    <script>\n        function addCoin() {\n            const input = document.getElementById('new-coin-input');\n            const coin = input.value.toUpperCase();\n            if (coin) {\n                console.log('Adding coin:', coin);\n                input.value = '';\n                // Implementation would fetch new data\n            }\n        }\n        \n        // Update timestamp\n        function updateTimestamp() {\n            const now = new Date().toLocaleTimeString();\n            const lastUpdate = document.getElementById('last-update');\n            if (lastUpdate) lastUpdate.innerText = now;\n        }\n        \n        // Periodic updates\n        setInterval(updateTimestamp, 1000);\n        updateTimestamp();\n        \n        // Fetch real data from API\n        async function fetchDashboardData() {\n            try {\n                const response = await fetch('/api/signals');\n                if (response.ok) {\n                    const data = await response.json();\n                    console.log('Dashboard data:', data);\n                    // Update UI with real data from PostgreSQL\n                }\n            } catch (e) {\n                console.error('API fetch failed:', e);\n                // Display fallback values (currently showing)\n            }\n        }\n        \n        // Initial fetch and periodic updates\n        fetchDashboardData();\n        setInterval(fetchDashboardData, 5000); // Every 5 seconds\n    </script>\n</body>\n</html>
+            <p class="timestamp">Last Update: <span id="last-update">--</span></p>
+            <p style="color: #666; font-size: 0.9em;">DEMIR AI v6.0 | Real-time Trading Intelligence</p>
+        </div>
+    </div>
+    
+    <!-- Load external JS (fixed path) -->
+    <script src="/static/app.js"></script>
+    
+    <!-- Inline JS for basic functionality -->
+    <script>
+        // ✅ YENİ: WebSocket bağlantı fonksiyonu (REAL DATA)
+        function connectWebSocket() {
+            try {
+                const streams = 'btcusdt@ticker/ethusdt@ticker/ltcusdt@ticker';
+                const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+                
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    const data = message.data;
+                    
+                    if (data.s === 'BTCUSDT') {
+                        document.getElementById('price').innerText = `$${parseFloat(data.c).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}`;
+                        
+                        const changePercent = parseFloat(data.P);
+                        document.getElementById('price-change').innerHTML = 
+                            `${changePercent > 0 ? '↑' : '↓'} ${Math.abs(changePercent).toFixed(2)}%`;
+                    }
+                };
+                
+                ws.onerror = () => {
+                    console.error('WebSocket error - using API fallback');
+                    fetchDashboardData();
+                };
+            } catch(e) {
+                console.error('WebSocket failed:', e);
+            }
+        }
+
+        function addCoin() {
+            const input = document.getElementById('new-coin-input');
+            const coin = input.value.toUpperCase();
+            if (coin) {
+                console.log('Adding coin:', coin);
+                input.value = '';
+            }
+        }
+        
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date().toLocaleTimeString();
+            const lastUpdate = document.getElementById('last-update');
+            if (lastUpdate) lastUpdate.innerText = now;
+        }
+        
+        // Periodic updates
+        setInterval(updateTimestamp, 1000);
+        updateTimestamp();
+        
+        // Fetch real data from API
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/signals');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Dashboard data:', data);
+                }
+            } catch (e) {
+                console.error('API fetch failed:', e);
+            }
+        }
+        
+        // ✅ WebSocket'i başlat
+        connectWebSocket();
+        
+        // Initial fetch and periodic updates
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 5000); // Every 5 seconds
+    </script>
+</body>
+</html>
