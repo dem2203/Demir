@@ -1,221 +1,315 @@
 """
-DEMIR AI BOT - Backtest Engine Production
-Full 2023-2024 historical backtesting with real metrics
-Performance validation and optimization
+DEMIR AI v6.0 - PHASE 4 [58/NEW]
+Backtester 3-Year Historical
+Montecarlo Simulation, Performance Metrics, Real Data Analysis
+Production-Grade Historical Backtesting Engine
 """
 
 import logging
-from typing import Dict, List, Tuple, Any
-from datetime import datetime, timedelta
 import numpy as np
-from dataclasses import dataclass
+import pandas as pd
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+import json
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class TradeResult:
-    """Single trade result."""
-    entry_price: float
-    exit_price: float
-    entry_time: datetime
-    exit_time: datetime
-    pnl: float
-    pnl_percent: float
-    direction: str  # LONG, SHORT
+class Backtester3Year:
+    """Professional 3-year historical backtester"""
+    
+    def __init__(self, initial_capital: float = 10000):
+        """Initialize backtester"""
+        self.initial_capital = initial_capital
+        self.annual_rf_rate = 0.02  # 2% risk-free rate
+        self.trading_days_per_year = 252
+        logger.info(f"📈 3-Year Backtester initialized (Capital: ${initial_capital})")
+    
+    def backtest(self, symbol: str, signals: List[Dict], ohlcv: List[Dict]) -> Dict[str, any]:
+        """Run comprehensive backtest on 3+ years of data"""
+        
+        try:
+            logger.info(f"🔄 Starting backtest for {symbol}...")
+            
+            if len(ohlcv) < 252:  # Need at least 1 year
+                logger.warning("⚠️ Insufficient data for backtest")
+                return {'error': 'Need at least 1 year of data'}
+            
+            # Sort signals by entry time
+            sorted_signals = sorted(signals, key=lambda x: x.get('timestamp', 0))
+            
+            # Initialize tracking
+            trades = []
+            equity_curve = [self.initial_capital]
+            portfolio_value = self.initial_capital
+            win_count = 0
+            loss_count = 0
+            total_pnl = 0
+            max_portfolio = self.initial_capital
+            min_portfolio = self.initial_capital
+            peak_portfolio = self.initial_capital
+            
+            # Process each signal
+            for i, signal in enumerate(sorted_signals):
+                if i + 1 >= len(ohlcv):
+                    break
+                
+                try:
+                    entry_price = signal.get('entry_price', ohlcv[i]['close'])
+                    entry_index = i + 1
+                    exit_price = ohlcv[entry_index]['close']
+                    exit_time = ohlcv[entry_index]['timestamp']
+                    
+                    # Calculate PnL
+                    if signal.get('direction') == 'LONG':
+                        pnl = (exit_price - entry_price) / entry_price
+                    else:  # SHORT
+                        pnl = (entry_price - exit_price) / entry_price
+                    
+                    # Position size (Kelly-based)
+                    kelly = signal.get('kelly', 0.1)
+                    position_size = portfolio_value * kelly
+                    trade_pnl = position_size * pnl
+                    
+                    # Update portfolio
+                    portfolio_value += trade_pnl
+                    total_pnl += trade_pnl
+                    
+                    # Track trade
+                    if pnl > 0:
+                        win_count += 1
+                    else:
+                        loss_count += 1
+                    
+                    trades.append({
+                        'symbol': symbol,
+                        'direction': signal.get('direction'),
+                        'entry_price': entry_price,
+                        'exit_price': exit_price,
+                        'pnl': float(pnl),
+                        'pnl_amount': float(trade_pnl),
+                        'portfolio_value': float(portfolio_value)
+                    })
+                    
+                    # Update equity curve
+                    equity_curve.append(portfolio_value)
+                    
+                    # Update peak/drawdown tracking
+                    if portfolio_value > peak_portfolio:
+                        peak_portfolio = portfolio_value
+                    
+                    max_portfolio = max(max_portfolio, portfolio_value)
+                    min_portfolio = min(min_portfolio, portfolio_value)
+                
+                except Exception as e:
+                    logger.debug(f"Trade processing error: {e}")
+                    continue
+            
+            total_trades = win_count + loss_count
+            if total_trades == 0:
+                return {'error': 'No trades executed'}
+            
+            # Calculate metrics
+            win_rate = win_count / total_trades
+            avg_win = np.mean([t['pnl'] for t in trades if t['pnl'] > 0]) if win_count > 0 else 0
+            avg_loss = abs(np.mean([t['pnl'] for t in trades if t['pnl'] < 0])) if loss_count > 0 else 0
+            
+            # Profit factor
+            gross_profit = sum([t['pnl_amount'] for t in trades if t['pnl_amount'] > 0])
+            gross_loss = abs(sum([t['pnl_amount'] for t in trades if t['pnl_amount'] < 0]))
+            profit_factor = gross_profit / (gross_loss + 1e-10)
+            
+            # Return metrics
+            total_return = (portfolio_value - self.initial_capital) / self.initial_capital
+            
+            # Sharpe ratio
+            returns = np.diff(equity_curve) / equity_curve[:-1]
+            sharpe = self._calculate_sharpe(returns)
+            
+            # Max drawdown
+            max_drawdown = self._calculate_max_drawdown(equity_curve)
+            
+            # Sortino ratio
+            sortino = self._calculate_sortino(returns)
+            
+            # Recovery factor
+            recovery_factor = total_return / max(abs(max_drawdown), 1e-10)
+            
+            # CAGR (Compound Annual Growth Rate)
+            years = len(ohlcv) / self.trading_days_per_year
+            cagr = (portfolio_value / self.initial_capital) ** (1 / years) - 1 if years > 0 else 0
+            
+            result = {
+                'symbol': symbol,
+                'total_trades': total_trades,
+                'wins': win_count,
+                'losses': loss_count,
+                'win_rate': float(win_rate),
+                'profit_factor': float(profit_factor),
+                'avg_win': float(avg_win),
+                'avg_loss': float(avg_loss),
+                'total_pnl': float(total_pnl),
+                'total_return_pct': float(total_return * 100),
+                'portfolio_value': float(portfolio_value),
+                'initial_capital': float(self.initial_capital),
+                'gross_profit': float(gross_profit),
+                'gross_loss': float(gross_loss),
+                'max_drawdown_pct': float(max_drawdown * 100),
+                'sharpe_ratio': float(sharpe),
+                'sortino_ratio': float(sortino),
+                'recovery_factor': float(recovery_factor),
+                'cagr_pct': float(cagr * 100),
+                'trades': trades,
+                'backtest_start': datetime.fromtimestamp(ohlcv[0]['timestamp'] / 1000).isoformat(),
+                'backtest_end': datetime.fromtimestamp(ohlcv[-1]['timestamp'] / 1000).isoformat()
+            }
+            
+            logger.info(f"✅ Backtest complete: WinRate={win_rate:.1%}, Sharpe={sharpe:.2f}, MaxDD={max_drawdown*100:.1f}%")
+            
+            return result
+        
+        except Exception as e:
+            logger.error(f"❌ Backtest error: {e}")
+            return {'error': str(e)}
+    
+    def _calculate_sharpe(self, returns: np.ndarray) -> float:
+        """Calculate Sharpe ratio"""
+        if len(returns) < 2:
+            return 0.0
+        
+        excess_return = np.mean(returns) - (self.annual_rf_rate / self.trading_days_per_year)
+        volatility = np.std(returns)
+        
+        if volatility == 0:
+            return 0.0
+        
+        sharpe = excess_return / volatility * np.sqrt(self.trading_days_per_year)
+        return float(sharpe)
+    
+    def _calculate_sortino(self, returns: np.ndarray) -> float:
+        """Calculate Sortino ratio (only downside volatility)"""
+        if len(returns) < 2:
+            return 0.0
+        
+        excess_return = np.mean(returns) - (self.annual_rf_rate / self.trading_days_per_year)
+        
+        downside_returns = returns[returns < 0]
+        if len(downside_returns) == 0:
+            downside_volatility = 0.0
+        else:
+            downside_volatility = np.std(downside_returns)
+        
+        if downside_volatility == 0:
+            return float(excess_return * np.sqrt(self.trading_days_per_year))
+        
+        sortino = excess_return / downside_volatility * np.sqrt(self.trading_days_per_year)
+        return float(sortino)
+    
+    def _calculate_max_drawdown(self, equity_curve: List[float]) -> float:
+        """Calculate maximum drawdown"""
+        if len(equity_curve) < 2:
+            return 0.0
+        
+        peak = equity_curve[0]
+        max_dd = 0.0
+        
+        for value in equity_curve:
+            if value > peak:
+                peak = value
+            
+            drawdown = (peak - value) / peak
+            if drawdown > max_dd:
+                max_dd = drawdown
+        
+        return float(-max_dd)
+    
+    def monte_carlo_simulation(self, backtest_result: Dict, simulations: int = 1000) -> Dict[str, any]:
+        """Run Monte Carlo simulation on trades"""
+        
+        try:
+            trades = backtest_result.get('trades', [])
+            if len(trades) < 2:
+                return {'error': 'Insufficient trades for simulation'}
+            
+            pnl_list = [t['pnl'] for t in trades]
+            portfolio_value = self.initial_capital
+            
+            worst_case = portfolio_value
+            best_case = portfolio_value
+            avg_case = portfolio_value
+            
+            for _ in range(simulations):
+                sim_portfolio = self.initial_capital
+                
+                for _ in range(len(trades)):
+                    random_pnl = np.random.choice(pnl_list)
+                    sim_portfolio *= (1 + random_pnl)
+                
+                worst_case = min(worst_case, sim_portfolio)
+                best_case = max(best_case, sim_portfolio)
+                avg_case += sim_portfolio
+            
+            avg_case /= simulations
+            
+            return {
+                'simulations': simulations,
+                'worst_case': float(worst_case),
+                'best_case': float(best_case),
+                'average_case': float(avg_case),
+                'worst_case_loss_pct': float((worst_case - self.initial_capital) / self.initial_capital * 100),
+                'best_case_gain_pct': float((best_case - self.initial_capital) / self.initial_capital * 100)
+            }
+        
+        except Exception as e:
+            logger.error(f"Monte Carlo error: {e}")
+            return {'error': str(e)}
 
 
-@dataclass
-class BacktestMetrics:
-    """Backtest performance metrics."""
-    total_trades: int
-    winning_trades: int
-    losing_trades: int
-    win_rate: float
-    avg_win: float
-    avg_loss: float
-    profit_factor: float
-    sharpe_ratio: float
-    max_drawdown: float
-    total_pnl: float
-    total_return_percent: float
+class BacktestReportGenerator:
+    """Generate professional backtest reports"""
+    
+    @staticmethod
+    def generate_report(backtest_result: Dict, monte_carlo_result: Dict = None) -> str:
+        """Generate text report"""
+        
+        report = f"""
+╔══════════════════════════════════════════════════════════════╗
+║           DEMIR AI v6.0 - BACKTEST REPORT                    ║
+╚══════════════════════════════════════════════════════════════╝
 
+📊 SYMBOL: {backtest_result.get('symbol', 'N/A')}
+📅 PERIOD: {backtest_result.get('backtest_start', 'N/A')} to {backtest_result.get('backtest_end', 'N/A')}
 
-class BacktestEngine:
-    """Production backtesting engine."""
+╔══ TRADE STATISTICS ═══════════════════════════════════════════╗
+│ Total Trades:        {backtest_result.get('total_trades', 0):>8} trades
+│ Winning Trades:      {backtest_result.get('wins', 0):>8} ({backtest_result.get('win_rate', 0)*100:>5.1f}%)
+│ Losing Trades:       {backtest_result.get('losses', 0):>8}
+│ Avg Win:             {backtest_result.get('avg_win', 0):>8.2%}
+│ Avg Loss:            {backtest_result.get('avg_loss', 0):>8.2%}
+│ Profit Factor:       {backtest_result.get('profit_factor', 0):>8.2f}
 
-    def __init__(self):
-        """Initialize backtest engine."""
-        self.trades: List[TradeResult] = []
-        self.equity_curve: List[float] = []
+╔══ RETURNS & RISK ═════════════════════════════════════════════╗
+│ Initial Capital:     ${backtest_result.get('initial_capital', 0):>12,.2f}
+│ Final Portfolio:     ${backtest_result.get('portfolio_value', 0):>12,.2f}
+│ Total Return:        {backtest_result.get('total_return_pct', 0):>8.1f}%
+│ CAGR:                {backtest_result.get('cagr_pct', 0):>8.1f}%
+│ Max Drawdown:        {backtest_result.get('max_drawdown_pct', 0):>8.1f}%
 
-    def validate_backtest_data(self, data: Dict[str, Any]) -> Tuple[bool, List[str]]:
-        """Validate backtest input data."""
-        errors = []
+╔══ RISK-ADJUSTED RETURNS ══════════════════════════════════════╗
+│ Sharpe Ratio:        {backtest_result.get('sharpe_ratio', 0):>8.2f}
+│ Sortino Ratio:       {backtest_result.get('sortino_ratio', 0):>8.2f}
+│ Recovery Factor:     {backtest_result.get('recovery_factor', 0):>8.2f}
 
-        required_fields = ['ohlcv_data', 'signals', 'start_date', 'end_date']
-        for field in required_fields:
-            if field not in data:
-                errors.append(f"Missing required field: {field}")
-
-        # Validate date range
-        if 'start_date' in data and 'end_date' in data:
-            start = data['start_date']
-            end = data['end_date']
-
-            if start >= end:
-                errors.append("Start date must be before end date")
-
-            # Should be 2023-2024 for full year testing
-            if start.year < 2023:
-                errors.append("Backtest should start from 2023 or later")
-
-        return len(errors) == 0, errors
-
-    def run_backtest(
-        self,
-        ohlcv_data: List[Dict],
-        signals: List[Dict],
-        initial_capital: float = 10000.0
-    ) -> BacktestMetrics:
-        """
-        Run full backtest with real data.
-
-        Args:
-            ohlcv_data: List of OHLCV candles
-            signals: List of generated signals
-            initial_capital: Starting capital
-
-        Returns:
-            BacktestMetrics with performance statistics
-        """
-
-        self.trades = []
-        self.equity_curve = [initial_capital]
-        current_equity = initial_capital
-
-        logger.info(f"Starting backtest with {len(signals)} signals")
-
-        for signal in signals:
-            # Only process valid signals
-            if signal['confidence'] < 0.70:
-                continue
-
-            # Find corresponding OHLCV data
-            matching_candle = next(
-                (c for c in ohlcv_data 
-                 if c['timestamp'] == signal['timestamp']),
-                None
-            )
-
-            if not matching_candle:
-                continue
-
-            # Simulate trade
-            entry_price = signal['entry_price']
-            tp_price = signal['tp1']
-            sl_price = signal['sl']
-
-            # Assume TP hit for simulation (conservative)
-            exit_price = tp_price
-
-            # Calculate P&L
-            if signal['direction'] == 'LONG':
-                pnl = (exit_price - entry_price) * 100  # 100 units
-            else:  # SHORT
-                pnl = (entry_price - exit_price) * 100
-
-            pnl_percent = (pnl / entry_price) / 100
-            current_equity += pnl
-
-            self.equity_curve.append(current_equity)
-
-            trade_result = TradeResult(
-                entry_price=entry_price,
-                exit_price=exit_price,
-                entry_time=datetime.fromtimestamp(signal['timestamp']),
-                exit_time=datetime.fromtimestamp(signal['timestamp'] + 3600),
-                pnl=pnl,
-                pnl_percent=pnl_percent,
-                direction=signal['direction']
-            )
-
-            self.trades.append(trade_result)
-
-        # Calculate metrics
-        metrics = self._calculate_metrics(initial_capital)
-
-        logger.info(f"Backtest complete: {metrics.total_trades} trades, "
-                   f"{metrics.win_rate:.1%} win rate")
-
-        return metrics
-
-    def _calculate_metrics(self, initial_capital: float) -> BacktestMetrics:
-        """Calculate performance metrics."""
-
-        if not self.trades:
-            return BacktestMetrics(
-                total_trades=0, winning_trades=0, losing_trades=0,
-                win_rate=0, avg_win=0, avg_loss=0, profit_factor=0,
-                sharpe_ratio=0, max_drawdown=0, total_pnl=0, total_return_percent=0
-            )
-
-        # Win/Loss analysis
-        winning_trades = [t for t in self.trades if t.pnl > 0]
-        losing_trades = [t for t in self.trades if t.pnl < 0]
-
-        total_trades = len(self.trades)
-        winning = len(winning_trades)
-        losing = len(losing_trades)
-
-        win_rate = winning / total_trades if total_trades > 0 else 0
-
-        avg_win = np.mean([t.pnl for t in winning_trades]) if winning_trades else 0
-        avg_loss = abs(np.mean([t.pnl for t in losing_trades])) if losing_trades else 0
-
-        # Profit factor
-        total_wins = sum(t.pnl for t in winning_trades)
-        total_losses = abs(sum(t.pnl for t in losing_trades))
-        profit_factor = total_wins / total_losses if total_losses > 0 else 0
-
-        # Equity metrics
-        total_pnl = self.equity_curve[-1] - initial_capital if self.equity_curve else 0
-        total_return_percent = (total_pnl / initial_capital) * 100 if initial_capital > 0 else 0
-
-        # Sharpe ratio (simplified)
-        returns = np.diff(self.equity_curve) / np.array(self.equity_curve[:-1]) if len(self.equity_curve) > 1 else []
-        sharpe_ratio = np.mean(returns) / np.std(returns) * np.sqrt(252) if len(returns) > 1 else 0
-
-        # Maximum drawdown
-        cumulative = np.array(self.equity_curve)
-        running_max = np.maximum.accumulate(cumulative)
-        drawdown = (cumulative - running_max) / running_max
-        max_drawdown = np.min(drawdown) if len(drawdown) > 0 else 0
-
-        return BacktestMetrics(
-            total_trades=total_trades,
-            winning_trades=winning,
-            losing_trades=losing,
-            win_rate=win_rate,
-            avg_win=avg_win,
-            avg_loss=avg_loss,
-            profit_factor=profit_factor,
-            sharpe_ratio=float(sharpe_ratio),
-            max_drawdown=float(max_drawdown),
-            total_pnl=total_pnl,
-            total_return_percent=total_return_percent
-        )
-
-    def get_metrics_summary(self, metrics: BacktestMetrics) -> Dict[str, Any]:
-        """Get human-readable metrics summary."""
-        return {
-            'total_trades': metrics.total_trades,
-            'win_rate': f"{metrics.win_rate * 100:.1f}%",
-            'profit_factor': f"{metrics.profit_factor:.2f}",
-            'sharpe_ratio': f"{metrics.sharpe_ratio:.2f}",
-            'max_drawdown': f"{metrics.max_drawdown * 100:.1f}%",
-            'total_pnl': f"${metrics.total_pnl:.2f}",
-            'total_return': f"{metrics.total_return_percent:.1f}%",
-            'avg_win': f"${metrics.avg_win:.2f}",
-            'avg_loss': f"${metrics.avg_loss:.2f}"
-        }
+"""
+        
+        if monte_carlo_result:
+            report += f"""
+╔══ MONTE CARLO SIMULATION (1000x) ═════════════════════════════╗
+│ Worst Case:          ${monte_carlo_result.get('worst_case', 0):>12,.2f} ({monte_carlo_result.get('worst_case_loss_pct', 0):>6.1f}%)
+│ Best Case:           ${monte_carlo_result.get('best_case', 0):>12,.2f} ({monte_carlo_result.get('best_case_gain_pct', 0):>6.1f}%)
+│ Average Case:        ${monte_carlo_result.get('average_case', 0):>12,.2f}
+"""
+        
+        report += "\n╚═════════════════════════════════════════════════════════════════╝\n"
+        
+        return report
