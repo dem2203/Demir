@@ -84,4 +84,3 @@ class ParallelAnalyzer:
     def _sentiment_analysis(self, symbol: str) -> float:
         """Sentiment analysis routine"""
         return 0.63
-
