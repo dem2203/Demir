@@ -18,7 +18,8 @@ COPY style.css .
 
 # Copy requirements and install
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=1000 --retries 5 \
+    -i https://pypi.mirrors.aliyun.com/simple -r requirements.txt
 
 # Copy Python backend files
 COPY main.py ai_brain_ensemble.py ./
