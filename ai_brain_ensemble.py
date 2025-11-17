@@ -405,7 +405,7 @@ class AiBrainEnsemble:
             logger.warning(f"Confidence calculation error: {e}")
             return 0.6
 
-    def batch_analyze(self, symbols_data: Dict[str, Tuple[np.ndarray, np.ndarray]]) -> List[Dict]:
+    def batch_analyze(self, symbols_ Dict[str, Tuple[np.ndarray, np.ndarray]]) -> List[Dict]:
         """Analyze multiple symbols at once"""
         signals = []
         for symbol, (prices, volumes) in symbols_data.items():
@@ -434,4 +434,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     ai = AiBrainEnsemble()
     health = ai.get_health_status()
-    logger.info(f"✅ DEMIR AI v6.0 READY: {health}")
+    logger.info(f"Health: {health}")
