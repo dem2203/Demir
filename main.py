@@ -140,18 +140,17 @@ class RealDataVerifier:
         self.last_prices[symbol] = price
         return True, f"Price verified: ${price}"
     
-    def verify_timestamp(self, ts: float, max_age: int = 3600) -> Tuple[bool, str]:
-        """Verify timestamp is current"""
-        current = datetime.now().timestamp()
-        age = current - ts
-        
-        if age < 0:
-            return False, "Future timestamp"
-        if age > max_age:
-            return False, f"Stale data ({age:.0f}s old)"
-        
-        return True, f"Timestamp valid ({age:.0f}s old)"
-
+    def verify_timestamp(self, ts, max_age=3600):
+    current = datetime.now().timestamp()
+    # Eğer ts datetime ise timestamp'a çevir:
+    if isinstance(ts, datetime):
+        ts = ts.timestamp()
+    age = current - ts
+    if age < 0:
+        return False, "Future timestamp"
+    if age > max_age:
+        return False, f"Stale data ({age:.0f}s old)"
+    return True, f"Timestamp valid ({age:.0f}s old)"
 
 class SignalValidator:
     """Master validation"""
