@@ -1318,3 +1318,24 @@ if __name__ == '__main__':
     logger.info("=" * 100 + "\n")
     
     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+
+if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 8080))
+    
+    # Production mode - use gunicorn
+    if os.environ.get('RAILWAY_ENVIRONMENT'):
+        from gevent import pywsgi
+        from geventwebsocket.handler import WebSocketHandler
+        
+        server = pywsgi.WSGIServer(
+            ('0.0.0.0', port),
+            app,
+            handler_class=WebSocketHandler
+        )
+        logger.info(f"🚀 Starting PRODUCTION server with WebSocket support on port {port}")
+        server.serve_forever()
+    else:
+        # Development mode
+        app.run(host='0.0.0.0', port=port, debug=False)
+
