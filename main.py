@@ -1337,5 +1337,7 @@ if __name__ == '__main__':
         server.serve_forever()
     else:
         # Development mode
+        logger.info(f"🚀 Starting DEVELOPMENT server on port {port}")
         app.run(host='0.0.0.0', port=port, debug=False)
+
 
