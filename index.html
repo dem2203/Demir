@@ -3,326 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEMIR AI v6.0 - Professional Trading Dashboard</title>
-    
-    <!-- Chart.js CDN for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
-    <!-- External CSS -->
+    <title>🤖 DEMIR AI v6.0 - Professional Crypto Trading Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    
-    <!-- ========== HEADER ========== -->
-    <header class="header">
-        <div class="header-content">
-            <h1>🤖 DEMIR AI v6.0</h1>
-            <p class="subtitle">Professional Trading Dashboard - 4-GROUP Signal System</p>
-            <div id="headerStatus" class="status-badge">🟢 Bağlanıyor...</div>
-        </div>
-    </header>
-
-    <!-- ========== MAIN CONTAINER ========== -->
     <div class="container">
-        
-        <!-- Coin Selector -->
-        <div class="coin-selector">
-            <div id="coinsList" class="coins-list">
-                <!-- JavaScript will populate coins here -->
-                <button class="coin-btn active" data-coin="BTCUSDT">BTC</button>
-                <button class="coin-btn" data-coin="ETHUSDT">ETH</button>
-                <button class="coin-btn" data-coin="LTCUSDT">LTC</button>
+        <!-- ========== HEADER ========== -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🤖 DEMIR AI v6.0</h1>
+                <p class="subtitle">Professional Crypto Trading Dashboard</p>
             </div>
-            <button id="refreshButton" class="btn btn-secondary">🔄 Yenile</button>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span id="connectionStatus">Bağlı</span>
+                </div>
+                <span id="lastUpdate">Son güncelleme: --:--:--</span>
+            </div>
+        </header>
+
+        <!-- ========== GOLDEN BANNER ========== -->
+        <div class="golden-banner">
+            <span>⚡ Real-time Signal Tracking</span>
+            <span>📊 4-GROUP Analysis (Technical + Sentiment + ML/AI + OnChain)</span>
+            <span>🚀 Railway Production Ready</span>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="tabs">
+        <!-- ========== NAVIGATION TABS ========== -->
+        <nav class="nav-tabs">
             <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
-            <button class="tab-btn" data-tab="signals">📡 Sinyaller</button>
+            <button class="tab-btn" data-tab="signals">🔔 Sinyaller</button>
             <button class="tab-btn" data-tab="positions">💼 Pozisyonlar</button>
             <button class="tab-btn" data-tab="settings">⚙️ Ayarlar</button>
+        </nav>
+
+        <!-- ========== COINS TOOLBAR ========== -->
+        <div class="coins-toolbar">
+            <div class="coins-list" id="coinButtons">
+                <button class="coin-btn active" data-coin="BTCUSDT">BTC</button>
+                <button class="coin-btn" data-coin="ETHUSDT">ETH</button>
+                <button class="coin-btn" data-coin="BNBUSDT">BNB</button>
+                <button class="coin-btn" data-coin="LTCUSDT">LTC</button>
+            </div>
         </div>
 
-        <!-- ========== TAB 1: DASHBOARD ========== -->
-        <div id="dashboardTab" class="tab-content active">
+        <!-- TAB 1: DASHBOARD -->
+        <div id="dashboardTab" class="tab-content active" style="display: block;">
             
-            <!-- Price Display Card -->
-            <div class="price-display">
-                <h2 id="currentSymbol">BTCUSDT</h2>
-                <div class="price-info">
-                    <span id="currentPrice" class="price">$0.00</span>
-                    <span id="priceChange" class="price-change neutral">0.00%</span>
+            <section class="price-section">
+                <div class="price-card">
+                    <h3>💰 Current Price</h3>
+                    <div class="price-display">
+                        <span class="price" id="currentPrice">$0.00</span>
+                        <span class="change positive" id="priceChange">+0.00%</span>
+                    </div>
+                    <span class="source-badge">🔴 Live Data from Railway</span>
                 </div>
-            </div>
+            </section>
 
-            <!-- Consensus Signal Card -->
-            <div class="card consensus-card">
-                <h3>📈 Konsensüs Sinyali</h3>
-                <div class="signal-grid">
-                    <div class="signal-item">
-                        <label>Yön</label>
-                        <div id="consensusDirection" class="signal-direction neutral">● NEUTRAL</div>
-                    </div>
-                    <div class="signal-item">
-                        <label>Güç</label>
-                        <div id="consensusStrength" class="signal-value">50%</div>
-                        <div class="progress-bar">
-                            <div id="consensusStrengthBar" class="progress-fill" style="width: 50%; background: var(--color-neutral);"></div>
-                        </div>
-                    </div>
-                    <div class="signal-item">
-                        <label>Güven</label>
-                        <div id="consensusConfidence" class="signal-value">50%</div>
-                        <div class="progress-bar">
-                            <div id="consensusConfidenceBar" class="progress-fill" style="width: 50%; background: var(--color-neutral);"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4-GROUP Analysis Card -->
-            <div class="card groups-card">
-                <h3>🔍 4-GROUP Analiz Sistemi</h3>
+            <div class="signals-grid">
                 
-                <!-- Technical Analysis Group -->
-                <div class="group-signal">
-                    <h4 class="group-title">📊 Technical Analysis (28 Layer)</h4>
-                    <div class="group-grid">
-                        <div class="group-item">
-                            <label>Yön</label>
-                            <div id="technicalDirection" class="signal-direction neutral">● NEUTRAL</div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güç</label>
-                            <span id="technicalStrength" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="technicalStrengthBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güven</label>
-                            <span id="technicalConfidence" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="technicalConfidenceBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Aktif Layer</label>
-                            <span id="technicalLayers" class="signal-value">28/28</span>
-                        </div>
+                <!-- TECHNICAL -->
+                <div class="signal-card technical">
+                    <div class="card-header">
+                        <h3>📈 Technical</h3>
+                        <span class="group-label">28 Layers</span>
                     </div>
-                    <p id="technicalExplanation" class="explanation">Teknik göstergeler analiz ediliyor...</p>
+                    <div class="signal-content">
+                        <div class="signal-direction long" id="technicalDirection">● LONG</div>
+                        <div class="signal-bars">
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Strength</span>
+                                    <span id="technicalStrength">0%</span>
+                                </div>
+                                <div class="bar" id="technicalStrengthBar" style="width: 0%;"></div>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Confidence</span>
+                                    <span id="technicalConfidence">0%</span>
+                                </div>
+                                <div class="bar" id="technicalConfidenceBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div class="signal-layers" id="technicalLayers">0/28 Active Layers</div>
+                        <div class="signal-explanation" id="technicalExplanation">Teknik göstergeler analiz ediliyor...</div>
+                    </div>
                 </div>
 
-                <!-- Sentiment Analysis Group -->
-                <div class="group-signal">
-                    <h4 class="group-title">💬 Sentiment Analysis (20 Layer)</h4>
-                    <div class="group-grid">
-                        <div class="group-item">
-                            <label>Yön</label>
-                            <div id="sentimentDirection" class="signal-direction neutral">● NEUTRAL</div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güç</label>
-                            <span id="sentimentStrength" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="sentimentStrengthBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güven</label>
-                            <span id="sentimentConfidence" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="sentimentConfidenceBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Aktif Layer</label>
-                            <span id="sentimentLayers" class="signal-value">20/20</span>
-                        </div>
+                <!-- SENTIMENT -->
+                <div class="signal-card sentiment">
+                    <div class="card-header">
+                        <h3>💭 Sentiment</h3>
+                        <span class="group-label">20 Layers</span>
                     </div>
-                    <p id="sentimentExplanation" class="explanation">Pazar duyarlılığı ve sosyal medya analiz ediliyor...</p>
+                    <div class="signal-content">
+                        <div class="signal-direction neutral" id="sentimentDirection">● NEUTRAL</div>
+                        <div class="signal-bars">
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Strength</span>
+                                    <span id="sentimentStrength">0%</span>
+                                </div>
+                                <div class="bar" id="sentimentStrengthBar" style="width: 0%;"></div>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Confidence</span>
+                                    <span id="sentimentConfidence">0%</span>
+                                </div>
+                                <div class="bar" id="sentimentConfidenceBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div class="signal-layers" id="sentimentLayers">0/20 Active Layers</div>
+                        <div class="signal-explanation" id="sentimentExplanation">Pazar duyarlılığı analiz ediliyor...</div>
+                    </div>
                 </div>
 
-                <!-- ML/AI Predictions Group -->
-                <div class="group-signal">
-                    <h4 class="group-title">🤖 ML/AI Predictions (10 Model)</h4>
-                    <div class="group-grid">
-                        <div class="group-item">
-                            <label>Yön</label>
-                            <div id="mlDirection" class="signal-direction neutral">● NEUTRAL</div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güç</label>
-                            <span id="mlStrength" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="mlStrengthBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güven</label>
-                            <span id="mlConfidence" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="mlConfidenceBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Aktif Model</label>
-                            <span id="mlLayers" class="signal-value">10/10</span>
-                        </div>
+                <!-- ML/AI -->
+                <div class="signal-card macro">
+                    <div class="card-header">
+                        <h3>🤖 ML/AI</h3>
+                        <span class="group-label">10 Layers</span>
                     </div>
-                    <p id="mlExplanation" class="explanation">LSTM, XGBoost ve Transformer modelleri tahmin yapıyor...</p>
+                    <div class="signal-content">
+                        <div class="signal-direction neutral" id="mlDirection">● NEUTRAL</div>
+                        <div class="signal-bars">
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Strength</span>
+                                    <span id="mlStrength">0%</span>
+                                </div>
+                                <div class="bar" id="mlStrengthBar" style="width: 0%;"></div>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Confidence</span>
+                                    <span id="mlConfidence">0%</span>
+                                </div>
+                                <div class="bar" id="mlConfidenceBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div class="signal-layers" id="mlLayers">0/10 Active Layers</div>
+                        <div class="signal-explanation" id="mlExplanation">ML modelleri tahmin yapıyor...</div>
+                    </div>
                 </div>
 
-                <!-- OnChain Analysis Group -->
-                <div class="group-signal">
-                    <h4 class="group-title">⛓️ OnChain Analysis (6 Layer)</h4>
-                    <div class="group-grid">
-                        <div class="group-item">
-                            <label>Yön</label>
-                            <div id="onchainDirection" class="signal-direction neutral">● NEUTRAL</div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güç</label>
-                            <span id="onchainStrength" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="onchainStrengthBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Güven</label>
-                            <span id="onchainConfidence" class="signal-value">50%</span>
-                            <div class="progress-bar">
-                                <div id="onchainConfidenceBar" class="progress-fill" style="width: 50%;"></div>
-                            </div>
-                        </div>
-                        <div class="group-item">
-                            <label>Aktif Layer</label>
-                            <span id="onchainLayers" class="signal-value">6/6</span>
-                        </div>
+                <!-- ONCHAIN -->
+                <div class="signal-card onchain">
+                    <div class="card-header">
+                        <h3>⛓️ OnChain</h3>
+                        <span class="group-label">6 Layers</span>
                     </div>
-                    <p id="onchainExplanation" class="explanation">Blockchain verileri ve whale hareketleri analiz ediliyor...</p>
+                    <div class="signal-content">
+                        <div class="signal-direction neutral" id="onchainDirection">● NEUTRAL</div>
+                        <div class="signal-bars">
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Strength</span>
+                                    <span id="onchainStrength">0%</span>
+                                </div>
+                                <div class="bar" id="onchainStrengthBar" style="width: 0%;"></div>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-label">
+                                    <span>Confidence</span>
+                                    <span id="onchainConfidence">0%</span>
+                                </div>
+                                <div class="bar" id="onchainConfidenceBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div class="signal-layers" id="onchainLayers">0/6 Active Layers</div>
+                        <div class="signal-explanation" id="onchainExplanation">Blockchain verileri analiz ediliyor...</div>
+                    </div>
                 </div>
+
             </div>
 
-            <!-- Charts Card -->
-            <div class="card charts-card">
-                <h3>📈 Grafikler</h3>
-                <div class="charts-grid">
-                    <div class="chart-container">
-                        <h4>Grup Gücü Karşılaştırması</h4>
-                        <canvas id="groupStrengthChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <h4>Fiyat Hareketi</h4>
-                        <canvas id="priceChart"></canvas>
+            <section class="consensus-section">
+                <div class="consensus-card">
+                    <h3>🎯 Consensus Signal</h3>
+                    <div class="consensus-direction long" id="consensusDirection">● LONG</div>
+                    <div class="consensus-bars">
+                        <div class="consensus-metric">
+                            <span>Weighted Strength</span>
+                            <div class="consensus-bar-container">
+                                <div class="bar" id="consensusStrengthBar" style="width: 0%;"></div>
+                                <span id="consensusStrength">0%</span>
+                            </div>
+                        </div>
+                        <div class="consensus-metric">
+                            <span>Consensus Confidence</span>
+                            <div class="consensus-bar-container">
+                                <div class="bar" id="consensusConfidenceBar" style="width: 0%;"></div>
+                                <span id="consensusConfidence">0%</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="risk-card">
+                    <h3>⚠️ Risk Assessment</h3>
+                    <div class="risk-content">
+                        <div class="risk-item">
+                            <span>Entry Zone</span>
+                            <strong id="riskEntryZone">$0.00</strong>
+                        </div>
+                        <div class="risk-item">
+                            <span>Stop Loss</span>
+                            <strong id="riskStopLoss">$0.00</strong>
+                        </div>
+                        <div class="risk-item">
+                            <span>Take Profit</span>
+                            <strong id="riskTakeProfit">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
         </div>
 
-        <!-- ========== TAB 2: SIGNALS ========== -->
+        <!-- TAB 2: SIGNALS -->
         <div id="signalsTab" class="tab-content" style="display: none;">
-            <div class="card">
-                <h3>📡 Son 50 Sinyal</h3>
-                <div id="signalsContainer" class="signals-container">
-                    <p class="loading-text">Sinyaller yükleniyor...</p>
-                </div>
+            <h2>🔔 Signal History</h2>
+            <div id="signalsContainer">
+                <p class="no-data">Sinyaller yükleniyor...</p>
             </div>
         </div>
 
-        <!-- ========== TAB 3: POSITIONS ========== -->
+        <!-- TAB 3: POSITIONS -->
         <div id="positionsTab" class="tab-content" style="display: none;">
-            <div class="card">
-                <h3>💼 Aktif Pozisyonlar</h3>
-                <div id="positionsContainer" class="positions-container">
-                    <p class="no-data">Henüz aktif pozisyon yok</p>
-                </div>
+            <h2>💼 Active Positions</h2>
+            <div id="positionsContainer">
+                <p class="no-data">Henüz aktif pozisyon yok</p>
             </div>
-            <div class="card">
-                <h3>📊 İşlem Geçmişi</h3>
-                <div id="tradeHistoryContainer" class="trade-history-container">
-                    <p class="no-data">İşlem geçmişi yükleniyor...</p>
-                </div>
+            <h3 style="margin-top: 30px;">📊 Trade History</h3>
+            <div id="tradeHistory">
+                <p class="no-data">İşlem geçmişi yükleniyor...</p>
             </div>
         </div>
 
-        <!-- ========== TAB 4: SETTINGS ========== -->
+        <!-- TAB 4: SETTINGS -->
         <div id="settingsTab" class="tab-content" style="display: none;">
-            <div class="card">
-                <h3>⚙️ Ayarlar</h3>
-                <div class="settings-grid">
-                    <div class="setting-item">
-                        <label for="soundToggle">
-                            <span>🔔 Ses Bildirimleri</span>
-                            <input type="checkbox" id="soundToggle" checked>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <label for="autoRefreshToggle">
-                            <span>🔄 Otomatik Yenileme</span>
-                            <input type="checkbox" id="autoRefreshToggle" checked>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <label for="darkModeToggle">
-                            <span>🌙 Koyu Tema</span>
-                            <input type="checkbox" id="darkModeToggle" checked>
-                        </label>
-                    </div>
-                    <div class="setting-item disabled">
-                        <label for="autoTradeToggle">
-                            <span>🤖 Otomatik İşlem (Yakında)</span>
-                            <input type="checkbox" id="autoTradeToggle" disabled>
-                        </label>
-                    </div>
+            <h2>⚙️ Settings & Configuration</h2>
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3>⚙️ General Settings</h3>
+                    <p>Configuration panel</p>
                 </div>
-            </div>
-
-            <div class="card">
-                <h3>ℹ️ Sistem Bilgisi</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <label>Versiyon:</label>
-                        <span>v6.0 Production</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Backend:</label>
-                        <span>Flask + PostgreSQL</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Deployment:</label>
-                        <span>Railway</span>
-                    </div>
-                    <div class="info-item">
-                        <label>AI Layers:</label>
-                        <span>60+ Layers (Tech + Sentiment + ML + OnChain)</span>
-                    </div>
+                <div class="settings-card">
+                    <h3>🔔 Notifications</h3>
+                    <p>Alert preferences</p>
+                </div>
+                <div class="settings-card">
+                    <h3>📊 Data Sources</h3>
+                    <p>API connections</p>
                 </div>
             </div>
         </div>
+
+        <div id="notificationContainer"></div>
 
     </div>
 
-    <!-- ========== FOOTER ========== -->
-    <footer class="footer">
-        <div class="footer-content">
-            <p>&copy; 2025 DEMIR AI v6.0 - Professional Trading System</p>
-            <p id="lastUpdate" class="last-update">Son güncelleme: --:--:--</p>
-            <div id="connectionStatus" class="connection-status">
-                <span class="status-dot"></span> Bağlanıyor...
-            </div>
-        </div>
-    </footer>
-
-    <!-- ========== NOTIFICATION CONTAINER ========== -->
-    <div id="notificationContainer" class="notification-container"></div>
-
-    <!-- ========== EXTERNAL JAVASCRIPT ========== -->
     <script src="app.js"></script>
-    
 </body>
 </html>
-
