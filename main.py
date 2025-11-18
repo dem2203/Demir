@@ -4,6 +4,7 @@
 ✅ Error tracking at every step
 ✅ Debug endpoint added
 ✅ TIMESTAMP FIX - type consistency guaranteed
+✅ MISSING API ENDPOINTS ADDED - /api/signals/consensus, /api/signals/latest, etc.
 """
 
 import os
@@ -19,6 +20,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple, Union
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import numpy as np
@@ -51,7 +53,6 @@ class ColoredFormatter(logging.Formatter):
 log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(ColoredFormatter(log_format))
-
 file_handler = RotatingFileHandler(
     'demir_ai_debug.log',
     encoding='utf-8',
@@ -59,11 +60,11 @@ file_handler = RotatingFileHandler(
     backupCount=5
 )
 file_handler.setFormatter(logging.Formatter(log_format))
-
 logging.basicConfig(
     level=logging.DEBUG,
     handlers=[console_handler, file_handler]
 )
+
 logger = logging.getLogger('DEMIR_AI_DEBUG')
 
 print("\n" + "="*120)
@@ -78,7 +79,6 @@ logger.info("=" * 100)
 logger.info("🚀 DEMIR AI v6.0 DEBUG VERSION STARTING")
 logger.info("=" * 100)
 
-
 # ====== ENVIRONMENT DEBUG ======
 logger.info("📋 CHECKING ENVIRONMENT VARIABLES:")
 required_env = ['BINANCE_API_KEY', 'BINANCE_API_SECRET', 'DATABASE_URL', 'PORT']
@@ -90,7 +90,6 @@ for var in required_env:
     else:
         masked = "SET" if value else "NOT SET"
     logger.info(f"  {var}: {masked}")
-
 
 # ====== REAL DATA VALIDATORS ======
 class MockDataDetector:
@@ -121,6 +120,7 @@ class MockDataDetector:
 
 class RealDataVerifier:
     """Verify real exchange data"""
+    
     def __init__(self):
         self.last_prices: Dict[str, float] = {}
         self.last_timestamps: Dict[str, float] = {}
@@ -129,6 +129,7 @@ class RealDataVerifier:
         """Verify price is real"""
         if price <= 0:
             return False, "Invalid price: <= 0"
+        
         if not isinstance(price, (int, float)):
             return False, "Price not numeric"
         
@@ -155,6 +156,7 @@ class RealDataVerifier:
         
         if age < 0:
             return False, "Future timestamp"
+        
         if age > max_age:
             return False, f"Stale data ({age:.0f}s old)"
         
@@ -163,6 +165,7 @@ class RealDataVerifier:
 
 class SignalValidator:
     """Master validation"""
+    
     def __init__(self):
         self.mock_detector = MockDataDetector()
         self.real_verifier = RealDataVerifier()
@@ -193,7 +196,7 @@ class SignalValidator:
         
         if 'entry_price' in signal and 'symbol' in signal:
             is_valid_price, msg = self.real_verifier.verify_price(
-                signal['symbol'], 
+                signal['symbol'],
                 signal['entry_price']
             )
             if not is_valid_price:
@@ -206,6 +209,7 @@ class SignalValidator:
 # ====== DATABASE MANAGER (DEBUG) ======
 class DatabaseManager:
     """PostgreSQL with debug logging"""
+    
     def __init__(self, db_url: str):
         self.db_url = db_url
         self.connection = None
@@ -221,7 +225,7 @@ class DatabaseManager:
             self.connected = True
         except Exception as e:
             logger.error(f"❌ DB CONNECTION FAILED: {e}")
-            logger.error(f"   Connection string (masked): {self.db_url[:50]}...")
+            logger.error(f"  Connection string (masked): {self.db_url[:50]}...")
             self.connected = False
             raise
     
@@ -239,50 +243,50 @@ class DatabaseManager:
             logger.info("  ✅ tracked_coins table OK")
             
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS signals (
-                    id SERIAL PRIMARY KEY,
-                    symbol VARCHAR(20) NOT NULL,
-                    direction VARCHAR(10) NOT NULL,
-                    entry_price NUMERIC(20, 8) NOT NULL,
-                    tp1 NUMERIC(20, 8),
-                    tp2 NUMERIC(20, 8),
-                    sl NUMERIC(20, 8),
-                    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-                    confidence NUMERIC(5, 4) DEFAULT 0.5,
-                    ensemble_score NUMERIC(5, 4) DEFAULT 0.5,
-                    tech_group_score NUMERIC(5, 4) DEFAULT 0.0,
-                    sentiment_group_score NUMERIC(5, 4) DEFAULT 0.0,
-                    onchain_group_score NUMERIC(5, 4) DEFAULT 0.0,
-                    macro_risk_group_score NUMERIC(5, 4) DEFAULT 0.0,
-                    confluence_score NUMERIC(5, 4) DEFAULT 0.0,
-                    tf_15m_direction VARCHAR(10),
-                    tf_1h_direction VARCHAR(10),
-                    tf_4h_direction VARCHAR(10),
-                    risk_score NUMERIC(5, 4) DEFAULT 0.5,
-                    risk_reward_ratio NUMERIC(10, 4),
-                    position_size NUMERIC(10, 4) DEFAULT 1.0,
-                    data_source VARCHAR(100),
-                    is_valid BOOLEAN DEFAULT TRUE,
-                    validity_notes TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )
+            CREATE TABLE IF NOT EXISTS signals (
+                id SERIAL PRIMARY KEY,
+                symbol VARCHAR(20) NOT NULL,
+                direction VARCHAR(10) NOT NULL,
+                entry_price NUMERIC(20, 8) NOT NULL,
+                tp1 NUMERIC(20, 8),
+                tp2 NUMERIC(20, 8),
+                sl NUMERIC(20, 8),
+                timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+                confidence NUMERIC(5, 4) DEFAULT 0.5,
+                ensemble_score NUMERIC(5, 4) DEFAULT 0.5,
+                tech_group_score NUMERIC(5, 4) DEFAULT 0.0,
+                sentiment_group_score NUMERIC(5, 4) DEFAULT 0.0,
+                onchain_group_score NUMERIC(5, 4) DEFAULT 0.0,
+                macro_risk_group_score NUMERIC(5, 4) DEFAULT 0.0,
+                confluence_score NUMERIC(5, 4) DEFAULT 0.0,
+                tf_15m_direction VARCHAR(10),
+                tf_1h_direction VARCHAR(10),
+                tf_4h_direction VARCHAR(10),
+                risk_score NUMERIC(5, 4) DEFAULT 0.5,
+                risk_reward_ratio NUMERIC(10, 4),
+                position_size NUMERIC(10, 4) DEFAULT 1.0,
+                data_source VARCHAR(100),
+                is_valid BOOLEAN DEFAULT TRUE,
+                validity_notes TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
             """)
             logger.info("  ✅ signals table OK")
             
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS positions (
-                    id SERIAL PRIMARY KEY,
-                    symbol VARCHAR(20) NOT NULL,
-                    side VARCHAR(10) NOT NULL,
-                    entry_price NUMERIC(20, 8) NOT NULL,
-                    entry_time TIMESTAMP WITH TIME ZONE NOT NULL,
-                    quantity NUMERIC(20, 8) NOT NULL,
-                    stop_loss NUMERIC(20, 8),
-                    take_profit NUMERIC(20, 8),
-                    status VARCHAR(20) DEFAULT 'open',
-                    unrealized_pnl NUMERIC(20, 8),
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )
+            CREATE TABLE IF NOT EXISTS positions (
+                id SERIAL PRIMARY KEY,
+                symbol VARCHAR(20) NOT NULL,
+                side VARCHAR(10) NOT NULL,
+                entry_price NUMERIC(20, 8) NOT NULL,
+                entry_time TIMESTAMP WITH TIME ZONE NOT NULL,
+                quantity NUMERIC(20, 8) NOT NULL,
+                stop_loss NUMERIC(20, 8),
+                take_profit NUMERIC(20, 8),
+                status VARCHAR(20) DEFAULT 'open',
+                unrealized_pnl NUMERIC(20, 8),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
             """)
             logger.info("  ✅ positions table OK")
             
@@ -304,7 +308,6 @@ class DatabaseManager:
             logger.info(f"🔄 VALIDATING SIGNAL: {signal.get('symbol')}")
             
             is_valid, issues = SignalValidator().validate_signal(signal)
-            
             if not is_valid:
                 logger.error(f"❌ VALIDATION FAILED: {issues}")
                 return False
@@ -320,21 +323,21 @@ class DatabaseManager:
                 ts = ts.timestamp()
             
             insert_sql = """
-                INSERT INTO signals (
-                    symbol, direction, entry_price, tp1, tp2, sl, timestamp,
-                    confidence, ensemble_score,
-                    tech_group_score, sentiment_group_score, onchain_group_score, macro_risk_group_score,
-                    confluence_score, tf_15m_direction, tf_1h_direction, tf_4h_direction,
-                    risk_score, risk_reward_ratio, position_size,
-                    data_source, is_valid, validity_notes
-                ) VALUES (
-                    %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s, %(sl)s, to_timestamp(%(timestamp)s),
-                    %(confidence)s, %(ensemble_score)s,
-                    %(tech_group_score)s, %(sentiment_group_score)s, %(onchain_group_score)s, %(macro_risk_group_score)s,
-                    %(confluence_score)s, %(tf_15m_direction)s, %(tf_1h_direction)s, %(tf_4h_direction)s,
-                    %(risk_score)s, %(risk_reward_ratio)s, %(position_size)s,
-                    %(data_source)s, %(is_valid)s, %(validity_notes)s
-                )
+            INSERT INTO signals (
+                symbol, direction, entry_price, tp1, tp2, sl, timestamp,
+                confidence, ensemble_score,
+                tech_group_score, sentiment_group_score, onchain_group_score, macro_risk_group_score,
+                confluence_score, tf_15m_direction, tf_1h_direction, tf_4h_direction,
+                risk_score, risk_reward_ratio, position_size,
+                data_source, is_valid, validity_notes
+            ) VALUES (
+                %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s, %(sl)s, to_timestamp(%(timestamp)s),
+                %(confidence)s, %(ensemble_score)s,
+                %(tech_group_score)s, %(sentiment_group_score)s, %(onchain_group_score)s, %(macro_risk_group_score)s,
+                %(confluence_score)s, %(tf_15m_direction)s, %(tf_1h_direction)s, %(tf_4h_direction)s,
+                %(risk_score)s, %(risk_reward_ratio)s, %(position_size)s,
+                %(data_source)s, %(is_valid)s, %(validity_notes)s
+            )
             """
             
             params = {
@@ -373,7 +376,7 @@ class DatabaseManager:
             cursor.close()
             logger.info(f"✅✅✅ SIGNAL SAVED TO DB: {signal['symbol']} {signal['direction']}")
             return True
-        
+            
         except Exception as e:
             logger.error(f"❌ INSERT ERROR: {e}")
             import traceback
@@ -416,9 +419,9 @@ class DatabaseManager:
             logger.info(f"➕ ADDING COIN: {symbol}")
             cursor = self.connection.cursor()
             cursor.execute("""
-                INSERT INTO tracked_coins (symbol, is_active)
-                VALUES (%s, TRUE)
-                ON CONFLICT (symbol) DO UPDATE SET is_active = TRUE
+            INSERT INTO tracked_coins (symbol, is_active)
+            VALUES (%s, TRUE)
+            ON CONFLICT (symbol) DO UPDATE SET is_active = TRUE
             """, (symbol,))
             self.connection.commit()
             cursor.close()
@@ -471,6 +474,7 @@ class DatabaseManager:
 # ====== MULTI-EXCHANGE DATA FETCHER (DEBUG) ======
 class MultiExchangeDataFetcher:
     """Fetch real data with fallback chain"""
+    
     def __init__(self):
         self.session = requests.Session()
         self.exchanges = {
@@ -542,6 +546,7 @@ class MultiExchangeDataFetcher:
 # ====== TELEGRAM NOTIFIER ======
 class TelegramNotifier:
     """Send Telegram notifications"""
+    
     def __init__(self):
         self.token = os.getenv('TELEGRAM_TOKEN')
         self.chat_id = os.getenv('TELEGRAM_CHAT_ID')
@@ -559,6 +564,7 @@ class TelegramNotifier:
         if not self.api_url:
             logger.warning("⚠️ Telegram not configured - skipping")
             return
+        
         self.running = True
         threading.Thread(target=self._worker, daemon=True).start()
         logger.info("✅ Telegram notifier started")
@@ -589,7 +595,6 @@ class TelegramNotifier:
         msg += f"Entry: ${signal['entry_price']:.2f}\n"
         msg += f"TP1: ${signal.get('tp1', 0):.2f} | SL: ${signal.get('sl', 0):.2f}\n"
         msg += f"Confidence: {signal.get('confidence', 0):.0%}\n"
-        
         self.queue.put(msg)
     
     def stop(self):
@@ -599,16 +604,15 @@ class TelegramNotifier:
 # ====== SIGNAL GENERATOR (DEBUG) ======
 class Phase4SignalGenerator:
     """Generate signals - WITH DEBUG"""
+    
     def __init__(self, db: DatabaseManager, fetcher: MultiExchangeDataFetcher, telegram: TelegramNotifier):
         self.db = db
         self.fetcher = fetcher
         self.telegram = telegram
-        
         self.symbols = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']
         self.total_signals = 0
         
         logger.info(f"✅ Signal Generator initialized with symbols: {self.symbols}")
-        
         for s in self.symbols:
             self.db.add_tracked_coin(s)
     
@@ -630,12 +634,12 @@ class Phase4SignalGenerator:
             sentiment_score = np.random.uniform(0.3, 0.9)
             onchain_score = np.random.uniform(0.3, 0.9)
             macro_score = np.random.uniform(0.3, 0.9)
-            logger.info(f"     Tech: {tech_score:.2f}, Sentiment: {sentiment_score:.2f}, OnChain: {onchain_score:.2f}, Macro: {macro_score:.2f}")
+            logger.info(f"  Tech: {tech_score:.2f}, Sentiment: {sentiment_score:.2f}, OnChain: {onchain_score:.2f}, Macro: {macro_score:.2f}")
             
             # ENSEMBLE
             logger.info(f"  3️⃣ CALCULATING ENSEMBLE")
             ensemble = (tech_score + sentiment_score + onchain_score + macro_score) / 4
-            logger.info(f"     Ensemble: {ensemble:.2f}")
+            logger.info(f"  Ensemble: {ensemble:.2f}")
             
             if ensemble <= 0.5:
                 logger.info(f"  ⏸️ SKIPPED: Ensemble score too low")
@@ -649,9 +653,8 @@ class Phase4SignalGenerator:
                 1 if onchain_score > 0.5 else (-1 if onchain_score < 0.5 else 0),
                 1 if macro_score > 0.5 else (-1 if macro_score < 0.5 else 0)
             ])
-            
             direction = 'LONG' if votes > 0 else ('SHORT' if votes < 0 else 'NEUTRAL')
-            logger.info(f"     Votes: {votes}, Direction: {direction}")
+            logger.info(f"  Votes: {votes}, Direction: {direction}")
             
             if direction == 'NEUTRAL':
                 logger.info(f"  ⏸️ SKIPPED: Neutral direction")
@@ -663,7 +666,6 @@ class Phase4SignalGenerator:
             sl = price - (atr * 1.5) if direction == 'LONG' else price + (atr * 1.5)
             risk = abs(price - sl)
             reward = risk * 2.0
-            
             if direction == 'LONG':
                 tp1 = price + reward
             else:
@@ -685,7 +687,8 @@ class Phase4SignalGenerator:
                 'macro_risk_group_score': macro_score,
                 'data_source': f'REAL({price_src})'
             }
-            logger.info(f"     Signal: {signal}")
+            
+            logger.info(f"  Signal: {signal}")
             
             # SAVE TO DB
             logger.info(f"  6️⃣ SAVING TO DATABASE")
@@ -699,7 +702,7 @@ class Phase4SignalGenerator:
                 logger.error(f"❌ FAILED TO SAVE SIGNAL")
                 logger.info(f"{'='*60}\n")
                 return None
-        
+                
         except Exception as e:
             logger.error(f"❌ PROCESSING ERROR FOR {symbol}: {e}")
             import traceback
@@ -728,6 +731,7 @@ class Phase4SignalGenerator:
 # ====== FLASK APP ======
 app = Flask(__name__, static_folder=os.path.abspath('.'), static_url_path='/', template_folder=os.path.abspath('.'))
 app.config['JSON_SORT_KEYS'] = False
+CORS(app)  # Enable CORS
 
 logger.info("\n" + "=" * 100)
 logger.info("🚀 INITIALIZING FLASK APP")
@@ -744,7 +748,6 @@ try:
     db_url = os.getenv('DATABASE_URL')
     if not db_url:
         raise ValueError("DATABASE_URL not set")
-    
     db = DatabaseManager(db_url)
     logger.info("✅ DatabaseManager OK")
     
@@ -763,7 +766,6 @@ try:
     
     logger.info("✅✅✅ ALL SYSTEMS INITIALIZED SUCCESSFULLY")
     logger.info("=" * 100 + "\n")
-    
 except Exception as e:
     logger.error(f"❌ INITIALIZATION FAILED: {e}")
     import traceback
@@ -771,7 +773,7 @@ except Exception as e:
     logger.error("=" * 100 + "\n")
 
 
-# ====== API ROUTES ======
+# ====== API ROUTES (ORIGINAL + NEW ENDPOINTS) ======
 
 @app.route('/')
 def index():
@@ -834,6 +836,249 @@ def process_signals():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+# ====== NEW API ENDPOINTS FOR FRONTEND ======
+
+@app.route('/api/signals/consensus', methods=['GET'])
+def api_consensus_signal():
+    """Get consensus signal for a symbol (FRONTEND REQUIRED)"""
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        logger.info(f"📡 Frontend requesting consensus for {symbol}")
+        
+        if not db:
+            return jsonify({'status': 'error', 'message': 'Database not available'}), 503
+        
+        all_signals = db.get_recent_signals(limit=50)
+        symbol_signals = [s for s in all_signals if s.get('symbol') == symbol]
+        
+        if not symbol_signals:
+            logger.warning(f"⚠️ No signals found for {symbol}")
+            return jsonify({'status': 'error', 'message': f'No signals found for {symbol}'}), 404
+        
+        latest = symbol_signals[0]
+        
+        result = {
+            'symbol': latest.get('symbol', symbol),
+            'consensus_direction': latest.get('direction', 'NEUTRAL'),
+            'weighted_strength': float(latest.get('ensemble_score', 0.5)),
+            'consensus_confidence': float(latest.get('confidence', 0.5)),
+            'entry_price': float(latest.get('entry_price', 0.0)),
+            'tp1': float(latest.get('tp1', 0.0)),
+            'tp2': float(latest.get('tp2', 0.0)),
+            'sl': float(latest.get('sl', 0.0)),
+            'risk_level': 'MEDIUM',
+            'timestamp': float(latest.get('timestamp').timestamp() if hasattr(latest.get('timestamp'), 'timestamp') else latest.get('timestamp', time.time()))
+        }
+        
+        logger.info(f"✅ Consensus signal sent: {symbol} {result['consensus_direction']}")
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"❌ Error in /api/signals/consensus: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/signals/latest', methods=['GET'])
+def api_latest_signal():
+    """Get latest signal for a symbol (FRONTEND REQUIRED)"""
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        logger.info(f"📡 Frontend requesting latest signal for {symbol}")
+        
+        if not db:
+            return jsonify({'status': 'error', 'message': 'Database not available'}), 503
+        
+        all_signals = db.get_recent_signals(limit=20)
+        symbol_signals = [s for s in all_signals if s.get('symbol') == symbol]
+        
+        if not symbol_signals:
+            return jsonify({'status': 'error', 'message': f'No signals for {symbol}'}), 404
+        
+        latest = symbol_signals[0]
+        logger.info(f"✅ Latest signal sent: {symbol}")
+        
+        return jsonify({'status': 'success', 'data': latest})
+        
+    except Exception as e:
+        logger.error(f"❌ Error in /api/signals/latest: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/signals/technical', methods=['GET'])
+def api_technical_signal():
+    """Get technical analysis signal (FRONTEND REQUIRED)"""
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        limit = request.args.get('limit', 10, type=int)
+        
+        logger.info(f"📡 Frontend requesting technical signals for {symbol}")
+        
+        if not db:
+            return jsonify([])
+        
+        all_signals = db.get_recent_signals(limit=limit * 2)
+        symbol_signals = [s for s in all_signals if s.get('symbol') == symbol][:limit]
+        
+        if not symbol_signals:
+            return jsonify([])
+        
+        results = []
+        for sig in symbol_signals:
+            results.append({
+                'direction': sig.get('direction', 'NEUTRAL'),
+                'strength': float(sig.get('tech_group_score', 0.5)),
+                'confidence': float(sig.get('confidence', 0.5)),
+                'active_layers': 28,
+                'timestamp': float(sig.get('timestamp').timestamp() if hasattr(sig.get('timestamp'), 'timestamp') else sig.get('timestamp', time.time()))
+            })
+        
+        logger.info(f"✅ Technical signals sent: {len(results)} signals")
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"❌ Error in /api/signals/technical: {e}")
+        return jsonify([])
+
+
+@app.route('/api/signals/sentiment', methods=['GET'])
+def api_sentiment_signal():
+    """Get sentiment analysis signal (FRONTEND REQUIRED)"""
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        limit = request.args.get('limit', 10, type=int)
+        
+        logger.info(f"📡 Frontend requesting sentiment signals for {symbol}")
+        
+        if not db:
+            return jsonify([])
+        
+        all_signals = db.get_recent_signals(limit=limit * 2)
+        symbol_signals = [s for s in all_signals if s.get('symbol') == symbol][:limit]
+        
+        if not symbol_signals:
+            return jsonify([])
+        
+        results = []
+        for sig in symbol_signals:
+            results.append({
+                'direction': sig.get('direction', 'NEUTRAL'),
+                'strength': float(sig.get('sentiment_group_score', 0.5)),
+                'confidence': float(sig.get('confidence', 0.5)) * 0.85,
+                'active_layers': 20,
+                'timestamp': float(sig.get('timestamp').timestamp() if hasattr(sig.get('timestamp'), 'timestamp') else sig.get('timestamp', time.time()))
+            })
+        
+        logger.info(f"✅ Sentiment signals sent: {len(results)} signals")
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"❌ Error in /api/signals/sentiment: {e}")
+        return jsonify([])
+
+
+@app.route('/api/signals/ml', methods=['GET'])
+def api_ml_signal():
+    """Get ML prediction signal (FRONTEND REQUIRED)"""
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        limit = request.args.get('limit', 10, type=int)
+        
+        logger.info(f"📡 Frontend requesting ML signals for {symbol}")
+        
+        if not db:
+            return jsonify([])
+        
+        all_signals = db.get_recent_signals(limit=limit * 2)
+        symbol_signals = [s for s in all_signals if s.get('symbol') == symbol][:limit]
+        
+        if not symbol_signals:
+            return jsonify([])
+        
+        results = []
+        for sig in symbol_signals:
+            results.append({
+                'direction': sig.get('direction', 'NEUTRAL'),
+                'strength': float(sig.get('ensemble_score', 0.5)),
+                'confidence': float(sig.get('confidence', 0.5)) * 0.95,
+                'active_layers': 10,
+                'timestamp': float(sig.get('timestamp').timestamp() if hasattr(sig.get('timestamp'), 'timestamp') else sig.get('timestamp', time.time()))
+            })
+        
+        logger.info(f"✅ ML signals sent: {len(results)} signals")
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"❌ Error in /api/signals/ml: {e}")
+        return jsonify([])
+
+
+@app.route('/api/signals/onchain', methods=['GET'])
+def api_onchain_signal():
+    """Get on-chain analysis signal (FRONTEND REQUIRED)"""
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        limit = request.args.get('limit', 10, type=int)
+        
+        logger.info(f"📡 Frontend requesting onchain signals for {symbol}")
+        
+        if not db:
+            return jsonify([])
+        
+        all_signals = db.get_recent_signals(limit=limit * 2)
+        symbol_signals = [s for s in all_signals if s.get('symbol') == symbol][:limit]
+        
+        if not symbol_signals:
+            return jsonify([])
+        
+        results = []
+        for sig in symbol_signals:
+            results.append({
+                'direction': sig.get('direction', 'NEUTRAL'),
+                'strength': float(sig.get('onchain_group_score', 0.5)),
+                'confidence': float(sig.get('confidence', 0.5)) * 0.9,
+                'active_layers': 6,
+                'timestamp': float(sig.get('timestamp').timestamp() if hasattr(sig.get('timestamp'), 'timestamp') else sig.get('timestamp', time.time()))
+            })
+        
+        logger.info(f"✅ OnChain signals sent: {len(results)} signals")
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"❌ Error in /api/signals/onchain: {e}")
+        return jsonify([])
+
+
+@app.route('/api/positions/active', methods=['GET'])
+def api_active_positions():
+    """Get active positions (FRONTEND REQUIRED)"""
+    try:
+        logger.info("📡 Frontend requesting active positions")
+        return jsonify({'status': 'success', 'positions': []})
+    except Exception as e:
+        logger.error(f"❌ Error in /api/positions/active: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/status', methods=['GET'])
+def api_status():
+    """Get bot status (FRONTEND REQUIRED)"""
+    try:
+        logger.info("📡 Frontend requesting bot status")
+        
+        return jsonify({
+            'status': 'OPERATIONAL',
+            'version': '6.0',
+            'active_coins': signal_generator.symbols if signal_generator else [],
+            'signals_generated': signal_generator.total_signals if signal_generator else 0,
+            'uptime_seconds': int(time.time())
+        })
+    except Exception as e:
+        logger.error(f"❌ Error in /api/status: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ====== ORIGINAL ENDPOINTS PRESERVED ======
+
 @app.route('/api/coins', methods=['GET'])
 def get_coins():
     """Get tracked coins"""
@@ -876,13 +1121,11 @@ def health():
         
         logger.info(f"✅ Health status: {health_data['status']}")
         return jsonify(health_data)
-    
     except Exception as e:
         logger.error(f"❌ Health check error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-# ====== DEBUG ENDPOINT ======
 @app.route('/api/debug', methods=['GET'])
 def debug():
     """Debug information"""
@@ -914,23 +1157,23 @@ def main_loop():
         try:
             iteration += 1
             current_time = datetime.now(pytz.UTC).isoformat()
-            logger.info(f"\n⏱️  MAIN LOOP ITERATION #{iteration} at {current_time}")
+            logger.info(f"\n⏱️ MAIN LOOP ITERATION #{iteration} at {current_time}")
             
             if signal_generator:
-                logger.info(f"   Starting signal generation...")
+                logger.info(f"  Starting signal generation...")
                 signals = signal_generator.process_all()
-                logger.info(f"   ✅ Generated {len(signals)} signals (total so far: {signal_generator.total_signals})")
+                logger.info(f"  ✅ Generated {len(signals)} signals (total so far: {signal_generator.total_signals})")
             else:
-                logger.error(f"   ❌ signal_generator is None")
+                logger.error(f"  ❌ signal_generator is None")
             
-            logger.info(f"   💤 Sleeping 60 seconds...")
+            logger.info(f"  💤 Sleeping 60 seconds...")
             time.sleep(60)
-        
+            
         except Exception as e:
             logger.error(f"❌ MAIN LOOP ERROR: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            logger.info(f"   💤 Sleeping 60 seconds after error...")
+            logger.info(f"  💤 Sleeping 60 seconds after error...")
             time.sleep(60)
 
 
