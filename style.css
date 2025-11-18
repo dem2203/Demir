@@ -1,3 +1,43 @@
+/* TAB ANIMATION FIX */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.tab-content.active {
+    display: block !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-primary);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+.coin-btn.active {
+    transform: scale(1.05);
+}
+
+.coin-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 :root {
   /* Primitive Color Tokens */
   --color-white: rgba(255, 255, 255, 1);
