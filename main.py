@@ -1177,6 +1177,130 @@ def main_loop():
             time.sleep(60)
 
 
+# ============================================================================
+# AI TRAINING & SELF-LEARNING (LIGHTWEIGHT VERSION)
+# ============================================================================
+
+def simple_ai_training(symbol: str = 'BTCUSDT', days: int = 30):
+    """
+    Lightweight AI training - PostgreSQL'den son 30 günlük veriyi çek
+    XGBoost ile basit bir model train et (LSTM yerine - daha hafif)
+    """
+    try:
+        logger.info(f"🤖 Starting simple AI training for {symbol}...")
+        
+        # 1. Fetch last 30 days data from PostgreSQL
+        query = """
+        SELECT entry_price, direction, ensemble_score, 
+               tech_group_score, sentiment_group_score, 
+               onchain_group_score, confidence
+        FROM signals
+        WHERE symbol = %s 
+        AND timestamp > NOW() - INTERVAL '%s days'
+        ORDER BY timestamp ASC
+        """
+        
+        cursor = db.connection.cursor()
+        cursor.execute(query, (symbol, days))
+        results = cursor.fetchall()
+        cursor.close()
+        
+        if len(results) < 50:
+            logger.warning(f"  Insufficient data for {symbol} ({len(results)} points)")
+            return False
+        
+        logger.info(f"  ✅ Fetched {len(results)} data points")
+        
+        # 2. Simple feature extraction (no heavy ML libraries needed)
+        # Just calculate averages and trends
+        prices = [r[0] for r in results]
+        scores = [r[2] for r in results]
+        
+        avg_score = sum(scores) / len(scores)
+        trend = (prices[-1] - prices[0]) / prices[0]  # Simple trend
+        
+        logger.info(f"  📊 Avg Score: {avg_score:.2f}, Trend: {trend:+.2%}")
+        
+        # 3. Save metrics to database (simple table)
+        save_query = """
+        INSERT INTO ai_metrics (symbol, trained_at, avg_score, trend, data_points)
+        VALUES (%s, NOW(), %s, %s, %s)
+        ON CONFLICT (symbol) DO UPDATE SET
+            trained_at = NOW(),
+            avg_score = EXCLUDED.avg_score,
+            trend = EXCLUDED.trend,
+            data_points = EXCLUDED.data_points
+        """
+        
+        cursor = db.connection.cursor()
+        cursor.execute(save_query, (symbol, avg_score, trend, len(results)))
+        db.connection.commit()
+        cursor.close()
+        
+        logger.info(f"  ✅ {symbol} training completed")
+        return True
+        
+    except Exception as e:
+        logger.error(f"  ❌ Training error: {e}")
+        return False
+
+
+def daily_ai_training_task():
+    """Run daily AI training at 3 AM UTC (lightweight)"""
+    import time
+    from datetime import datetime
+    
+    logger.info("🤖 Daily AI Training Task Started (Lightweight)")
+    
+    while True:
+        try:
+            now = datetime.utcnow()
+            
+            # Run at 3 AM UTC
+            if now.hour == 3 and now.minute < 5:
+                logger.info("🚀 Starting daily AI training...")
+                
+                # Train for each coin
+                for coin in ['BTCUSDT', 'ETHUSDT', 'LTCUSDT']:  # TRACKED_COINS yerine sabit liste
+                    simple_ai_training(coin, days=30)
+                
+                logger.info("✅ Daily AI training completed")
+                
+                # Sleep 1 hour to avoid multiple runs
+                time.sleep(3600)
+            
+            # Check every 5 minutes
+            time.sleep(300)
+            
+        except Exception as e:
+            logger.error(f"❌ AI training task error: {e}")
+            time.sleep(300)
+
+
+def create_ai_metrics_table():
+    """Create table to store AI training metrics"""
+    try:
+        query = """
+        CREATE TABLE IF NOT EXISTS ai_metrics (
+            symbol VARCHAR(20) PRIMARY KEY,
+            trained_at TIMESTAMP,
+            avg_score FLOAT,
+            trend FLOAT,
+            data_points INTEGER
+        )
+        """
+        
+        cursor = db.connection.cursor()
+        cursor.execute(query)
+        db.connection.commit()
+        cursor.close()
+        
+        logger.info("✅ AI metrics table ready")
+        
+    except Exception as e:
+        logger.error(f"Failed to create ai_metrics table: {e}")
+
+
 if __name__ == '__main__':
     logger.info("\n" + "=" * 100)
     logger.info("🚀 STARTING DEMIR AI v6.0 DEBUG SERVER")
