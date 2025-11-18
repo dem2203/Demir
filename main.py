@@ -3,6 +3,7 @@
 ✅ Verbose logging with everything
 ✅ Error tracking at every step
 ✅ Debug endpoint added
+✅ TIMESTAMP FIX - type consistency guaranteed
 """
 
 import os
@@ -16,7 +17,7 @@ import requests
 import pytz
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 from flask import Flask, jsonify, request
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -140,17 +141,25 @@ class RealDataVerifier:
         self.last_prices[symbol] = price
         return True, f"Price verified: ${price}"
     
-    def verify_timestamp(self, ts, max_age=3600):
-    current = datetime.now().timestamp()
-    # Eğer ts datetime ise timestamp'a çevir:
-    if isinstance(ts, datetime):
-        ts = ts.timestamp()
-    age = current - ts
-    if age < 0:
-        return False, "Future timestamp"
-    if age > max_age:
-        return False, f"Stale data ({age:.0f}s old)"
-    return True, f"Timestamp valid ({age:.0f}s old)"
+    def verify_timestamp(self, ts: Union[float, datetime], max_age: int = 3600) -> Tuple[bool, str]:
+        """Verify timestamp is current - FIXED TYPE HANDLING"""
+        current = datetime.now().timestamp()
+        
+        # Convert datetime to float if needed
+        if isinstance(ts, datetime):
+            ts_float = ts.timestamp()
+        else:
+            ts_float = float(ts)
+        
+        age = current - ts_float
+        
+        if age < 0:
+            return False, "Future timestamp"
+        if age > max_age:
+            return False, f"Stale data ({age:.0f}s old)"
+        
+        return True, f"Timestamp valid ({age:.0f}s old)"
+
 
 class SignalValidator:
     """Master validation"""
@@ -305,6 +314,11 @@ class DatabaseManager:
             cursor = self.connection.cursor()
             logger.info(f"📝 EXECUTING INSERT QUERY")
             
+            # Convert timestamp to float if it's datetime
+            ts = signal['timestamp']
+            if isinstance(ts, datetime):
+                ts = ts.timestamp()
+            
             insert_sql = """
                 INSERT INTO signals (
                     symbol, direction, entry_price, tp1, tp2, sl, timestamp,
@@ -314,7 +328,7 @@ class DatabaseManager:
                     risk_score, risk_reward_ratio, position_size,
                     data_source, is_valid, validity_notes
                 ) VALUES (
-                    %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s, %(sl)s, %(timestamp)s,
+                    %(symbol)s, %(direction)s, %(entry_price)s, %(tp1)s, %(tp2)s, %(sl)s, to_timestamp(%(timestamp)s),
                     %(confidence)s, %(ensemble_score)s,
                     %(tech_group_score)s, %(sentiment_group_score)s, %(onchain_group_score)s, %(macro_risk_group_score)s,
                     %(confluence_score)s, %(tf_15m_direction)s, %(tf_1h_direction)s, %(tf_4h_direction)s,
@@ -330,7 +344,7 @@ class DatabaseManager:
                 'tp1': signal.get('tp1', signal['entry_price'] * 1.02),
                 'tp2': signal.get('tp2', signal['entry_price'] * 1.05),
                 'sl': signal.get('sl', signal['entry_price'] * 0.98),
-                'timestamp': signal['timestamp'],
+                'timestamp': ts,
                 'confidence': signal.get('confidence', 0.5),
                 'ensemble_score': signal.get('ensemble_score', 0.5),
                 'tech_group_score': signal.get('tech_group_score', 0.0),
@@ -662,7 +676,7 @@ class Phase4SignalGenerator:
                 'tp1': tp1,
                 'tp2': tp1 * 1.5 if direction == 'LONG' else tp1 * 0.5,
                 'sl': sl,
-                'timestamp': datetime.now(pytz.UTC),
+                'timestamp': datetime.now(pytz.UTC).timestamp(),
                 'confidence': ensemble,
                 'ensemble_score': ensemble,
                 'tech_group_score': tech_score,
