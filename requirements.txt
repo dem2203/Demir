@@ -50,10 +50,10 @@ scikit-learn==1.3.2
 xgboost==2.0.3
 
 # ============================================================================
-# TECHNICAL ANALYSIS
+# TECHNICAL ANALYSIS (TA-Lib alternative)
 # ============================================================================
 ta==0.11.0
-pandas-ta==0.3.14b0.dev2
+
 # ============================================================================
 # DATABASE
 # ============================================================================
@@ -96,26 +96,3 @@ pytz==2023.3
 # ============================================================================
 pytest==7.4.3
 pytest-asyncio==0.21.1
-
-# ============================================================================
-# NOTES
-# ============================================================================
-# 
-# INSTALLATION:
-#   pip install -r requirements.txt
-#
-# FOR RAILWAY DEPLOYMENT:
-#   Railway automatically installs from requirements.txt
-#
-# TA-Lib NOTE:
-#   If TA-Lib installation fails, use:
-#     - Linux/Railway: apt-get install -y ta-lib
-#     - macOS: brew install ta-lib
-#     - Windows: Download from https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
-#
-# PRODUCTION ENVIRONMENT:
-#   - Python 3.10 or higher
-#   - PostgreSQL 14+
-#   - Redis 7+ (optional)
-#
-# ============================================================================
