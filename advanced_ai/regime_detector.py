@@ -38,6 +38,16 @@ class RegimeDetector:
             self.current_regime = regime
             logger.info(f"✅ Regime: {regime.upper()}")
             return regime
+        
         except Exception as e:
             logger.error(f"Detection error: {e}")
             return 'unknown'
+
+# ============================================================================
+# BACKWARD COMPATIBILITY ALIAS
+# ============================================================================
+
+# main.py'de "from advanced_ai.regime_detector import MarketRegimeDetector" kullanıldığı için
+MarketRegimeDetector = RegimeDetector
+
+__all__ = ['RegimeDetector', 'MarketRegimeDetector']
