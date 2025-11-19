@@ -1,427 +1,682 @@
+# analytics/performance_engine.py
 """
-🚀 DEMIR AI v5.2 - Performance Analytics Engine
-📊 Win Rate, Profit Factor, Sharpe Ratio Calculator
-🎯 Production-Grade Performance Tracking
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 DEMIR AI v7.0 - PERFORMANCE ENGINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Location: GitHub Root / analytics/performance_engine.py (NEW FILE - CREATE FOLDER)
-Size: ~1200 lines
-Author: AI Research Agent
-Date: 2025-11-15
+COMPREHENSIVE PERFORMANCE TRACKING & ANALYTICS
+
+Features:
+    ✅ Real-time performance metrics
+    ✅ Signal accuracy tracking
+    ✅ Win rate calculation
+    ✅ Profit/Loss analysis
+    ✅ Sharpe ratio computation
+    ✅ Maximum drawdown tracking
+    ✅ Group performance comparison
+    ✅ Time-series analytics
+
+Metrics Tracked:
+    - Total signals generated
+    - Win rate percentage
+    - Average R:R achieved
+    - Total P&L
+    - Sharpe ratio
+    - Maximum drawdown
+    - Recovery factor
+    - Profit factor
+
+DEPLOYMENT: Railway Production
+AUTHOR: DEMIR AI Research Team
+DATE: 2025-11-19
+VERSION: 7.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
-import os
+import time
 import logging
-from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timedelta
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import pandas as pd
+from typing import Dict, List, Optional, Any, Tuple
+from collections import deque, defaultdict
+from dataclasses import dataclass, asdict
 import numpy as np
-from statistics import mean, stdev
-import json
-import pytz
+import pandas as pd
 
-logger = logging.getLogger('PERFORMANCE_ENGINE')
+logger = logging.getLogger(__name__)
 
 # ============================================================================
-# PERFORMANCE METRICS CALCULATOR
+# PERFORMANCE METRICS DATA CLASSES
 # ============================================================================
 
-class PerformanceAnalytics:
-    """Calculate comprehensive performance metrics"""
+@dataclass
+class TradeResult:
+    """Individual trade result"""
+    trade_id: str
+    symbol: str
+    direction: str
+    entry_price: float
+    exit_price: float
+    pnl: float
+    pnl_percent: float
+    risk_reward_achieved: float
+    entry_time: datetime
+    exit_time: datetime
+    duration_hours: float
+    outcome: str  # 'WIN', 'LOSS', 'BREAKEVEN'
+    signal_confidence: float
     
-    def __init__(self, db_url: str):
-        self.db_url = db_url
-        self.connection = self._connect()
+    def to_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data['entry_time'] = self.entry_time.isoformat()
+        data['exit_time'] = self.exit_time.isoformat()
+        return data
+
+@dataclass
+class PerformanceMetrics:
+    """Overall performance metrics"""
     
-    def _connect(self):
-        """Connect to PostgreSQL"""
-        try:
-            conn = psycopg2.connect(self.db_url)
-            logger.info("✅ Connected to PostgreSQL for analytics")
-            return conn
-        except Exception as e:
-            logger.error(f"❌ Database connection error: {e}")
-            return None
+    # Basic stats
+    total_signals: int
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
+    breakeven_trades: int
     
-    # =====================================================================
-    # BASIC METRICS
-    # =====================================================================
+    # Win rate
+    win_rate: float
+    loss_rate: float
     
-    def calculate_win_rate(self, days: int = 7) -> Dict:
-        """Calculate win rate percentage"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT 
-                    COUNT(*) as total_trades,
-                    SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
-                    SUM(CASE WHEN profit_loss < 0 THEN 1 ELSE 0 END) as losing_trades,
-                    SUM(CASE WHEN profit_loss = 0 THEN 1 ELSE 0 END) as breakeven_trades
-                FROM performance_tracking
-                WHERE entry_time > NOW() - INTERVAL '%s days'
-            ''', (days,))
-            result = cursor.fetchone()
-            cursor.close()
-            
-            if result and result['total_trades'] > 0:
-                win_rate = (result['winning_trades'] / result['total_trades']) * 100
-                return {
-                    'total_trades': result['total_trades'],
-                    'winning_trades': result['winning_trades'],
-                    'losing_trades': result['losing_trades'],
-                    'breakeven_trades': result['breakeven_trades'],
-                    'win_rate_percent': round(win_rate, 2),
-                    'loss_rate_percent': round(100 - win_rate, 2),
-                    'period_days': days
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Win rate calculation error: {e}")
-            return {}
+    # P&L
+    total_pnl: float
+    total_pnl_percent: float
+    average_win: float
+    average_loss: float
+    largest_win: float
+    largest_loss: float
     
-    def calculate_profit_factor(self, days: int = 7) -> Dict:
-        """Calculate profit factor (gross profit / gross loss)"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT 
-                    COALESCE(SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END), 0) as gross_profit,
-                    COALESCE(ABS(SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END)), 0) as gross_loss
-                FROM performance_tracking
-                WHERE entry_time > NOW() - INTERVAL '%s days'
-            ''', (days,))
-            result = cursor.fetchone()
-            cursor.close()
-            
-            if result:
-                gross_loss = result['gross_loss']
-                if gross_loss > 0:
-                    profit_factor = result['gross_profit'] / gross_loss
-                else:
-                    profit_factor = 0 if result['gross_profit'] == 0 else float('inf')
-                
-                return {
-                    'gross_profit': round(result['gross_profit'], 2),
-                    'gross_loss': round(result['gross_loss'], 2),
-                    'profit_factor': round(profit_factor, 2),
-                    'net_profit': round(result['gross_profit'] - result['gross_loss'], 2),
-                    'period_days': days
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Profit factor calculation error: {e}")
-            return {}
+    # Risk metrics
+    average_rr_achieved: float
+    profit_factor: float
+    sharpe_ratio: float
+    max_drawdown: float
+    max_drawdown_percent: float
+    recovery_factor: float
     
-    def calculate_sharpe_ratio(self, days: int = 7, risk_free_rate: float = 0.02) -> Dict:
+    # Timing
+    average_trade_duration_hours: float
+    total_trading_days: int
+    
+    # Accuracy by confidence
+    high_confidence_accuracy: float  # >85%
+    medium_confidence_accuracy: float  # 75-85%
+    
+    # Group performance
+    tech_group_accuracy: float
+    sentiment_group_accuracy: float
+    ml_group_accuracy: float
+    onchain_group_accuracy: float
+    macro_risk_group_accuracy: float
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+# ============================================================================
+# PERFORMANCE ENGINE
+# ============================================================================
+
+class PerformanceEngine:
+    """
+    Comprehensive performance tracking and analytics engine
+    
+    Tracks:
+        - All signals generated
+        - Trade outcomes
+        - Win/loss rates
+        - P&L metrics
+        - Risk-adjusted returns
+        - Group-level performance
+    """
+    
+    def __init__(self, db_manager):
         """
-        Calculate Sharpe Ratio
-        Sharpe = (Return - Risk-free Rate) / StdDev(Returns)
-        """
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT profit_loss_percent
-                FROM performance_tracking
-                WHERE entry_time > NOW() - INTERVAL '%s days'
-                AND profit_loss_percent IS NOT NULL
-                ORDER BY entry_time
-            ''', (days,))
-            returns = [row['profit_loss_percent'] / 100 for row in cursor.fetchall()]
-            cursor.close()
-            
-            if len(returns) > 1:
-                mean_return = mean(returns)
-                std_dev = stdev(returns)
-                
-                if std_dev > 0:
-                    daily_rf = risk_free_rate / 365
-                    sharpe = (mean_return - daily_rf) / std_dev
-                else:
-                    sharpe = 0
-                
-                return {
-                    'sharpe_ratio': round(sharpe, 2),
-                    'mean_return': round(mean_return * 100, 2),
-                    'std_deviation': round(std_dev * 100, 2),
-                    'trade_count': len(returns),
-                    'period_days': days,
-                    'note': 'Higher Sharpe is better (target > 1.0)'
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Sharpe ratio calculation error: {e}")
-            return {}
-    
-    # =====================================================================
-    # ADVANCED METRICS
-    # =====================================================================
-    
-    def calculate_max_drawdown(self, days: int = 7) -> Dict:
-        """Calculate maximum drawdown from peak"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT profit_loss
-                FROM performance_tracking
-                WHERE entry_time > NOW() - INTERVAL '%s days'
-                ORDER BY entry_time
-            ''', (days,))
-            results = cursor.fetchall()
-            cursor.close()
-            
-            if results:
-                cumulative_pnl = []
-                running_sum = 0
-                for row in results:
-                    running_sum += row['profit_loss']
-                    cumulative_pnl.append(running_sum)
-                
-                peak = cumulative_pnl[0]
-                max_dd = 0
-                
-                for value in cumulative_pnl:
-                    if value > peak:
-                        peak = value
-                    dd = peak - value
-                    if dd > max_dd:
-                        max_dd = dd
-                
-                max_dd_percent = (max_dd / peak * 100) if peak > 0 else 0
-                
-                return {
-                    'max_drawdown': round(max_dd, 2),
-                    'max_drawdown_percent': round(max_dd_percent, 2),
-                    'peak_value': round(peak, 2),
-                    'trade_count': len(results),
-                    'period_days': days,
-                    'note': 'Lower is better'
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Max drawdown calculation error: {e}")
-            return {}
-    
-    def calculate_recovery_factor(self, days: int = 7) -> Dict:
-        """Recovery factor = Net Profit / Max Drawdown"""
-        try:
-            profit_factor_data = self.calculate_profit_factor(days)
-            max_dd_data = self.calculate_max_drawdown(days)
-            
-            if profit_factor_data and max_dd_data:
-                net_profit = profit_factor_data['net_profit']
-                max_dd = max_dd_data['max_drawdown']
-                
-                if max_dd > 0:
-                    recovery_factor = net_profit / max_dd
-                else:
-                    recovery_factor = 0 if net_profit == 0 else float('inf')
-                
-                return {
-                    'recovery_factor': round(recovery_factor, 2),
-                    'net_profit': net_profit,
-                    'max_drawdown': max_dd,
-                    'period_days': days,
-                    'note': 'Higher is better (target > 2.0)'
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Recovery factor calculation error: {e}")
-            return {}
-    
-    def calculate_average_win_loss(self, days: int = 7) -> Dict:
-        """Calculate average winning and losing trade"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT 
-                    AVG(CASE WHEN profit_loss > 0 THEN profit_loss END) as avg_win,
-                    AVG(CASE WHEN profit_loss < 0 THEN profit_loss END) as avg_loss,
-                    AVG(profit_loss) as avg_trade
-                FROM performance_tracking
-                WHERE entry_time > NOW() - INTERVAL '%s days'
-            ''', (days,))
-            result = cursor.fetchone()
-            cursor.close()
-            
-            if result:
-                avg_win = result['avg_win'] or 0
-                avg_loss = abs(result['avg_loss'] or 0)
-                
-                win_loss_ratio = avg_win / avg_loss if avg_loss > 0 else 0
-                
-                return {
-                    'average_win': round(avg_win, 2),
-                    'average_loss': round(avg_loss, 2),
-                    'win_loss_ratio': round(win_loss_ratio, 2),
-                    'average_trade': round(result['avg_trade'] or 0, 2),
-                    'period_days': days,
-                    'note': 'Win/Loss ratio > 1.5 is good'
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Average win/loss calculation error: {e}")
-            return {}
-    
-    def calculate_expectancy(self, days: int = 7) -> Dict:
-        """
-        Expectancy = (Win% × Avg Win) - (Loss% × Avg Loss)
-        Represents average profit per trade
-        """
-        try:
-            win_rate = self.calculate_win_rate(days)
-            avg_wl = self.calculate_average_win_loss(days)
-            
-            if win_rate and avg_wl:
-                win_percent = win_rate['win_rate_percent'] / 100
-                loss_percent = win_rate['loss_rate_percent'] / 100
-                
-                expectancy = (win_percent * avg_wl['average_win']) - (loss_percent * avg_wl['average_loss'])
-                
-                return {
-                    'expectancy': round(expectancy, 2),
-                    'win_rate': win_rate['win_rate_percent'],
-                    'avg_win': avg_wl['average_win'],
-                    'avg_loss': avg_wl['average_loss'],
-                    'period_days': days,
-                    'note': 'Expected profit per trade (positive is good)'
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Expectancy calculation error: {e}")
-            return {}
-    
-    # =====================================================================
-    # SYMBOL-SPECIFIC ANALYTICS
-    # =====================================================================
-    
-    def get_symbol_analytics(self, symbol: str, days: int = 7) -> Dict:
-        """Get all analytics for specific symbol"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT 
-                    t.symbol,
-                    COUNT(*) as total_signals,
-                    SUM(CASE WHEN t.signal_type = 'LONG' THEN 1 ELSE 0 END) as long_signals,
-                    SUM(CASE WHEN t.signal_type = 'SHORT' THEN 1 ELSE 0 END) as short_signals,
-                    ROUND(AVG(t.confidence), 2) as avg_confidence,
-                    ROUND(AVG(pt.profit_loss), 2) as avg_pnl,
-                    SUM(CASE WHEN pt.profit_loss > 0 THEN 1 ELSE 0 END) as winning_trades,
-                    COUNT(*) as total_trades_with_pnl
-                FROM trades t
-                LEFT JOIN performance_tracking pt ON t.id = pt.trade_id
-                WHERE t.symbol = %s
-                AND t.timestamp > NOW() - INTERVAL '%s days'
-                GROUP BY t.symbol
-            ''', (symbol, days))
-            result = cursor.fetchone()
-            cursor.close()
-            
-            if result:
-                win_rate = (result['winning_trades'] / result['total_trades_with_pnl'] * 100) if result['total_trades_with_pnl'] > 0 else 0
-                
-                return {
-                    'symbol': result['symbol'],
-                    'total_signals': result['total_signals'],
-                    'long_signals': result['long_signals'],
-                    'short_signals': result['short_signals'],
-                    'avg_confidence': result['avg_confidence'],
-                    'average_pnl': result['avg_pnl'],
-                    'win_rate': round(win_rate, 2),
-                    'period_days': days
-                }
-            return {}
-        except Exception as e:
-            logger.error(f"❌ Symbol analytics error: {e}")
-            return {}
-    
-    # =====================================================================
-    # MONTHLY PERFORMANCE
-    # =====================================================================
-    
-    def get_monthly_performance(self) -> List[Dict]:
-        """Get performance breakdown by month"""
-        try:
-            cursor = self.connection.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('''
-                SELECT 
-                    DATE_TRUNC('month', entry_time)::date as month,
-                    COUNT(*) as trades,
-                    SUM(CASE WHEN profit_loss > 0 THEN 1 ELSE 0 END) as wins,
-                    ROUND(SUM(profit_loss), 2) as total_pnl,
-                    ROUND(AVG(profit_loss), 2) as avg_pnl,
-                    ROUND(AVG(profit_loss_percent), 2) as avg_return_percent
-                FROM performance_tracking
-                GROUP BY DATE_TRUNC('month', entry_time)
-                ORDER BY month DESC
-                LIMIT 12
-            ''')
-            results = cursor.fetchall()
-            cursor.close()
-            
-            monthly_data = []
-            for row in results:
-                win_rate = (row['wins'] / row['trades'] * 100) if row['trades'] > 0 else 0
-                monthly_data.append({
-                    'month': row['month'].strftime('%Y-%m') if row['month'] else 'N/A',
-                    'trades': row['trades'],
-                    'wins': row['wins'],
-                    'win_rate': round(win_rate, 2),
-                    'total_pnl': row['total_pnl'],
-                    'avg_pnl': row['avg_pnl'],
-                    'avg_return_percent': row['avg_return_percent']
-                })
-            
-            return monthly_data
-        except Exception as e:
-            logger.error(f"❌ Monthly performance error: {e}")
-            return []
-    
-    # =====================================================================
-    # COMPREHENSIVE REPORT
-    # =====================================================================
-    
-    def generate_comprehensive_report(self, days: int = 7) -> Dict:
-        """Generate complete performance report"""
-        logger.info(f"📊 Generating comprehensive report for {days} days...")
+        Initialize performance engine
         
-        report = {
-            'generated_at': datetime.now(pytz.UTC).isoformat(),
-            'period_days': days,
-            'win_rate': self.calculate_win_rate(days),
-            'profit_factor': self.calculate_profit_factor(days),
-            'sharpe_ratio': self.calculate_sharpe_ratio(days),
-            'max_drawdown': self.calculate_max_drawdown(days),
-            'recovery_factor': self.calculate_recovery_factor(days),
-            'average_win_loss': self.calculate_average_win_loss(days),
-            'expectancy': self.calculate_expectancy(days),
-            'symbol_analytics': {
-                'BTCUSDT': self.get_symbol_analytics('BTCUSDT', days),
-                'ETHUSDT': self.get_symbol_analytics('ETHUSDT', days),
-                'LTCUSDT': self.get_symbol_analytics('LTCUSDT', days)
-            },
-            'monthly_performance': self.get_monthly_performance()
+        Args:
+            db_manager: Database manager instance
+        """
+        self.db = db_manager
+        
+        # Trade history
+        self.trade_results: List[TradeResult] = []
+        self.trade_history = deque(maxlen=10000)
+        
+        # Running totals
+        self.running_pnl = 0.0
+        self.peak_balance = 0.0
+        self.current_drawdown = 0.0
+        self.max_drawdown = 0.0
+        
+        # Group performance tracking
+        self.group_predictions: Dict[str, List[bool]] = defaultdict(list)
+        
+        # Time series data
+        self.equity_curve: List[Tuple[datetime, float]] = []
+        
+        # Statistics
+        self.stats = {
+            'total_signals_generated': 0,
+            'total_trades_executed': 0,
+            'last_update': None
         }
         
-        logger.info("✅ Report generated successfully")
+        logger.info("✅ PerformanceEngine initialized")
+    
+    # ========================================================================
+    # TRADE RECORDING
+    # ========================================================================
+    
+    def record_trade(
+        self,
+        symbol: str,
+        direction: str,
+        entry_price: float,
+        exit_price: float,
+        entry_time: datetime,
+        exit_time: datetime,
+        signal_confidence: float,
+        signal_data: Optional[Dict[str, Any]] = None
+    ) -> TradeResult:
+        """
+        Record a completed trade
+        
+        Args:
+            symbol: Trading pair
+            direction: 'LONG' or 'SHORT'
+            entry_price: Entry price
+            exit_price: Exit price
+            entry_time: Entry timestamp
+            exit_time: Exit timestamp
+            signal_confidence: Original signal confidence
+            signal_data: Full signal data (optional)
+        
+        Returns:
+            TradeResult object
+        """
+        # Calculate P&L
+        if direction == 'LONG':
+            pnl = exit_price - entry_price
+        else:  # SHORT
+            pnl = entry_price - exit_price
+        
+        pnl_percent = (pnl / entry_price) * 100
+        
+        # Determine outcome
+        if pnl > 0:
+            outcome = 'WIN'
+        elif pnl < 0:
+            outcome = 'LOSS'
+        else:
+            outcome = 'BREAKEVEN'
+        
+        # Calculate duration
+        duration = (exit_time - entry_time).total_seconds() / 3600  # hours
+        
+        # Calculate risk/reward achieved (if signal data available)
+        rr_achieved = 0.0
+        if signal_data and 'sl' in signal_data:
+            risk = abs(entry_price - signal_data['sl'])
+            if risk > 0:
+                rr_achieved = abs(pnl) / risk
+        
+        # Create trade result
+        trade = TradeResult(
+            trade_id=f"{symbol}_{int(entry_time.timestamp())}",
+            symbol=symbol,
+            direction=direction,
+            entry_price=entry_price,
+            exit_price=exit_price,
+            pnl=pnl,
+            pnl_percent=pnl_percent,
+            risk_reward_achieved=rr_achieved,
+            entry_time=entry_time,
+            exit_time=exit_time,
+            duration_hours=duration,
+            outcome=outcome,
+            signal_confidence=signal_confidence
+        )
+        
+        # Update running metrics
+        self.trade_results.append(trade)
+        self.trade_history.append(trade)
+        self.running_pnl += pnl
+        
+        # Update drawdown tracking
+        self._update_drawdown()
+        
+        # Update equity curve
+        self.equity_curve.append((exit_time, self.running_pnl))
+        
+        # Track group performance if data available
+        if signal_data:
+            self._track_group_performance(signal_data, outcome)
+        
+        self.stats['total_trades_executed'] += 1
+        self.stats['last_update'] = datetime.now()
+        
+        logger.info(
+            f"Trade recorded: {symbol} {direction} | "
+            f"P&L: ${pnl:.2f} ({pnl_percent:+.2f}%) | "
+            f"Outcome: {outcome}"
+        )
+        
+        return trade
+    
+    def record_signal_generated(self, signal: Dict[str, Any]):
+        """Record that a signal was generated"""
+        self.stats['total_signals_generated'] += 1
+    
+    # ========================================================================
+    # METRICS CALCULATION
+    # ========================================================================
+    
+    def calculate_metrics(self) -> PerformanceMetrics:
+        """
+        Calculate comprehensive performance metrics
+        
+        Returns:
+            PerformanceMetrics object
+        """
+        if not self.trade_results:
+            return self._empty_metrics()
+        
+        trades = self.trade_results
+        
+        # Basic counts
+        total_trades = len(trades)
+        winning_trades = sum(1 for t in trades if t.outcome == 'WIN')
+        losing_trades = sum(1 for t in trades if t.outcome == 'LOSS')
+        breakeven_trades = sum(1 for t in trades if t.outcome == 'BREAKEVEN')
+        
+        # Win rates
+        win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+        loss_rate = (losing_trades / total_trades * 100) if total_trades > 0 else 0
+        
+        # P&L metrics
+        total_pnl = sum(t.pnl for t in trades)
+        total_pnl_percent = sum(t.pnl_percent for t in trades)
+        
+        wins = [t.pnl for t in trades if t.outcome == 'WIN']
+        losses = [abs(t.pnl) for t in trades if t.outcome == 'LOSS']
+        
+        average_win = np.mean(wins) if wins else 0
+        average_loss = np.mean(losses) if losses else 0
+        largest_win = max(wins) if wins else 0
+        largest_loss = max(losses) if losses else 0
+        
+        # Risk metrics
+        average_rr = np.mean([t.risk_reward_achieved for t in trades if t.risk_reward_achieved > 0])
+        average_rr = average_rr if not np.isnan(average_rr) else 0
+        
+        # Profit factor
+        total_wins = sum(wins)
+        total_losses = sum(losses)
+        profit_factor = (total_wins / total_losses) if total_losses > 0 else 0
+        
+        # Sharpe ratio
+        sharpe_ratio = self._calculate_sharpe_ratio(trades)
+        
+        # Drawdown
+        max_dd_percent = (self.max_drawdown / max(self.peak_balance, 1)) * 100
+        
+        # Recovery factor
+        recovery_factor = (total_pnl / abs(self.max_drawdown)) if self.max_drawdown != 0 else 0
+        
+        # Average trade duration
+        avg_duration = np.mean([t.duration_hours for t in trades])
+        
+        # Trading days
+        if trades:
+            first_trade = min(t.entry_time for t in trades)
+            last_trade = max(t.exit_time for t in trades)
+            trading_days = (last_trade - first_trade).days + 1
+        else:
+            trading_days = 0
+        
+        # Confidence-based accuracy
+        high_conf_trades = [t for t in trades if t.signal_confidence >= 0.85]
+        medium_conf_trades = [t for t in trades if 0.75 <= t.signal_confidence < 0.85]
+        
+        high_conf_accuracy = (
+            sum(1 for t in high_conf_trades if t.outcome == 'WIN') / 
+            len(high_conf_trades) * 100
+        ) if high_conf_trades else 0
+        
+        medium_conf_accuracy = (
+            sum(1 for t in medium_conf_trades if t.outcome == 'WIN') / 
+            len(medium_conf_trades) * 100
+        ) if medium_conf_trades else 0
+        
+        # Group accuracies
+        group_accuracies = self._calculate_group_accuracies()
+        
+        return PerformanceMetrics(
+            total_signals=self.stats['total_signals_generated'],
+            total_trades=total_trades,
+            winning_trades=winning_trades,
+            losing_trades=losing_trades,
+            breakeven_trades=breakeven_trades,
+            win_rate=win_rate,
+            loss_rate=loss_rate,
+            total_pnl=total_pnl,
+            total_pnl_percent=total_pnl_percent,
+            average_win=average_win,
+            average_loss=average_loss,
+            largest_win=largest_win,
+            largest_loss=largest_loss,
+            average_rr_achieved=average_rr,
+            profit_factor=profit_factor,
+            sharpe_ratio=sharpe_ratio,
+            max_drawdown=self.max_drawdown,
+            max_drawdown_percent=max_dd_percent,
+            recovery_factor=recovery_factor,
+            average_trade_duration_hours=avg_duration,
+            total_trading_days=trading_days,
+            high_confidence_accuracy=high_conf_accuracy,
+            medium_confidence_accuracy=medium_conf_accuracy,
+            tech_group_accuracy=group_accuracies['technical'],
+            sentiment_group_accuracy=group_accuracies['sentiment'],
+            ml_group_accuracy=group_accuracies['ml'],
+            onchain_group_accuracy=group_accuracies['onchain'],
+            macro_risk_group_accuracy=group_accuracies['macro_risk']
+        )
+    
+    def get_current_metrics(self) -> Dict[str, Any]:
+        """Get current performance metrics as dictionary"""
+        metrics = self.calculate_metrics()
+        return metrics.to_dict()
+    
+    def update_metrics(self) -> Dict[str, Any]:
+        """Update and return current metrics"""
+        return self.get_current_metrics()
+    
+    def _empty_metrics(self) -> PerformanceMetrics:
+        """Return empty metrics object"""
+        return PerformanceMetrics(
+            total_signals=self.stats['total_signals_generated'],
+            total_trades=0,
+            winning_trades=0,
+            losing_trades=0,
+            breakeven_trades=0,
+            win_rate=0.0,
+            loss_rate=0.0,
+            total_pnl=0.0,
+            total_pnl_percent=0.0,
+            average_win=0.0,
+            average_loss=0.0,
+            largest_win=0.0,
+            largest_loss=0.0,
+            average_rr_achieved=0.0,
+            profit_factor=0.0,
+            sharpe_ratio=0.0,
+            max_drawdown=0.0,
+            max_drawdown_percent=0.0,
+            recovery_factor=0.0,
+            average_trade_duration_hours=0.0,
+            total_trading_days=0,
+            high_confidence_accuracy=0.0,
+            medium_confidence_accuracy=0.0,
+            tech_group_accuracy=0.0,
+            sentiment_group_accuracy=0.0,
+            ml_group_accuracy=0.0,
+            onchain_group_accuracy=0.0,
+            macro_risk_group_accuracy=0.0
+        )
+    
+    # ========================================================================
+    # ADVANCED METRICS
+    # ========================================================================
+    
+    def _calculate_sharpe_ratio(self, trades: List[TradeResult]) -> float:
+        """
+        Calculate Sharpe ratio
+        
+        Sharpe Ratio = (Average Return - Risk-Free Rate) / Standard Deviation
+        Assuming risk-free rate = 0 for simplicity
+        """
+        if not trades or len(trades) < 2:
+            return 0.0
+        
+        returns = [t.pnl_percent for t in trades]
+        avg_return = np.mean(returns)
+        std_return = np.std(returns)
+        
+        if std_return == 0:
+            return 0.0
+        
+        # Annualize (assuming 365 trading days)
+        sharpe = (avg_return / std_return) * np.sqrt(365)
+        
+        return sharpe
+    
+    def _update_drawdown(self):
+        """Update drawdown tracking"""
+        # Update peak balance
+        if self.running_pnl > self.peak_balance:
+            self.peak_balance = self.running_pnl
+        
+        # Calculate current drawdown
+        self.current_drawdown = self.peak_balance - self.running_pnl
+        
+        # Update max drawdown
+        if self.current_drawdown > self.max_drawdown:
+            self.max_drawdown = self.current_drawdown
+    
+    def _track_group_performance(self, signal_data: Dict[str, Any], outcome: str):
+        """Track individual group performance"""
+        is_win = (outcome == 'WIN')
+        
+        groups = [
+            'tech_group_score',
+            'sentiment_group_score',
+            'ml_group_score',
+            'onchain_group_score',
+            'macro_risk_group_score'
+        ]
+        
+        for group in groups:
+            if group in signal_data:
+                score = signal_data[group]
+                # If group predicted correctly (high score and win, or low score and loss)
+                predicted_correctly = (score > 0.55 and is_win) or (score < 0.45 and not is_win)
+                self.group_predictions[group].append(predicted_correctly)
+    
+    def _calculate_group_accuracies(self) -> Dict[str, float]:
+        """Calculate accuracy for each group"""
+        accuracies = {}
+        
+        group_mapping = {
+            'tech_group_score': 'technical',
+            'sentiment_group_score': 'sentiment',
+            'ml_group_score': 'ml',
+            'onchain_group_score': 'onchain',
+            'macro_risk_group_score': 'macro_risk'
+        }
+        
+        for group_key, group_name in group_mapping.items():
+            predictions = self.group_predictions.get(group_key, [])
+            if predictions:
+                accuracy = sum(predictions) / len(predictions) * 100
+            else:
+                accuracy = 0.0
+            accuracies[group_name] = accuracy
+        
+        return accuracies
+    
+    # ========================================================================
+    # TIME-SERIES ANALYTICS
+    # ========================================================================
+    
+    def get_equity_curve(self) -> pd.DataFrame:
+        """
+        Get equity curve as DataFrame
+        
+        Returns:
+            DataFrame with timestamp and equity columns
+        """
+        if not self.equity_curve:
+            return pd.DataFrame(columns=['timestamp', 'equity'])
+        
+        df = pd.DataFrame(self.equity_curve, columns=['timestamp', 'equity'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df.set_index('timestamp', inplace=True)
+        
+        return df
+    
+    def get_returns_distribution(self) -> Dict[str, Any]:
+        """Get returns distribution statistics"""
+        if not self.trade_results:
+            return {}
+        
+        returns = [t.pnl_percent for t in self.trade_results]
+        
+        return {
+            'mean': np.mean(returns),
+            'median': np.median(returns),
+            'std': np.std(returns),
+            'min': np.min(returns),
+            'max': np.max(returns),
+            'percentile_25': np.percentile(returns, 25),
+            'percentile_75': np.percentile(returns, 75),
+            'skewness': float(pd.Series(returns).skew()),
+            'kurtosis': float(pd.Series(returns).kurtosis())
+        }
+    
+    def get_monthly_performance(self) -> pd.DataFrame:
+        """Get monthly performance breakdown"""
+        if not self.trade_results:
+            return pd.DataFrame()
+        
+        # Create DataFrame from trades
+        trades_data = [
+            {
+                'date': t.exit_time,
+                'pnl': t.pnl,
+                'pnl_percent': t.pnl_percent,
+                'outcome': t.outcome
+            }
+            for t in self.trade_results
+        ]
+        
+        df = pd.DataFrame(trades_data)
+        df['date'] = pd.to_datetime(df['date'])
+        df['year_month'] = df['date'].dt.to_period('M')
+        
+        # Group by month
+        monthly = df.groupby('year_month').agg({
+            'pnl': 'sum',
+            'pnl_percent': 'sum',
+            'outcome': 'count'
+        }).rename(columns={'outcome': 'trades'})
+        
+        # Calculate win rate per month
+        wins_per_month = df[df['outcome'] == 'WIN'].groupby('year_month').size()
+        monthly['win_rate'] = (wins_per_month / monthly['trades'] * 100).fillna(0)
+        
+        return monthly
+    
+    # ========================================================================
+    # REPORTING
+    # ========================================================================
+    
+    def generate_performance_report(self) -> str:
+        """Generate comprehensive performance report"""
+        metrics = self.calculate_metrics()
+        
+        report = f"""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      DEMIR AI PERFORMANCE REPORT                             ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  📊 TRADING STATISTICS                                                       ║
+║  ═══════════════════                                                         ║
+║  Total Signals:          {metrics.total_signals:>10,}                                    ║
+║  Total Trades:           {metrics.total_trades:>10,}                                    ║
+║  Winning Trades:         {metrics.winning_trades:>10,}  ({metrics.win_rate:>5.1f}%)                    ║
+║  Losing Trades:          {metrics.losing_trades:>10,}  ({metrics.loss_rate:>5.1f}%)                    ║
+║                                                                              ║
+║  💰 PROFIT & LOSS                                                            ║
+║  ════════════════                                                            ║
+║  Total P&L:              ${metrics.total_pnl:>10,.2f}                                  ║
+║  Total P&L %:            {metrics.total_pnl_percent:>10.2f}%                                  ║
+║  Average Win:            ${metrics.average_win:>10,.2f}                                  ║
+║  Average Loss:           ${metrics.average_loss:>10,.2f}                                  ║
+║  Largest Win:            ${metrics.largest_win:>10,.2f}                                  ║
+║  Largest Loss:           ${metrics.largest_loss:>10,.2f}                                  ║
+║                                                                              ║
+║  📈 RISK METRICS                                                             ║
+║  ═══════════════                                                             ║
+║  Avg R:R Achieved:       {metrics.average_rr_achieved:>10.2f}                                    ║
+║  Profit Factor:          {metrics.profit_factor:>10.2f}                                    ║
+║  Sharpe Ratio:           {metrics.sharpe_ratio:>10.2f}                                    ║
+║  Max Drawdown:           ${metrics.max_drawdown:>10,.2f}  ({metrics.max_drawdown_percent:>5.1f}%)                ║
+║  Recovery Factor:        {metrics.recovery_factor:>10.2f}                                    ║
+║                                                                              ║
+║  🎯 ACCURACY BY CONFIDENCE                                                   ║
+║  ═════════════════════                                                       ║
+║  High Confidence (>85%): {metrics.high_confidence_accuracy:>10.1f}%                                  ║
+║  Medium Conf (75-85%):   {metrics.medium_confidence_accuracy:>10.1f}%                                  ║
+║                                                                              ║
+║  🧠 GROUP PERFORMANCE                                                        ║
+║  ════════════════════                                                        ║
+║  Technical Analysis:     {metrics.tech_group_accuracy:>10.1f}%                                  ║
+║  Sentiment Analysis:     {metrics.sentiment_group_accuracy:>10.1f}%                                  ║
+║  ML Models:              {metrics.ml_group_accuracy:>10.1f}%                                  ║
+║  On-Chain Data:          {metrics.onchain_group_accuracy:>10.1f}%                                  ║
+║  Macro/Risk:             {metrics.macro_risk_group_accuracy:>10.1f}%                                  ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+"""
         return report
     
-    def close(self):
-        """Close database connection"""
-        if self.connection:
-            self.connection.close()
-            logger.info("✅ Database connection closed")
-
-# ============================================================================
-# MAIN ENTRY POINT
-# ============================================================================
-
-if __name__ == '__main__':
-    analytics = PerformanceAnalytics(os.getenv('DATABASE_URL'))
-    report = analytics.generate_comprehensive_report(days=7)
+    # ========================================================================
+    # DATA EXPORT
+    # ========================================================================
     
-    print(json.dumps(report, indent=2, default=str))
+    def export_trades_csv(self, filename: str = 'trades_export.csv'):
+        """Export all trades to CSV"""
+        if not self.trade_results:
+            logger.warning("No trades to export")
+            return
+        
+        df = pd.DataFrame([t.to_dict() for t in self.trade_results])
+        df.to_csv(filename, index=False)
+        logger.info(f"Exported {len(df)} trades to {filename}")
     
-    analytics.close()
-
+    def get_trade_history(
+        self,
+        limit: int = 100,
+        symbol: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get trade history
+        
+        Args:
+            limit: Maximum trades to return
+            symbol: Filter by symbol (optional)
+        
+        Returns:
+            List of trade dictionaries
+        """
+        trades = self.trade_results
+        
+        # Filter by symbol if specified
+        if symbol:
+            trades = [t for t in trades if t.symbol == symbol]
+        
+        # Sort by exit time (most recent first)
+        trades = sorted(trades, key=lambda t: t.exit_time, reverse=True)
+        
+        # Limit
+        trades = trades[:limit]
+        
+        return [t.to_dict() for t in trades]
