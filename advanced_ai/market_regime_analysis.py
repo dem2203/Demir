@@ -1,4 +1,3 @@
-```python
 import numpy as np
 from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
