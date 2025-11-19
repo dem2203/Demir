@@ -1,30 +1,57 @@
-# .dockerignore - Reduce image size
-.git
+# .dockerignore - DEMIR AI v7.0
+# Only ignore what's unnecessary
+
+# Git files
+.git/
 .gitignore
-.pytest_cache
-__pycache__
+.github/
+
+# Python cache
+__pycache__/
 *.pyc
 *.pyo
-*.egg-info
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files (keep .env.example)
 .env.local
 .env.development
-node_modules
-dist
-build
-*.log
-.DS_Store
-.vscode
-.idea
-tests
-docs
-*.md
-*.txt
-!requirements.txt
-*.jpg
-*.png
-*.gif
-.github
-.railway
-railway.json
+
+# Build artifacts
+dist/
+build/
+node_modules/
+
+# Documentation (optional - keep if you want)
+docs/
+tests/
+
+# Docker files (to prevent recursion)
 Dockerfile
 docker-compose.yml
+.dockerignore
+
+# Railway specific
+.railway/
+railway.json
