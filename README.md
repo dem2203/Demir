@@ -11,7 +11,6 @@
 📊 **GitHub Repository:** [https://github.com/dem2203/Demir](https://github.com/dem2203/Demir)
 
 ---
-
 ## 📋 İçindekiler
 
 - [Özellikler](#-özellikler)
