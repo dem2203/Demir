@@ -331,7 +331,7 @@ class DemirAIAdvisor:
                 logger.error("Fatal error in DemirAIAdvisor iteration #%d: %s", iteration, e)
             time.sleep(self.config.scan_interval_seconds)
 
-    # ------------------------- DB tabanlı fırsatlar ------------------------
+       # ------------------------- DB tabanlı fırsatlar ------------------------
 
     def get_db_opportunities_for_api(self, limit: int = 20) -> List[Dict]:
         """
@@ -341,6 +341,15 @@ class DemirAIAdvisor:
         if not self.advisor_service:
             logger.warning("AdvisorOpportunityService not set in DemirAIAdvisor")
             return []
-
+        
         opps = self.advisor_service.get_top_opportunities(limit=limit)
         return [o.to_dict() for o in opps]
+
+# ============================================================================
+# BACKWARD COMPATIBILITY ALIAS
+# ============================================================================
+
+# main.py'de "from advanced_ai.advisor_core import AdvisorCore" kullanıldığı için
+AdvisorCore = DemirAIAdvisor
+
+__all__ = ['DemirAIAdvisor', 'AdvisorCore', 'AdvisorConfig', 'LastPlanInfo']
