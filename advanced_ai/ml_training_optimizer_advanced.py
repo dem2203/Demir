@@ -1,9 +1,3 @@
-"""
-DEMIR AI BOT - ML Training Optimizer Advanced
-1000+ sample training with cross-validation
-Hyperparameter tuning and model versioning
-"""
-
 import logging
 from typing import Tuple, List, Dict, Any
 import numpy as np
