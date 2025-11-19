@@ -1,9 +1,3 @@
-"""
-DEMIR AI BOT - Layer Optimizer Intelligent
-Optimal layer selection from 71 to 40 (performance vs accuracy)
-Bayesian optimization and contribution analysis
-"""
-
 import logging
 from typing import Dict, List, Tuple, Set
 import numpy as np
