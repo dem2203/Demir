@@ -249,3 +249,4 @@ class LayerOptimizer:
                 errors.append(f"Critical layer missing: {critical}")
 
         return len(errors) == 0, errors
+
