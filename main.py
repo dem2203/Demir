@@ -36,6 +36,7 @@ from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
 from utils.signal_processor_advanced import AdvancedSignalProcessor
 from ui.data_fetcher_realtime import RealtimeDataFetcher
 from ui.telegram_tradeplan_notifier import TelegramTradePlanNotifier
+from analytics.advisor_opportunity_service import AdvisorOpportunityService
 
 # Add current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -759,6 +760,17 @@ db = None
 fetcher = None
 telegram = None
 signal_generator = None
+# AI Advisor Service (Trade Opportunities)
+advisor_service = None
+try:
+    if db:
+        advisor_service = AdvisorOpportunityService(db)
+        logger.info("✅ AdvisorOpportunityService initialized successfully")
+    else:
+        logger.warning("⚠️ AdvisorOpportunityService not initialized (db is None)")
+except Exception as e:
+    logger.error(f"❌ Failed to initialize AdvisorOpportunityService: {e}")
+    advisor_service = None
 
 try:
     logger.info("📊 Initializing DatabaseManager...")
@@ -826,6 +838,51 @@ def get_signals():
     except Exception as e:
         logger.error(f"❌ Error fetching signals: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/advisor/opportunities', methods=['GET'])
+def api_advisor_opportunities():
+    """
+    AI Advisor – En iyi trade fırsatlarını döndürür.
+    Sadece ÖNERİ: Bot trade açmaz, sadece plan üretir.
+    """
+    try:
+        logger.info("📡 API CALL: GET /api/advisor/opportunities")
+
+        if not advisor_service:
+            logger.error("Advisor service not available")
+            return jsonify({
+                'status': 'error',
+                'message': 'Advisor service not available'
+            }), 503
+
+        limit = request.args.get('limit', 20, type=int)
+        min_conf = request.args.get('min_confidence', 0.65, type=float)
+        min_ensemble = request.args.get('min_ensemble', 0.60, type=float)
+
+        opportunities = advisor_service.get_top_opportunities(
+            limit=limit,
+            min_confidence=min_conf,
+            min_ensemble=min_ensemble
+        )
+
+        data = [opp.to_dict() for opp in opportunities]
+
+        logger.info(f"✅ Returning {len(data)} advisor opportunities")
+        return jsonify({
+            'status': 'success',
+            'count': len(data),
+            'data': data,
+            'timestamp': datetime.now(pytz.UTC).isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Error in /api/advisor/opportunities: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 
 @app.route('/api/signals/process', methods=['POST'])
