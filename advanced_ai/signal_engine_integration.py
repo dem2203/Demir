@@ -43,8 +43,10 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-# Technical indicators
-import talib
+# Technical indicators - TA library (TA-Lib alternative)
+from ta.momentum import RSIIndicator, StochasticOscillator
+from ta.trend import MACD, SMAIndicator, ADXIndicator, CCIIndicator, IchimokuIndicator
+from ta.volatility import BollingerBands, AverageTrueRange
 
 # Import data fetcher and validators
 from integrations.multi_exchange_api import MultiExchangeDataFetcher
@@ -423,7 +425,8 @@ class SignalGroupOrchestrator:
     def _calculate_rsi_score(self, df: pd.DataFrame) -> float:
         """Calculate RSI-based score"""
         try:
-            rsi = talib.RSI(df['close'], timeperiod=14)
+            rsi_indicator = RSIIndicator(close=df['close'], window=14)
+            rsi = rsi_indicator.rsi()
             current_rsi = rsi.iloc[-1]
             
             # Score based on RSI levels
@@ -443,7 +446,10 @@ class SignalGroupOrchestrator:
     def _calculate_macd_score(self, df: pd.DataFrame) -> float:
         """Calculate MACD-based score"""
         try:
-            macd, signal, hist = talib.MACD(df['close'])
+            macd_indicator = MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
+            macd = macd_indicator.macd()
+            signal = macd_indicator.macd_signal()
+            hist = macd_indicator.macd_diff()
             
             current_macd = macd.iloc[-1]
             current_signal = signal.iloc[-1]
@@ -465,19 +471,19 @@ class SignalGroupOrchestrator:
     def _calculate_bb_score(self, df: pd.DataFrame) -> float:
         """Calculate Bollinger Bands score"""
         try:
-            upper, middle, lower = talib.BBANDS(df['close'], timeperiod=20)
+            bb = BollingerBands(close=df['close'], window=20, window_dev=2)
             
             current_price = df['close'].iloc[-1]
-            current_upper = upper.iloc[-1]
-            current_lower = lower.iloc[-1]
-            current_middle = middle.iloc[-1]
+            upper = bb.bollinger_hband().iloc[-1]
+            lower = bb.bollinger_lband().iloc[-1]
+            middle = bb.bollinger_mavg().iloc[-1]
             
             # Calculate position in bands
-            band_range = current_upper - current_lower
+            band_range = upper - lower
             if band_range == 0:
                 return 0.5
             
-            position = (current_price - current_lower) / band_range
+            position = (current_price - lower) / band_range
             
             # Near lower band = bullish (oversold)
             if position < 0.2:
@@ -496,8 +502,11 @@ class SignalGroupOrchestrator:
     def _calculate_ma_score(self, df: pd.DataFrame) -> float:
         """Calculate Moving Averages score"""
         try:
-            ma_fast = talib.SMA(df['close'], timeperiod=50)
-            ma_slow = talib.SMA(df['close'], timeperiod=200)
+            ma_fast_indicator = SMAIndicator(close=df['close'], window=50)
+            ma_slow_indicator = SMAIndicator(close=df['close'], window=200)
+            
+            ma_fast = ma_fast_indicator.sma_indicator()
+            ma_slow = ma_slow_indicator.sma_indicator()
             
             current_price = df['close'].iloc[-1]
             current_ma_fast = ma_fast.iloc[-1]
@@ -523,12 +532,9 @@ class SignalGroupOrchestrator:
     def _calculate_stochastic_score(self, df: pd.DataFrame) -> float:
         """Calculate Stochastic score"""
         try:
-            slowk, slowd = talib.STOCH(
-                df['high'], df['low'], df['close'],
-                fastk_period=14, slowk_period=3, slowd_period=3
-            )
-            
-            current_k = slowk.iloc[-1]
+            stoch = StochasticOscillator(high=df['high'], low=df['low'], close=df['close'], window=14, smooth_window=3)
+            stoch_k = stoch.stoch()
+            current_k = stoch_k.iloc[-1]
             
             # Oversold (bullish)
             if current_k < 20:
@@ -547,7 +553,8 @@ class SignalGroupOrchestrator:
     def _calculate_atr_score(self, df: pd.DataFrame) -> float:
         """Calculate ATR (volatility) score"""
         try:
-            atr = talib.ATR(df['high'], df['low'], df['close'], timeperiod=14)
+            atr_indicator = AverageTrueRange(high=df['high'], low=df['low'], close=df['close'], window=14)
+            atr = atr_indicator.average_true_range()
             current_atr = atr.iloc[-1]
             avg_atr = atr.mean()
             
@@ -564,7 +571,8 @@ class SignalGroupOrchestrator:
     def _calculate_adx_score(self, df: pd.DataFrame) -> float:
         """Calculate ADX (trend strength) score"""
         try:
-            adx = talib.ADX(df['high'], df['low'], df['close'], timeperiod=14)
+            adx_indicator = ADXIndicator(high=df['high'], low=df['low'], close=df['close'], window=14)
+            adx = adx_indicator.adx()
             current_adx = adx.iloc[-1]
             
             # Strong trend (>25) is favorable
@@ -580,7 +588,8 @@ class SignalGroupOrchestrator:
     def _calculate_cci_score(self, df: pd.DataFrame) -> float:
         """Calculate CCI score"""
         try:
-            cci = talib.CCI(df['high'], df['low'], df['close'], timeperiod=20)
+            cci_indicator = CCIIndicator(high=df['high'], low=df['low'], close=df['close'], window=20)
+            cci = cci_indicator.cci()
             current_cci = cci.iloc[-1]
             
             # Oversold (bullish)
@@ -656,21 +665,25 @@ class SignalGroupOrchestrator:
     def _calculate_candlestick_score(self, df: pd.DataFrame) -> float:
         """Calculate candlestick pattern score"""
         try:
-            # Check for bullish patterns
-            hammer = talib.CDLHAMMER(df['open'], df['high'], df['low'], df['close'])
-            engulfing = talib.CDLENGULFING(df['open'], df['high'], df['low'], df['close'])
-            morning_star = talib.CDLMORNINGSTAR(df['open'], df['high'], df['low'], df['close'])
+            # Simple candlestick pattern detection
+            recent_candles = df.tail(3)
             
-            # Recent patterns (last 3 candles)
-            recent_hammer = hammer.tail(3).sum()
-            recent_engulfing = engulfing.tail(3).sum()
-            recent_morning = morning_star.tail(3).sum()
+            # Calculate simple bullish/bearish patterns
+            bullish_count = 0
+            bearish_count = 0
             
-            bullish_score = recent_hammer + recent_engulfing + recent_morning
+            for idx in range(len(recent_candles)):
+                candle = recent_candles.iloc[idx]
+                body = candle['close'] - candle['open']
+                
+                if body > 0:  # Bullish candle
+                    bullish_count += 1
+                elif body < 0:  # Bearish candle
+                    bearish_count += 1
             
-            if bullish_score > 0:
+            if bullish_count > bearish_count:
                 return 0.65
-            elif bullish_score < 0:
+            elif bearish_count > bullish_count:
                 return 0.35
             else:
                 return 0.5
