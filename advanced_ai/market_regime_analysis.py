@@ -100,6 +100,7 @@ class HiddenMarkovModelTrading:
         """Fit HMM to returns"""
         self.hmm.fit(returns.reshape(-1, 1))
         logger.info("✅ HMM fitted")
+        
     
     def get_hidden_states(self, returns: np.ndarray) -> np.ndarray:
         """Get hidden states for returns"""
