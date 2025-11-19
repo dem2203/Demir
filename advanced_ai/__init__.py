@@ -5,14 +5,6 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CENTRALIZED IMPORTS FOR BACKWARD COMPATIBILITY
-
-All class names and imports are managed here to prevent name mismatches
-between main.py expectations and actual class definitions.
-
-DEPLOYMENT: Railway Production
-AUTHOR: DEMIR AI Research Team
-DATE: 2025-11-19
-VERSION: 7.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -32,11 +24,12 @@ except ImportError as e:
     SignalGroupOrchestrator = None
 
 # ============================================================================
-# ADVISOR CORE (Main orchestrator)
+# ADVISOR CORE
 # ============================================================================
 
 try:
-    from .advisor_core import DemirAIAdvisor, AdvisorCore, AdvisorConfig
+    from .advisor_core import DemirAIAdvisor, AdvisorConfig
+    AdvisorCore = DemirAIAdvisor  # Alias
     logger.debug("✅ AdvisorCore imported")
 except ImportError as e:
     logger.warning(f"⚠️  AdvisorCore import failed: {e}")
@@ -49,63 +42,13 @@ except ImportError as e:
 # ============================================================================
 
 try:
-    from .regime_detector import RegimeDetector, MarketRegimeDetector
+    from .regime_detector import RegimeDetector
+    MarketRegimeDetector = RegimeDetector  # Alias
     logger.debug("✅ MarketRegimeDetector imported")
 except ImportError as e:
     logger.warning(f"⚠️  MarketRegimeDetector import failed: {e}")
     RegimeDetector = None
     MarketRegimeDetector = None
-
-# ============================================================================
-# CAUSALITY & INFERENCE
-# ============================================================================
-
-try:
-    from .causality_inference import CausalInference
-    logger.debug("✅ CausalInference imported")
-except ImportError as e:
-    logger.warning(f"⚠️  CausalInference import failed: {e}")
-    CausalInference = None
-
-# ============================================================================
-# LSTM TRAINING
-# ============================================================================
-
-try:
-    from .lstm_trainer import LSTMTrainer
-    logger.debug("✅ LSTMTrainer imported")
-except ImportError as e:
-    logger.warning(f"⚠️  LSTMTrainer import failed: {e}")
-    LSTMTrainer = None
-
-# ============================================================================
-# LAYER OPTIMIZATION
-# ============================================================================
-
-try:
-    from .layer_optimizer import LayerOptimizer
-    logger.debug("✅ LayerOptimizer imported")
-except ImportError as e:
-    logger.warning(f"⚠️  LayerOptimizer import failed: {e}")
-    LayerOptimizer = None
-
-try:
-    from .layer_optimizer_intelligent import IntelligentLayerOptimizer
-    logger.debug("✅ IntelligentLayerOptimizer imported")
-except ImportError as e:
-    logger.warning(f"⚠️  IntelligentLayerOptimizer import failed: {e}")
-    IntelligentLayerOptimizer = None
-
-# ============================================================================
-# MARKET REGIME ANALYSIS
-# ============================================================================
-
-try:
-    from .market_regime_analysis import MarketRegimeAnalyzer
-    logger.debug("✅ MarketRegimeAnalyzer imported")
-except ImportError as e:
-    logger.warning(f"⚠️  MarketRegimeAnalyzer import failed: {e}")
-    MarketRegimeAnalyzer = None
 
 # ============================================================================
 # OPPORTUNITY ENGINE
@@ -120,35 +63,58 @@ except ImportError as e:
     TradePlan = None
 
 # ============================================================================
-# ADVISOR CORE
+# OPTIONAL MODULES (Allow failures)
 # ============================================================================
 
+# Causality
 try:
-    from .advisor_core import DemirAIAdvisor as AdvisorCore_Class
-    AdvisorCore = AdvisorCore_Class
-    logger.debug("✅ AdvisorCore aliased")
-except ImportError as e:
-    logger.warning(f"⚠️  AdvisorCore alias failed: {e}")
+    from .causality_inference import CausalInference
+    logger.debug("✅ CausalInference imported")
+except (ImportError, SyntaxError) as e:
+    logger.warning(f"⚠️  CausalInference import failed: {e}")
+    CausalInference = None
 
-# ============================================================================
-# ML TRAINING OPTIMIZER
-# ============================================================================
+# LSTM Trainer
+try:
+    from .lstm_trainer import LSTMTrainer
+    logger.debug("✅ LSTMTrainer imported")
+except (ImportError, SyntaxError) as e:
+    logger.warning(f"⚠️  LSTMTrainer import failed: {e}")
+    LSTMTrainer = None
 
+# Layer Optimizer
+try:
+    from .layer_optimizer import LayerOptimizer
+    logger.debug("✅ LayerOptimizer imported")
+except (ImportError, SyntaxError) as e:
+    logger.warning(f"⚠️  LayerOptimizer import failed: {e}")
+    LayerOptimizer = None
+
+# Intelligent Layer Optimizer
+try:
+    from .layer_optimizer_intelligent import IntelligentLayerOptimizer
+    logger.debug("✅ IntelligentLayerOptimizer imported")
+except (ImportError, SyntaxError) as e:
+    logger.warning(f"⚠️  IntelligentLayerOptimizer import failed: {e}")
+    IntelligentLayerOptimizer = None
+
+# Market Regime Analyzer - DISABLED (Syntax error)
+MarketRegimeAnalyzer = None
+logger.warning("⚠️  MarketRegimeAnalyzer disabled due to syntax error in file")
+
+# ML Training Optimizer
 try:
     from .ml_training_optimizer_advanced import MLTrainingOptimizerAdvanced
     logger.debug("✅ MLTrainingOptimizerAdvanced imported")
-except ImportError as e:
+except (ImportError, SyntaxError) as e:
     logger.warning(f"⚠️  MLTrainingOptimizerAdvanced import failed: {e}")
     MLTrainingOptimizerAdvanced = None
 
-# ============================================================================
-# DEEP LEARNING MODELS
-# ============================================================================
-
+# Deep Learning Models
 try:
     from .deep_learning_models import DeepLearningModels
     logger.debug("✅ DeepLearningModels imported")
-except ImportError as e:
+except (ImportError, SyntaxError) as e:
     logger.warning(f"⚠️  DeepLearningModels import failed: {e}")
     DeepLearningModels = None
 
@@ -157,34 +123,20 @@ except ImportError as e:
 # ============================================================================
 
 __all__ = [
-    # Signal generation
     'SignalGroupOrchestrator',
-    
-    # Advisor core
     'AdvisorCore',
     'DemirAIAdvisor',
     'AdvisorConfig',
-    
-    # Market regime
     'MarketRegimeDetector',
     'RegimeDetector',
-    'MarketRegimeAnalyzer',
-    
-    # Causality & inference
+    'OpportunityEngine',
+    'TradePlan',
     'CausalInference',
-    
-    # Training & optimization
     'LSTMTrainer',
     'LayerOptimizer',
     'IntelligentLayerOptimizer',
     'MLTrainingOptimizerAdvanced',
-    
-    # Opportunities
-    'OpportunityEngine',
-    'TradePlan',
-    
-    # Deep learning
     'DeepLearningModels',
 ]
 
-logger.info("✅ advanced_ai module initialized with centralized imports")
+logger.info("✅ advanced_ai module initialized")
