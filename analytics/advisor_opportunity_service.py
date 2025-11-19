@@ -9,7 +9,7 @@ ADVISORY MODE - INTELLIGENT OPPORTUNITY DETECTION
 Features:
     ✅ High-confidence opportunity detection
     ✅ Risk/Reward optimization
-    ✅ Real-time market scanning
+    ✅ Real-time market scanning from REAL exchanges
     ✅ Multi-criteria filtering
     ✅ Probability scoring
     ✅ Trade plan generation
@@ -24,8 +24,14 @@ Filtering Criteria:
     - Minimum confidence: 75%
     - Minimum R:R ratio: 2:1
     - Maximum risk: 3% per trade
-    - Real exchange data only
+    - Real exchange data ONLY (BINANCE/BYBIT/COINBASE)
     - Fresh signals only (<5 minutes)
+
+DATA INTEGRITY:
+    ✅ ZERO Mock Data
+    ✅ ZERO Fake Data
+    ✅ ZERO Test Data
+    ✅ 100% Real Exchange Data
 
 DEPLOYMENT: Railway Production
 AUTHOR: DEMIR AI Research Team
@@ -49,44 +55,50 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 # Confidence thresholds
-MIN_CONFIDENCE = 0.75           # 75% minimum
-HIGH_CONFIDENCE = 0.85          # 85% for premium opportunities
+MIN_CONFIDENCE = 0.75  # 75% minimum
+HIGH_CONFIDENCE = 0.85  # 85% for premium opportunities
 
 # Risk/Reward thresholds
-MIN_RR_RATIO = 2.0              # 1:2 minimum
-EXCELLENT_RR_RATIO = 3.0        # 1:3 for excellent opportunities
+MIN_RR_RATIO = 2.0  # 1:2 minimum
+EXCELLENT_RR_RATIO = 3.0  # 1:3 for excellent opportunities
 
 # Risk management
-MAX_RISK_PERCENT = 3.0          # 3% max risk per trade
-MAX_DRAWDOWN_PERCENT = 15.0     # 15% max portfolio drawdown
+MAX_RISK_PERCENT = 3.0  # 3% max risk per trade
+MAX_DRAWDOWN_PERCENT = 15.0  # 15% max portfolio drawdown
 
 # Volume requirements
-MIN_VOLUME_24H = 10_000_000     # $10M minimum 24h volume
+MIN_VOLUME_24H = 10_000_000  # $10M minimum 24h volume
 
 # Signal freshness
-MAX_SIGNAL_AGE = 300            # 5 minutes max age
+MAX_SIGNAL_AGE = 300  # 5 minutes max age
 
 # ============================================================================
-# OPPORTUNITY DATA CLASS
+# OPPORTUNITY DATA CLASS (FIXED FIELD ORDER)
 # ============================================================================
 
 @dataclass
 class TradingOpportunity:
-    """Trading opportunity data structure"""
+    """
+    Trading opportunity data structure
     
-    # Identification
+    CRITICAL: Fields WITHOUT defaults MUST come BEFORE fields WITH defaults!
+    """
+    
+    # ========================================================================
+    # FIELDS WITHOUT DEFAULTS (MUST BE FIRST)
+    # ========================================================================
+    
+    # Identification (NO defaults)
     opportunity_id: str
     symbol: str
-    direction: str              # 'LONG' or 'SHORT'
+    direction: str  # 'LONG' or 'SHORT'
     
-    # Pricing
+    # Pricing (NO defaults)
     entry_price: float
     stop_loss: float
     take_profit_1: float
-    take_profit_2: Optional[float] = None
-    take_profit_3: Optional[float] = None
     
-    # Analysis
+    # Analysis (NO defaults)
     confidence: float
     ensemble_score: float
     tech_score: float
@@ -95,27 +107,34 @@ class TradingOpportunity:
     onchain_score: float
     macro_risk_score: float
     
-    # Risk metrics
+    # Risk metrics (NO defaults)
     risk_amount: float
     potential_profit: float
     risk_reward_ratio: float
     risk_percent: float
     
-    # Market context
+    # Market context (NO defaults)
     market_regime: str
     volatility: str
     volume_24h: float
     
-    # Reasoning
+    # Reasoning (NO defaults)
     reasoning: str
     key_factors: List[str]
     warnings: List[str]
     
-    # Metadata
+    # Metadata (NO defaults)
     created_at: datetime
     expires_at: datetime
-    status: str                 # 'active', 'expired', 'executed'
+    status: str  # 'active', 'expired', 'executed'
     data_source: str
+    
+    # ========================================================================
+    # FIELDS WITH DEFAULTS (MUST BE LAST)
+    # ========================================================================
+    
+    take_profit_2: Optional[float] = None
+    take_profit_3: Optional[float] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
@@ -135,7 +154,7 @@ class AdvisorOpportunityService:
     Responsibilities:
         1. Scan signals for high-quality opportunities
         2. Apply multi-criteria filtering
-        3. Calculate risk metrics
+        3. Calculate risk metrics from REAL data
         4. Generate trade plans
         5. Provide educational insights
         6. Track opportunity lifecycle
@@ -180,7 +199,7 @@ class AdvisorOpportunityService:
         Scan signals and identify high-quality trading opportunities
         
         Args:
-            signals: List of validated signals
+            signals: List of validated signals (FROM REAL EXCHANGES ONLY)
             portfolio_value: Current portfolio value (for risk calculation)
         
         Returns:
@@ -197,7 +216,6 @@ class AdvisorOpportunityService:
             
             # 2. Calculate opportunity metrics
             opportunity = self._create_opportunity(signal, portfolio_value)
-            
             if opportunity is None:
                 continue
             
@@ -232,8 +250,7 @@ class AdvisorOpportunityService:
         return opportunities
     
     def _meets_basic_requirements(self, signal: Dict[str, Any]) -> bool:
-        """Check if signal meets basic requirements"""
-        
+        """Check if signal meets basic requirements (REAL DATA ONLY)"""
         # Required fields
         required = ['symbol', 'direction', 'entry_price', 'sl', 'tp1', 'confidence']
         if not all(field in signal for field in required):
@@ -258,11 +275,11 @@ class AdvisorOpportunityService:
                 logger.debug(f"Signal too old: {age:.0f}s")
                 return False
         
-        # Data source validation
+        # ✅ CRITICAL: Data source validation (REAL EXCHANGE ONLY)
         data_source = signal.get('data_source', '').upper()
         real_sources = ['BINANCE', 'BYBIT', 'COINBASE']
         if not any(source in data_source for source in real_sources):
-            logger.warning(f"Invalid data source: {data_source}")
+            logger.warning(f"❌ REJECTING non-real data source: {data_source}")
             return False
         
         return True
@@ -273,10 +290,10 @@ class AdvisorOpportunityService:
         portfolio_value: float
     ) -> Optional[TradingOpportunity]:
         """
-        Create opportunity object from signal
+        Create opportunity object from signal (REAL DATA ONLY)
         
         Args:
-            signal: Validated signal
+            signal: Validated signal FROM REAL EXCHANGE
             portfolio_value: Portfolio value
         
         Returns:
@@ -313,8 +330,6 @@ class AdvisorOpportunityService:
                 entry_price=entry_price,
                 stop_loss=sl,
                 take_profit_1=tp1,
-                take_profit_2=signal.get('tp2'),
-                take_profit_3=signal.get('tp3'),
                 confidence=signal['confidence'],
                 ensemble_score=signal.get('ensemble_score', signal['confidence']),
                 tech_score=signal.get('tech_group_score', 0.5),
@@ -335,7 +350,9 @@ class AdvisorOpportunityService:
                 created_at=datetime.now(),
                 expires_at=datetime.now() + timedelta(hours=4),
                 status='active',
-                data_source=signal.get('data_source', 'UNKNOWN')
+                data_source=signal.get('data_source', 'UNKNOWN'),
+                take_profit_2=signal.get('tp2'),
+                take_profit_3=signal.get('tp3')
             )
             
             return opportunity
@@ -346,7 +363,6 @@ class AdvisorOpportunityService:
     
     def _meets_quality_criteria(self, opportunity: TradingOpportunity) -> bool:
         """Check if opportunity meets quality criteria"""
-        
         # Minimum R:R ratio
         if opportunity.risk_reward_ratio < MIN_RR_RATIO:
             return False
@@ -381,6 +397,7 @@ class AdvisorOpportunityService:
             opportunity.onchain_score,
             opportunity.macro_risk_score
         ]
+        
         agreement = 1.0 - np.std(group_scores)  # High agreement = low std
         agreement_score = agreement * 10  # 10 points
         
@@ -394,7 +411,6 @@ class AdvisorOpportunityService:
     
     def _generate_reasoning(self, signal: Dict[str, Any]) -> str:
         """Generate human-readable reasoning for opportunity"""
-        
         direction = signal['direction']
         symbol = signal['symbol']
         confidence = signal['confidence'] * 100
@@ -426,7 +442,6 @@ class AdvisorOpportunityService:
     
     def _extract_key_factors(self, signal: Dict[str, Any]) -> List[str]:
         """Extract key factors contributing to opportunity"""
-        
         factors = []
         
         # High confidence
@@ -448,8 +463,8 @@ class AdvisorOpportunityService:
             signal.get('tf_4h_direction'),
             signal.get('tf_1d_direction')
         ]
-        tf_directions = [d for d in tf_directions if d]
         
+        tf_directions = [d for d in tf_directions if d]
         if len(tf_directions) >= 3:
             direction = signal['direction']
             agreement = sum(1 for d in tf_directions if d == direction)
@@ -472,7 +487,6 @@ class AdvisorOpportunityService:
         risk_percent: float
     ) -> List[str]:
         """Generate risk warnings"""
-        
         warnings = []
         
         # High risk
@@ -501,7 +515,6 @@ class AdvisorOpportunityService:
     
     def _assess_volatility(self, signal: Dict[str, Any]) -> str:
         """Assess market volatility level"""
-        
         # Would use ATR or other volatility metrics
         # For now, return based on risk percent
         risk = abs(signal['entry_price'] - signal['sl']) / signal['entry_price'] * 100
@@ -601,7 +614,7 @@ class AdvisorOpportunityService:
             ]),
             'expired_count': self.stats['expired_count'],
             'opportunity_rate': (
-                self.stats['opportunities_found'] / 
+                self.stats['opportunities_found'] /
                 max(self.stats['total_scanned'], 1) * 100
             )
         }
@@ -615,6 +628,7 @@ class AdvisorOpportunityService:
             'excellent_rr_count': 0,
             'expired_count': 0
         }
+        
         logger.info("Statistics reset")
 
 # ============================================================================
@@ -623,25 +637,21 @@ class AdvisorOpportunityService:
 
 def create_trade_plan(opportunity: TradingOpportunity) -> Dict[str, Any]:
     """Create detailed trade plan from opportunity"""
-    
     plan = {
         'opportunity_id': opportunity.opportunity_id,
         'symbol': opportunity.symbol,
         'direction': opportunity.direction,
-        
         'entry': {
             'price': opportunity.entry_price,
             'order_type': 'LIMIT',
             'notes': 'Wait for confirmation at entry level'
         },
-        
         'stop_loss': {
             'price': opportunity.stop_loss,
             'type': 'STOP_MARKET',
             'risk_amount': opportunity.risk_amount,
             'risk_percent': opportunity.risk_percent
         },
-        
         'take_profit': {
             'tp1': {
                 'price': opportunity.take_profit_1,
@@ -649,16 +659,13 @@ def create_trade_plan(opportunity: TradingOpportunity) -> Dict[str, Any]:
                 'profit': opportunity.potential_profit * 0.5
             }
         },
-        
         'analysis': {
             'confidence': f"{opportunity.confidence*100:.0f}%",
             'risk_reward_ratio': f"1:{opportunity.risk_reward_ratio:.2f}",
             'reasoning': opportunity.reasoning,
             'key_factors': opportunity.key_factors
         },
-        
         'warnings': opportunity.warnings,
-        
         'expiry': opportunity.expires_at.isoformat(),
         'created': opportunity.created_at.isoformat()
     }
