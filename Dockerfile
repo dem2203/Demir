@@ -1,6 +1,5 @@
-# Dockerfile - DEMIR AI v6.0 - DASHBOARD & FRONTEND FIXED
-# Build: Railway auto-detects and builds
-# Includes: Frontend files (HTML/CSS/JS) + Python Backend
+# Dockerfile - DEMIR AI v7.0 - PRODUCTION READY
+# Railway auto-detects and builds
 
 FROM python:3.12-slim
 
@@ -11,21 +10,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ libpq-dev curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy frontend files FIRST (HTML, CSS, JS)
-COPY index.html .
-COPY app.js .
-COPY style.css .
-
-# Copy requirements and install
+# Copy requirements and install first (for caching)
 COPY requirements.txt .
 RUN pip install --default-timeout=1000 --retries 5 -r requirements.txt
 
-# Copy Python backend files
-COPY main.py ai_brain_ensemble.py ./
-
-# Copy additional config files (if exists)
-COPY config.py .
-COPY ai_brain_ensemble.py .
+# Copy ALL application files and folders
+COPY . .
 
 # Create runtime directories
 RUN mkdir -p /app/logs /app/data /app/models /app/config
