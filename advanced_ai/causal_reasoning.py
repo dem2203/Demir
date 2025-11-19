@@ -1,4 +1,3 @@
-```python
 import networkx as nx
 from itertools import combinations
 import numpy as np
