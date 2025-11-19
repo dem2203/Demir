@@ -94,11 +94,9 @@ from config import (
 )
 
 # Advanced AI Components
-from advanced_ai.signal_engine_integration import SignalGroupOrchestrator
+from advanced_ai import AdvisorCore, MarketRegimeDetector, SignalGroupOrchestrator
 from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
 from advanced_ai.advisor_core import AdvisorCore
-from advanced_ai.regime_detector import MarketRegimeDetector
-from advanced_ai.layer_optimizer import LayerOptimizer
 from advanced_ai.causal_reasoning import CausalReasoningEngine
 
 # Analytics Components
