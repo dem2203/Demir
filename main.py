@@ -25,6 +25,17 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import numpy as np
 from dotenv import load_dotenv
+# main.py başındaki importlar arasına ekle:
+from config import (
+    ADVISORY_MODE,
+    DEFAULT_TRACKED_SYMBOLS,
+    OPPORTUNITY_THRESHOLDS,
+)
+from advanced_ai.signal_engine_integration import SignalGroupOrchestrator
+from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
+from utils.signal_processor_advanced import AdvancedSignalProcessor
+from ui.data_fetcher_realtime import RealtimeDataFetcher
+from ui.telegram_tradeplan_notifier import TelegramTradePlanNotifier
 
 # Add current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -732,6 +743,12 @@ class Phase4SignalGenerator:
 app = Flask(__name__, static_folder=os.path.abspath('.'), static_url_path='/', template_folder=os.path.abspath('.'))
 app.config['JSON_SORT_KEYS'] = False
 CORS(app)  # Enable CORS
+# Advisor mode bileşenleri
+orchestrator = SignalGroupOrchestrator()
+opportunity_engine = OpportunityEngine()
+advanced_processor = AdvancedSignalProcessor(min_agreement=2)
+realtime_fetcher = RealtimeDataFetcher()
+telegram_tradeplan_notifier = TelegramTradePlanNotifier()
 
 logger.info("\n" + "=" * 100)
 logger.info("🚀 INITIALIZING FLASK APP")
@@ -1300,6 +1317,115 @@ def create_ai_metrics_table():
     except Exception as e:
         logger.error(f"Failed to create ai_metrics table: {e}")
 
+def process_symbol_for_opportunities(symbol: str):
+    """
+    Tek bir sembol için:
+    - Gerçek 15m OHLCV verisini çek
+    - 5 grup sinyalini üret (technical/sentiment/ml/onchain/risk)
+    - İleri sinyal işleme -> entry/sl/tp hesapla
+    - OpportunityEngine ile TradePlan üret
+    - Plan iyi ise Telegram'a gönder
+    """
+    if not ADVISORY_MODE:
+        # Yine de sadece advisor modda kullanıyoruz ama geleceğe hazırlık
+        logger.info(f"[ADVISOR] ADVISORY_MODE=False, process_symbol_for_opportunities skip")
+        return
+
+    try:
+        logger.info(f"\n[ADVISOR] 🔍 Scanning opportunities for {symbol}")
+
+        # 1) Gerçek veriyi çek (15m örnek)
+        ohlcv_15m = realtime_fetcher.get_ohlcv(symbol=symbol, interval="15m", limit=200)
+        if not ohlcv_15m:
+            logger.warning(f"[ADVISOR] No OHLCV data for {symbol}")
+            return
+
+        latest_price = float(ohlcv_15m[-1]["close"])
+
+        # 2) 5 grup skorlarını üret (SignalGroupOrchestrator zaten kendi içinde
+        #    technical/sentiment/ml/onchain/risk hesaplamayı biliyor)
+        group_result = orchestrator.orchestrate_group_signals(
+            symbol=symbol,
+            market_data={"15m": ohlcv_15m},
+        )
+
+        if not group_result:
+            logger.warning(f"[ADVISOR] No group_result for {symbol}")
+            return
+
+        # 3) İleri sinyal işleme ile entry/sl/tp çıkar
+        filtered_signal = advanced_processor.process_single_symbol(
+            symbol=symbol,
+            ohlcv_data=ohlcv_15m,
+            group_result=group_result,
+        )
+
+        # 4) (Opsiyonel) Multi-TF confluence bilgisi varsa buraya eklenebilir
+        multi_tf_info = None  # Şimdilik None, istersen ileride entegre ederiz
+
+        # 5) Trade plan üret
+        plan: Optional[TradePlan] = opportunity_engine.build_from_group_result(
+            symbol=symbol,
+            latest_price=latest_price,
+            group_result=group_result,
+            filtered_signal=filtered_signal,
+            multi_tf_info=multi_tf_info,
+        )
+
+        if not plan:
+            logger.info(f"[ADVISOR] No valid TradePlan for {symbol}")
+            return
+
+        # 6) TradePlan'ı logla ve Telegram'a gönder
+        logger.info(f"[ADVISOR] ✅ TradePlan: {plan.to_dict()}")
+
+        if plan.confidence >= OPPORTUNITY_THRESHOLDS["min_telegram_confidence"]:
+            telegram_tradeplan_notifier.send_trade_plan(plan)
+        else:
+            logger.info(
+                f"[ADVISOR] TradePlan confidence {plan.confidence:.2f} < "
+                f"min_telegram_confidence {OPPORTUNITY_THRESHOLDS['min_telegram_confidence']:.2f}, "
+                "only logged."
+            )
+
+    except Exception as e:
+        logger.error(f"[ADVISOR] Error in process_symbol_for_opportunities({symbol}): {e}")
+
+
+def advisor_loop():
+    """
+    7/24 çalışan, sadece fırsat tarayan loop.
+    Hiçbir zaman emir açmaz; sadece TradePlan üretir ve haber verir.
+    """
+    if not ADVISORY_MODE:
+        logger.info("advisor_loop disabled because ADVISORY_MODE=False")
+        return
+
+    logger.info("\n" + "=" * 80)
+    logger.info("🧠 Starting DEMIR AI Advisor Loop (NO AUTO TRADING)")
+    logger.info("=" * 80 + "\n")
+
+    iteration = 0
+    sleep_seconds = 300  # 5 dakika
+
+    while True:
+        try:
+            iteration += 1
+            logger.info(
+                f"\n[ADVISOR] 🔄 Advisor iteration #{iteration} "
+                f"for {len(DEFAULT_TRACKED_SYMBOLS)} symbols"
+            )
+
+            for symbol in DEFAULT_TRACKED_SYMBOLS:
+                process_symbol_for_opportunities(symbol)
+
+            logger.info(f"[ADVISOR] Sleeping {sleep_seconds} seconds...\n")
+            time.sleep(sleep_seconds)
+
+        except Exception as e:
+            logger.error(f"[ADVISOR] Fatal error in advisor_loop: {e}")
+            # Çok büyük hata olursa bile loop ölsün istemiyoruz, biraz uyuyup devam
+            time.sleep(60)
 
 if __name__ == '__main__':
     logger.info("\n" + "=" * 100)
@@ -1311,7 +1437,16 @@ if __name__ == '__main__':
     processing_thread = threading.Thread(target=main_loop, daemon=True)
     processing_thread.start()
     logger.info("✅ Processing thread started\n")
-    
+
+        # Start advisor loop thread (NO AUTO TRADING)
+    if ADVISORY_MODE:
+        logger.info("🧵 Starting advisor (opportunity) thread...")
+        advisor_thread = threading.Thread(target=advisor_loop, daemon=True)
+        advisor_thread.start()
+        logger.info("✅ Advisor thread started\n")
+    else:
+        logger.info("ADVISORY_MODE is False, advisor_loop not started")
+
     # Start Flask server
     port = int(os.getenv('PORT', 8000))
     logger.info(f"🌐 Starting Flask server on 0.0.0.0:{port}")
