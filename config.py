@@ -5,11 +5,11 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Central configuration management
-- Environment variables
-- API credentials
-- System parameters
-- Trading settings
-- Thresholds and limits
+    - Environment variables
+    - API credentials
+    - System parameters
+    - Trading settings
+    - Thresholds and limits
 
 SECURITY: All sensitive data from environment variables
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -74,9 +74,9 @@ REDIS_URL = os.getenv('REDIS_URL', None)
 REDIS_ENABLED = bool(REDIS_URL)
 
 # Cache TTL (seconds)
-CACHE_TTL_SHORT = 60        # 1 minute
-CACHE_TTL_MEDIUM = 300      # 5 minutes
-CACHE_TTL_LONG = 3600       # 1 hour
+CACHE_TTL_SHORT = 60     # 1 minute
+CACHE_TTL_MEDIUM = 300   # 5 minutes
+CACHE_TTL_LONG = 3600    # 1 hour
 
 # ============================================================================
 # BINANCE API CREDENTIALS
@@ -86,17 +86,17 @@ BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
 BINANCE_API_SECRET = os.getenv('BINANCE_API_SECRET', '')
 
 if not BINANCE_API_KEY or not BINANCE_API_SECRET:
-    print("⚠️  WARNING: Binance API credentials not configured")
+    print("⚠️ WARNING: Binance API credentials not configured")
     print("   Some features will be limited to public endpoints only")
 
 BINANCE_BASE_URL = "https://api.binance.com"
 BINANCE_WS_URL = "wss://stream.binance.com:9443"
-BINANCE_TESTNET = os.getenv('BINANCE_TESTNET', 'false').lower() == 'true'
 
+BINANCE_TESTNET = os.getenv('BINANCE_TESTNET', 'false').lower() == 'true'
 if BINANCE_TESTNET:
     BINANCE_BASE_URL = "https://testnet.binance.vision"
     BINANCE_WS_URL = "wss://testnet.binance.vision/ws"
-    print("⚠️  WARNING: Using Binance TESTNET")
+    print("⚠️ WARNING: Using Binance TESTNET")
 
 # ============================================================================
 # BYBIT API CREDENTIALS
@@ -104,10 +104,9 @@ if BINANCE_TESTNET:
 
 BYBIT_API_KEY = os.getenv('BYBIT_API_KEY', '')
 BYBIT_API_SECRET = os.getenv('BYBIT_API_SECRET', '')
-
 BYBIT_BASE_URL = "https://api.bybit.com"
-BYBIT_TESTNET = os.getenv('BYBIT_TESTNET', 'false').lower() == 'true'
 
+BYBIT_TESTNET = os.getenv('BYBIT_TESTNET', 'false').lower() == 'true'
 if BYBIT_TESTNET:
     BYBIT_BASE_URL = "https://api-testnet.bybit.com"
 
@@ -117,7 +116,6 @@ if BYBIT_TESTNET:
 
 COINBASE_API_KEY = os.getenv('COINBASE_API_KEY', '')
 COINBASE_API_SECRET = os.getenv('COINBASE_API_SECRET', '')
-
 COINBASE_BASE_URL = "https://api.pro.coinbase.com"
 
 # ============================================================================
@@ -126,11 +124,10 @@ COINBASE_BASE_URL = "https://api.pro.coinbase.com"
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', '')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-
 TELEGRAM_ENABLED = bool(TELEGRAM_TOKEN and TELEGRAM_CHAT_ID)
 
 if not TELEGRAM_ENABLED:
-    print("⚠️  WARNING: Telegram notifications not configured")
+    print("⚠️ WARNING: Telegram notifications not configured")
 
 # ============================================================================
 # TRACKED SYMBOLS (Default)
@@ -138,35 +135,34 @@ if not TELEGRAM_ENABLED:
 
 # Primary symbols - major cryptocurrencies
 DEFAULT_TRACKED_SYMBOLS = [
-    'BTCUSDT',   # Bitcoin
-    'ETHUSDT',   # Ethereum
-    'BNBUSDT',   # Binance Coin
-    'SOLUSDT',   # Solana
-    'XRPUSDT',   # Ripple
-    'ADAUSDT',   # Cardano
-    'DOGEUSDT',  # Dogecoin
-    'DOTUSDT',   # Polkadot
-    'MATICUSDT', # Polygon
-    'AVAXUSDT',  # Avalanche
+    'BTCUSDT',    # Bitcoin
+    'ETHUSDT',    # Ethereum
+    'BNBUSDT',    # Binance Coin
+    'SOLUSDT',    # Solana
+    'XRPUSDT',    # Ripple
+    'ADAUSDT',    # Cardano
+    'DOGEUSDT',   # Dogecoin
+    'DOTUSDT',    # Polkadot
+    'MATICUSDT',  # Polygon
+    'AVAXUSDT',   # Avalanche
 ]
 
 # Extended symbols (can be enabled)
 EXTENDED_TRACKED_SYMBOLS = [
-    'LINKUSDT',  # Chainlink
-    'ATOMUSDT',  # Cosmos
-    'LTCUSDT',   # Litecoin
-    'UNIUSDT',   # Uniswap
-    'ETCUSDT',   # Ethereum Classic
-    'XLMUSDT',   # Stellar
-    'ALGOUSDT',  # Algorand
-    'VETUSDT',   # VeChain
-    'ICPUSDT',   # Internet Computer
-    'FILUSDT',   # Filecoin
+    'LINKUSDT',   # Chainlink
+    'ATOMUSDT',   # Cosmos
+    'LTCUSDT',    # Litecoin
+    'UNIUSDT',    # Uniswap
+    'ETCUSDT',    # Ethereum Classic
+    'XLMUSDT',    # Stellar
+    'ALGOUSDT',   # Algorand
+    'VETUSDT',    # VeChain
+    'ICPUSDT',    # Internet Computer
+    'FILUSDT',    # Filecoin
 ]
 
 # Use extended list if enabled
 USE_EXTENDED_SYMBOLS = os.getenv('USE_EXTENDED_SYMBOLS', 'false').lower() == 'true'
-
 if USE_EXTENDED_SYMBOLS:
     DEFAULT_TRACKED_SYMBOLS += EXTENDED_TRACKED_SYMBOLS
 
@@ -209,6 +205,7 @@ OPPORTUNITY_THRESHOLDS = {
     # Confidence thresholds
     'min_confidence': float(os.getenv('OPP_MIN_CONFIDENCE', '0.75')),  # 75%
     'high_confidence': float(os.getenv('OPP_HIGH_CONFIDENCE', '0.85')),  # 85%
+    'min_telegram_confidence': float(os.getenv('OPP_TELEGRAM_CONFIDENCE', '0.80')),  # 80% for Telegram ← EKLENEN SATIR
     
     # Risk/Reward thresholds
     'min_rr_ratio': float(os.getenv('OPP_MIN_RR', '2.0')),  # 1:2
@@ -353,7 +350,7 @@ LAYER_WEIGHTS = {
 # ============================================================================
 
 TIMEFRAMES = {
-    '1m': {'weight': 0.05, 'enabled': False},   # Disabled by default (too noisy)
+    '1m': {'weight': 0.05, 'enabled': False},  # Disabled by default (too noisy)
     '5m': {'weight': 0.10, 'enabled': True},
     '15m': {'weight': 0.15, 'enabled': True},
     '1h': {'weight': 0.25, 'enabled': True},
@@ -484,16 +481,16 @@ def print_config_summary():
     print("\n" + "="*80)
     print("📋 CONFIGURATION SUMMARY")
     print("="*80)
-    print(f"Version:              {FULL_NAME}")
-    print(f"Environment:          {ENVIRONMENT.upper()}")
-    print(f"Advisory Mode:        {'ENABLED ✅' if ADVISORY_MODE else 'DISABLED ⚠️'}")
-    print(f"Database:             {'Connected ✅' if DATABASE_URL else 'Not configured ❌'}")
-    print(f"Redis Cache:          {'Enabled ✅' if REDIS_ENABLED else 'Disabled'}")
-    print(f"Telegram:             {'Enabled ✅' if TELEGRAM_ENABLED else 'Disabled'}")
-    print(f"Tracked Symbols:      {len(DEFAULT_TRACKED_SYMBOLS)} pairs")
-    print(f"Min Confidence:       {MIN_SIGNAL_CONFIDENCE*100:.0f}%")
-    print(f"Min R:R Ratio:        1:{MIN_RISK_REWARD_RATIO:.1f}")
-    print(f"Signal Interval:      {SIGNAL_GENERATION_INTERVAL}s")
+    print(f"Version: {FULL_NAME}")
+    print(f"Environment: {ENVIRONMENT.upper()}")
+    print(f"Advisory Mode: {'ENABLED ✅' if ADVISORY_MODE else 'DISABLED ⚠️'}")
+    print(f"Database: {'Connected ✅' if DATABASE_URL else 'Not configured ❌'}")
+    print(f"Redis Cache: {'Enabled ✅' if REDIS_ENABLED else 'Disabled'}")
+    print(f"Telegram: {'Enabled ✅' if TELEGRAM_ENABLED else 'Disabled'}")
+    print(f"Tracked Symbols: {len(DEFAULT_TRACKED_SYMBOLS)} pairs")
+    print(f"Min Confidence: {MIN_SIGNAL_CONFIDENCE*100:.0f}%")
+    print(f"Min R:R Ratio: 1:{MIN_RISK_REWARD_RATIO:.1f}")
+    print(f"Signal Interval: {SIGNAL_GENERATION_INTERVAL}s")
     print("="*80 + "\n")
 
 # ============================================================================
