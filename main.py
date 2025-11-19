@@ -74,6 +74,91 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 
+# main.py - Auto-discover all Python modules
+
+import os
+import sys
+import glob
+from utils.module_health_check import health_checker
+
+def discover_project_modules():
+    """
+    Otomatik olarak tüm Python dosyalarını bul ve listeye ekle
+    
+    Returns:
+        List of module names to track
+    """
+    modules = []
+    
+    # Proje klasörleri
+    folders_to_scan = [
+        'advanced_ai',
+        'analytics',
+        'integrations',
+        'ui',
+        'utils',
+        'layers',
+    ]
+    
+    for folder in folders_to_scan:
+        if not os.path.exists(folder):
+            continue
+        
+        # Tüm .py dosyalarını bul
+        pattern = f"{folder}/**/*.py"
+        py_files = glob.glob(pattern, recursive=True)
+        
+        for py_file in py_files:
+            # __init__.py ve __pycache__ dosyalarını atla
+            if '__pycache__' in py_file or py_file.endswith('__init__.py'):
+                continue
+            
+            # Dosya yolunu modül adına çevir
+            # Örnek: "advanced_ai/advisor_core.py" -> "advanced_ai.advisor_core"
+            module_name = py_file.replace('/', '.').replace('\\', '.').replace('.py', '')
+            modules.append(module_name)
+    
+    return sorted(modules)
+
+# ============================================================================
+# MODULE HEALTH TRACKING (AUTO-DISCOVER)
+# ============================================================================
+
+print("\n" + "="*80)
+print("📊 MODULE HEALTH CHECK - Scanning all Python modules...")
+print("="*80)
+
+# Tüm modülleri otomatik bul
+all_modules = discover_project_modules()
+print(f"\n✅ Found {len(all_modules)} Python modules to track\n")
+
+# Her modülü kontrol et
+loaded_count = 0
+failed_count = 0
+
+for module_name in all_modules:
+    status = health_checker.check_module(module_name)
+    health_checker.register_module(
+        module_name,
+        status['status'],
+        status['error']
+    )
+    
+    if '✅' in status['status']:
+        loaded_count += 1
+        print(f"  ✅ {module_name}")
+    else:
+        failed_count += 1
+        print(f"  ❌ {module_name} - {status['error']}")
+
+print(f"\n{'='*80}")
+print(f"📊 MODULE HEALTH SUMMARY")
+print(f"{'='*80}")
+print(f"✅ Loaded: {loaded_count}/{len(all_modules)}")
+print(f"❌ Failed: {failed_count}/{len(all_modules)}")
+print(f"📈 Success Rate: {loaded_count/len(all_modules)*100:.1f}%")
+print(f"{'='*80}\n")
+
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
@@ -1342,6 +1427,25 @@ def health_check():
             'status': 'error',
             'message': str(e)
         }), 500
+
+# main.py - Flask Debug Route
+
+@app.route('/api/health/modules', methods=['GET'])
+def health_modules():
+    """Get module health status - JSON API"""
+    from utils.module_health_check import health_checker
+    
+    report = health_checker.get_health_report()
+    return jsonify(report)
+
+
+@app.route('/debug/modules', methods=['GET'])
+def debug_modules():
+    """Module health dashboard - HTML"""
+    from utils.module_health_check import health_checker
+    
+    html = health_checker.get_dashboard_html()
+    return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/api/status')
 @limiter.limit("30 per minute")
