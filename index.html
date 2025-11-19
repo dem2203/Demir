@@ -1,273 +1,1381 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🤖 DEMIR AI v6.0 - Professional Crypto Trading Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+    <title>DEMIR AI v6.0 - Enterprise Trading Dashboard</title>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
+    <!-- Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ================================================================
+           DEMIR AI v6.0 - ENTERPRISE DASHBOARD STYLES
+           ================================================================ */
+        
+        :root {
+            /* Dark Theme Colors */
+            --bg-primary: #0a0e27;
+            --bg-secondary: #141829;
+            --bg-card: #1a1f3a;
+            --bg-card-hover: #1f2542;
+            
+            /* Accent Colors */
+            --accent-green: #00ff88;
+            --accent-green-dark: #00cc66;
+            --accent-red: #ff4444;
+            --accent-red-dark: #cc3333;
+            --accent-blue: #3b82f6;
+            --accent-yellow: #fbbf24;
+            --accent-purple: #a855f7;
+            
+            /* Text Colors */
+            --text-primary: #ffffff;
+            --text-secondary: #8892b0;
+            --text-muted: #5a637a;
+            
+            /* Border & Shadow */
+            --border-color: rgba(255, 255, 255, 0.05);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+            
+            /* Animation */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* ================================================================
+           HEADER
+           ================================================================ */
+        
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--bg-primary);
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .logo-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.disconnected {
+            background: var(--accent-red);
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .system-time {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* ================================================================
+           DASHBOARD GRID
+           ================================================================ */
+        
+        .dashboard {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            max-width: 2400px;
+            margin: 0 auto;
+        }
+        
+        .widget {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        
+        .widget:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .widget-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .widget-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .widget-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+        
+        .widget-badge {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .widget-body {
+            padding: 24px;
+        }
+        
+        /* ================================================================
+           PRICE TICKER
+           ================================================================ */
+        
+        .price-ticker {
+            grid-column: span 12;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 24px;
+        }
+        
+        .price-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            transition: all var(--transition-normal);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .price-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform var(--transition-normal);
+        }
+        
+        .price-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .price-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-green);
+        }
+        
+        .price-symbol {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        
+        .price-value {
+            font-size: 32px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .price-change {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .price-change.positive {
+            color: var(--accent-green);
+        }
+        
+        .price-change.negative {
+            color: var(--accent-red);
+        }
+        
+        .price-change-icon {
+            font-size: 12px;
+        }
+        
+        /* ================================================================
+           SIGNAL FEED
+           ================================================================ */
+        
+        .signal-feed {
+            grid-column: span 4;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .signal-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .signal-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .signal-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .signal-list::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        
+        .signal-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid var(--accent-green);
+            transition: all var(--transition-fast);
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .signal-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(4px);
+        }
+        
+        .signal-item.short {
+            border-left-color: var(--accent-red);
+        }
+        
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .signal-symbol {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .signal-direction {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .signal-direction.long {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-green);
+        }
+        
+        .signal-direction.short {
+            background: rgba(255, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+        
+        .signal-details {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        
+        .signal-confidence {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .confidence-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+            transition: width 0.5s ease;
+        }
+        
+        /* ================================================================
+           LAYER ANALYSIS
+           ================================================================ */
+        
+        .layer-analysis {
+            grid-column: span 8;
+        }
+        
+        .layer-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 24px;
+        }
+        
+        .layer-category {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .layer-category-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .layer-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .layer-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .layer-name {
+            width: 120px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .layer-progress {
+            flex: 1;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .layer-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-green-dark));
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--bg-primary);
+        }
+        
+        .layer-progress-fill.negative {
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-red-dark));
+        }
+        
+        /* ================================================================
+           PERFORMANCE CHART
+           ================================================================ */
+        
+        .performance-chart {
+            grid-column: span 8;
+            min-height: 400px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            padding: 24px;
+        }
+        
+        /* ================================================================
+           ADVISOR OPPORTUNITIES
+           ================================================================ */
+        
+        .advisor-opportunities {
+            grid-column: span 4;
+        }
+        
+        .opportunity-list {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .opportunity-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-fast);
+            cursor: pointer;
+        }
+        
+        .opportunity-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--accent-blue);
+            transform: translateX(4px);
+        }
+        
+        .opportunity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .opportunity-symbol {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .opportunity-score {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            color: var(--bg-primary);
+        }
+        
+        .opportunity-details {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        /* ================================================================
+           SYSTEM METRICS
+           ================================================================ */
+        
+        .system-metrics {
+            grid-column: span 12;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 24px;
+        }
+        
+        .metric-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .metric-change {
+            font-size: 13px;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+        
+        /* ================================================================
+           LOADING & EMPTY STATES
+           ================================================================ */
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        
+        /* ================================================================
+           RESPONSIVE
+           ================================================================ */
+        
+        @media (max-width: 1400px) {
+            .dashboard {
+                grid-template-columns: repeat(8, 1fr);
+            }
+            
+            .signal-feed,
+            .advisor-opportunities {
+                grid-column: span 4;
+            }
+            
+            .layer-analysis,
+            .performance-chart {
+                grid-column: span 8;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                padding: 12px;
+                gap: 12px;
+            }
+            
+            .price-ticker,
+            .signal-feed,
+            .layer-analysis,
+            .performance-chart,
+            .advisor-opportunities,
+            .system-metrics {
+                grid-column: span 1;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+            
+            .layer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- ========== HEADER ========== -->
-        <header class="header">
-            <div class="header-left">
-                <h1>🤖 DEMIR AI v6.0</h1>
-                <p class="subtitle">Professional Crypto Trading Dashboard</p>
-            </div>
-            <div class="header-right">
-                <div class="status-indicator">
-                    <span class="status-dot online"></span>
-                    <span id="connectionStatus">Bağlı</span>
-                </div>
-                <span id="lastUpdate">Son güncelleme: --:--:--</span>
-            </div>
-        </header>
-
-        <!-- ========== GOLDEN BANNER ========== -->
-        <div class="golden-banner">
-            <span>⚡ Real-time Signal Tracking</span>
-            <span>📊 4-GROUP Analysis (Technical + Sentiment + ML/AI + OnChain)</span>
-            <span>🚀 Railway Production Ready</span>
-        </div>
-
-        <!-- ========== NAVIGATION TABS ========== -->
-        <nav class="nav-tabs">
-            <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
-            <button class="tab-btn" data-tab="signals">🔔 Sinyaller</button>
-            <button class="tab-btn" data-tab="positions">💼 Pozisyonlar</button>
-            <button class="tab-btn" data-tab="settings">⚙️ Ayarlar</button>
-        </nav>
-
-        <!-- ========== COINS TOOLBAR ========== -->
-        <div class="coins-toolbar">
-            <div class="coins-list" id="coinButtons">
-                <button class="coin-btn active" data-coin="BTCUSDT">BTC</button>
-                <button class="coin-btn" data-coin="ETHUSDT">ETH</button>
-                <button class="coin-btn" data-coin="BNBUSDT">BNB</button>
-                <button class="coin-btn" data-coin="LTCUSDT">LTC</button>
+    <!-- ================================================================
+         HEADER
+         ================================================================ -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">AI</div>
+            <div class="logo-text">
+                <div class="logo-title">DEMIR AI v6.0</div>
+                <div class="logo-subtitle">Enterprise Trading System</div>
             </div>
         </div>
-
-        <!-- TAB 1: DASHBOARD -->
-        <div id="dashboardTab" class="tab-content active" style="display: block;">
+        
+        <div class="header-right">
+            <div class="connection-status">
+                <div class="status-dot" id="connection-dot"></div>
+                <span id="connection-text">Bağlanıyor...</span>
+            </div>
             
-            <section class="price-section">
-                <div class="price-card">
-                    <h3>💰 Current Price</h3>
-                    <div class="price-display">
-                        <span class="price" id="currentPrice">$0.00</span>
-                        <span class="change positive" id="priceChange">+0.00%</span>
-                    </div>
-                    <span class="source-badge">🔴 Live Data from Railway</span>
-                </div>
-            </section>
-
-            <div class="signals-grid">
-                
-                <!-- TECHNICAL -->
-                <div class="signal-card technical">
-                    <div class="card-header">
-                        <h3>📈 Technical</h3>
-                        <span class="group-label">28 Layers</span>
-                    </div>
-                    <div class="signal-content">
-                        <div class="signal-direction long" id="technicalDirection">● LONG</div>
-                        <div class="signal-bars">
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Strength</span>
-                                    <span id="technicalStrength">0%</span>
-                                </div>
-                                <div class="bar" id="technicalStrengthBar" style="width: 0%;"></div>
-                            </div>
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Confidence</span>
-                                    <span id="technicalConfidence">0%</span>
-                                </div>
-                                <div class="bar" id="technicalConfidenceBar" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                        <div class="signal-layers" id="technicalLayers">0/28 Active Layers</div>
-                        <div class="signal-explanation" id="technicalExplanation">Teknik göstergeler analiz ediliyor...</div>
-                    </div>
-                </div>
-
-                <!-- SENTIMENT -->
-                <div class="signal-card sentiment">
-                    <div class="card-header">
-                        <h3>💭 Sentiment</h3>
-                        <span class="group-label">20 Layers</span>
-                    </div>
-                    <div class="signal-content">
-                        <div class="signal-direction neutral" id="sentimentDirection">● NEUTRAL</div>
-                        <div class="signal-bars">
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Strength</span>
-                                    <span id="sentimentStrength">0%</span>
-                                </div>
-                                <div class="bar" id="sentimentStrengthBar" style="width: 0%;"></div>
-                            </div>
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Confidence</span>
-                                    <span id="sentimentConfidence">0%</span>
-                                </div>
-                                <div class="bar" id="sentimentConfidenceBar" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                        <div class="signal-layers" id="sentimentLayers">0/20 Active Layers</div>
-                        <div class="signal-explanation" id="sentimentExplanation">Pazar duyarlılığı analiz ediliyor...</div>
-                    </div>
-                </div>
-
-                <!-- ML/AI -->
-                <div class="signal-card macro">
-                    <div class="card-header">
-                        <h3>🤖 ML/AI</h3>
-                        <span class="group-label">10 Layers</span>
-                    </div>
-                    <div class="signal-content">
-                        <div class="signal-direction neutral" id="mlDirection">● NEUTRAL</div>
-                        <div class="signal-bars">
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Strength</span>
-                                    <span id="mlStrength">0%</span>
-                                </div>
-                                <div class="bar" id="mlStrengthBar" style="width: 0%;"></div>
-                            </div>
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Confidence</span>
-                                    <span id="mlConfidence">0%</span>
-                                </div>
-                                <div class="bar" id="mlConfidenceBar" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                        <div class="signal-layers" id="mlLayers">0/10 Active Layers</div>
-                        <div class="signal-explanation" id="mlExplanation">ML modelleri tahmin yapıyor...</div>
-                    </div>
-                </div>
-
-                <!-- ONCHAIN -->
-                <div class="signal-card onchain">
-                    <div class="card-header">
-                        <h3>⛓️ OnChain</h3>
-                        <span class="group-label">6 Layers</span>
-                    </div>
-                    <div class="signal-content">
-                        <div class="signal-direction neutral" id="onchainDirection">● NEUTRAL</div>
-                        <div class="signal-bars">
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Strength</span>
-                                    <span id="onchainStrength">0%</span>
-                                </div>
-                                <div class="bar" id="onchainStrengthBar" style="width: 0%;"></div>
-                            </div>
-                            <div class="bar-container">
-                                <div class="bar-label">
-                                    <span>Confidence</span>
-                                    <span id="onchainConfidence">0%</span>
-                                </div>
-                                <div class="bar" id="onchainConfidenceBar" style="width: 0%;"></div>
-                            </div>
-                        </div>
-                        <div class="signal-layers" id="onchainLayers">0/6 Active Layers</div>
-                        <div class="signal-explanation" id="onchainExplanation">Blockchain verileri analiz ediliyor...</div>
-                    </div>
-                </div>
-
-            </div>
-
-            <section class="consensus-section">
-                <div class="consensus-card">
-                    <h3>🎯 Consensus Signal</h3>
-                    <div class="consensus-direction long" id="consensusDirection">● LONG</div>
-                    <div class="consensus-bars">
-                        <div class="consensus-metric">
-                            <span>Weighted Strength</span>
-                            <div class="consensus-bar-container">
-                                <div class="bar" id="consensusStrengthBar" style="width: 0%;"></div>
-                                <span id="consensusStrength">0%</span>
-                            </div>
-                        </div>
-                        <div class="consensus-metric">
-                            <span>Consensus Confidence</span>
-                            <div class="consensus-bar-container">
-                                <div class="bar" id="consensusConfidenceBar" style="width: 0%;"></div>
-                                <span id="consensusConfidence">0%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="risk-card">
-                    <h3>⚠️ Risk Assessment</h3>
-                    <div class="risk-content">
-                        <div class="risk-item">
-                            <span>Entry Zone</span>
-                            <strong id="riskEntryZone">$0.00</strong>
-                        </div>
-                        <div class="risk-item">
-                            <span>Stop Loss</span>
-                            <strong id="riskStopLoss">$0.00</strong>
-                        </div>
-                        <div class="risk-item">
-                            <span>Take Profit</span>
-                            <strong id="riskTakeProfit">$0.00</strong>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
+            <div class="system-time" id="system-time">--:--:--</div>
         </div>
-
-        <!-- TAB 2: SIGNALS -->
-        <div id="signalsTab" class="tab-content" style="display: none;">
-            <h2>🔔 Signal History</h2>
-            <div id="signalsContainer">
-                <p class="no-data">Sinyaller yükleniyor...</p>
-            </div>
-        </div>
-
-        <!-- TAB 3: POSITIONS -->
-        <div id="positionsTab" class="tab-content" style="display: none;">
-            <h2>💼 Active Positions</h2>
-            <div id="positionsContainer">
-                <p class="no-data">Henüz aktif pozisyon yok</p>
-            </div>
-            <h3 style="margin-top: 30px;">📊 Trade History</h3>
-            <div id="tradeHistory">
-                <p class="no-data">İşlem geçmişi yükleniyor...</p>
-            </div>
-        </div>
-
-        <!-- TAB 4: SETTINGS -->
-        <div id="settingsTab" class="tab-content" style="display: none;">
-            <h2>⚙️ Settings & Configuration</h2>
-            <div class="settings-grid">
-                <div class="settings-card">
-                    <h3>⚙️ General Settings</h3>
-                    <p>Configuration panel</p>
-                </div>
-                <div class="settings-card">
-                    <h3>🔔 Notifications</h3>
-                    <p>Alert preferences</p>
-                </div>
-                <div class="settings-card">
-                    <h3>📊 Data Sources</h3>
-                    <p>API connections</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="notificationContainer"></div>
-
     </div>
-
-    <script src="app.js"></script>
+    
+    <!-- ================================================================
+         DASHBOARD GRID
+         ================================================================ -->
+    <div class="dashboard">
+        <!-- Price Ticker -->
+        <div class="price-ticker" id="price-ticker">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <!-- Signal Feed -->
+        <div class="widget signal-feed">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>🎯</span>
+                    Live Signals
+                </div>
+                <div class="widget-badge" id="signal-count">0</div>
+            </div>
+            <div class="signal-list" id="signal-list">
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div>Sinyal bekleniyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Layer Analysis -->
+        <div class="widget layer-analysis">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>🧠</span>
+                    AI Layer Analysis - Real-Time
+                </div>
+                <select id="layer-symbol-select" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 13px;">
+                    <option value="BTCUSDT">BTCUSDT</option>
+                    <option value="ETHUSDT">ETHUSDT</option>
+                    <option value="BNBUSDT">BNBUSDT</option>
+                </select>
+            </div>
+            <div class="layer-grid" id="layer-grid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Chart -->
+        <div class="widget performance-chart">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>📈</span>
+                    Portfolio Performance
+                </div>
+                <select id="timeframe-select" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 13px;">
+                    <option value="1H">1 Saat</option>
+                    <option value="4H">4 Saat</option>
+                    <option value="1D" selected>24 Saat</option>
+                    <option value="1W">1 Hafta</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="performance-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Advisor Opportunities -->
+        <div class="widget advisor-opportunities">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>💡</span>
+                    AI Opportunities
+                </div>
+                <div class="widget-badge">Top 10</div>
+            </div>
+            <div class="opportunity-list" id="opportunity-list">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div>Fırsat aranıyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Metrics -->
+        <div class="system-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total Signals</div>
+                <div class="metric-value" id="metric-total-signals">0</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Win Rate</div>
+                <div class="metric-value" id="metric-win-rate">0%</div>
+                <div class="metric-change positive">+0.0%</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Total P&L</div>
+                <div class="metric-value" id="metric-pnl">$0</div>
+                <div class="metric-change positive">+$0</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Sharpe Ratio</div>
+                <div class="metric-value" id="metric-sharpe">0.00</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Active Layers</div>
+                <div class="metric-value" id="metric-layers">50</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">API Health</div>
+                <div class="metric-value" id="metric-api-health">100%</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ================================================================
+         JAVASCRIPT
+         ================================================================ -->
+    <script>
+        // ================================================================
+        // GLOBAL STATE
+        // ================================================================
+        
+        let socket = null;
+        let isConnected = false;
+        let signalCount = 0;
+        let performanceChart = null;
+        
+        const priceCache = {};
+        const layerScoresCache = {};
+        
+        // ================================================================
+        // WEBSOCKET CONNECTION
+        // ================================================================
+        
+        function initializeWebSocket() {
+            console.log('🔌 Connecting to WebSocket...');
+            
+            // Connect to current host
+            socket = io({
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: Infinity
+            });
+            
+            // Connection events
+            socket.on('connect', () => {
+                console.log('✅ WebSocket connected');
+                isConnected = true;
+                updateConnectionStatus(true);
+                
+                // Subscribe to primary symbols
+                socket.emit('subscribe_symbol', { symbol: 'BTCUSDT' });
+                socket.emit('subscribe_symbol', { symbol: 'ETHUSDT' });
+                socket.emit('subscribe_symbol', { symbol: 'BNBUSDT' });
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('❌ WebSocket disconnected');
+                isConnected = false;
+                updateConnectionStatus(false);
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.error('WebSocket error:', error);
+                isConnected = false;
+                updateConnectionStatus(false);
+            });
+            
+            // Data events
+            socket.on('price_update', handlePriceUpdate);
+            socket.on('price_bulk', handlePriceBulk);
+            socket.on('signal', handleNewSignal);
+            socket.on('layer_scores', handleLayerScores);
+            socket.on('performance_update', handlePerformanceUpdate);
+            socket.on('health_status', handleHealthStatus);
+        }
+        
+        function updateConnectionStatus(connected) {
+            const dot = document.getElementById('connection-dot');
+            const text = document.getElementById('connection-text');
+            
+            if (connected) {
+                dot.classList.remove('disconnected');
+                text.textContent = 'Bağlı';
+            } else {
+                dot.classList.add('disconnected');
+                text.textContent = 'Bağlantı Kesildi';
+            }
+        }
+        
+        // ================================================================
+        // PRICE UPDATES
+        // ================================================================
+        
+        function handlePriceUpdate(data) {
+            const { symbol, price, change_24h } = data;
+            
+            // Update cache
+            priceCache[symbol] = { price, change_24h, timestamp: Date.now() };
+            
+            // Update UI
+            updatePriceCard(symbol, price, change_24h);
+        }
+        
+        function handlePriceBulk(data) {
+            for (const [symbol, info] of Object.entries(data)) {
+                priceCache[symbol] = info;
+                updatePriceCard(symbol, info.price, info.change_24h);
+            }
+        }
+        
+        function updatePriceCard(symbol, price, change_24h) {
+            const ticker = document.getElementById('price-ticker');
+            
+            // Check if card exists
+            let card = document.getElementById(`price-card-${symbol}`);
+            
+            if (!card) {
+                // Create new card
+                card = document.createElement('div');
+                card.id = `price-card-${symbol}`;
+                card.className = 'price-card';
+                card.innerHTML = `
+                    <div class="price-symbol">
+                        <span>${symbol}</span>
+                        <span class="status-dot"></span>
+                    </div>
+                    <div class="price-value">$${formatPrice(price)}</div>
+                    <div class="price-change ${change_24h >= 0 ? 'positive' : 'negative'}">
+                        <span class="price-change-icon">${change_24h >= 0 ? '▲' : '▼'}</span>
+                        <span>${change_24h >= 0 ? '+' : ''}${change_24h.toFixed(2)}%</span>
+                    </div>
+                `;
+                
+                // Remove loading if present
+                const loading = ticker.querySelector('.loading');
+                if (loading) loading.remove();
+                
+                ticker.appendChild(card);
+            } else {
+                // Update existing card
+                card.querySelector('.price-value').textContent = `$${formatPrice(price)}`;
+                
+                const changeEl = card.querySelector('.price-change');
+                changeEl.className = `price-change ${change_24h >= 0 ? 'positive' : 'negative'}`;
+                changeEl.innerHTML = `
+                    <span class="price-change-icon">${change_24h >= 0 ? '▲' : '▼'}</span>
+                    <span>${change_24h >= 0 ? '+' : ''}${change_24h.toFixed(2)}%</span>
+                `;
+            }
+        }
+        
+        function formatPrice(price) {
+            return price.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+        
+        // ================================================================
+        // SIGNALS
+        // ================================================================
+        
+        function handleNewSignal(data) {
+            signalCount++;
+            document.getElementById('signal-count').textContent = signalCount;
+            
+            const signalList = document.getElementById('signal-list');
+            
+            // Remove empty state
+            const emptyState = signalList.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+            
+            // Create signal item
+            const signalItem = document.createElement('div');
+            signalItem.className = `signal-item ${data.direction.toLowerCase()}`;
+            signalItem.innerHTML = `
+                <div class="signal-header">
+                    <div class="signal-symbol">${data.symbol}</div>
+                    <div class="signal-direction ${data.direction.toLowerCase()}">${data.direction}</div>
+                </div>
+                <div class="signal-details">
+                    Entry: $${data.entry.toFixed(2)} | 
+                    TP1: $${data.tp1.toFixed(2)} | 
+                    SL: $${data.sl.toFixed(2)}
+                </div>
+                <div class="signal-confidence">
+                    <span>Confidence:</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${data.confidence * 100}%"></div>
+                    </div>
+                    <span>${(data.confidence * 100).toFixed(1)}%</span>
+                </div>
+            `;
+            
+            // Add to top
+            signalList.insertBefore(signalItem, signalList.firstChild);
+            
+            // Keep only last 20 signals
+            while (signalList.children.length > 20) {
+                signalList.removeChild(signalList.lastChild);
+            }
+            
+            // Play notification sound
+            playNotificationSound();
+        }
+        
+        function playNotificationSound() {
+            // Simple beep using Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+        
+        // ================================================================
+        // LAYER SCORES
+        // ================================================================
+        
+        function handleLayerScores(data) {
+            const { symbol, scores } = data;
+            
+            layerScoresCache[symbol] = scores;
+            
+            // Update UI if this symbol is selected
+            const selectedSymbol = document.getElementById('layer-symbol-select').value;
+            if (symbol === selectedSymbol) {
+                updateLayerGrid(scores);
+            }
+        }
+        
+        function updateLayerGrid(scores) {
+            const grid = document.getElementById('layer-grid');
+            
+            // Remove loading
+            const loading = grid.querySelector('.loading');
+            if (loading) loading.remove();
+            
+            // Clear existing
+            grid.innerHTML = '';
+            
+            // Group scores by category
+            const categories = {
+                'Sentiment': [],
+                'Technical': [],
+                'ML Models': [],
+                'On-Chain': []
+            };
+            
+            for (const [name, score] of Object.entries(scores)) {
+                if (name.includes('Sentiment') || name.includes('News') || name.includes('Fear')) {
+                    categories['Sentiment'].push({ name, score });
+                } else if (name.includes('RSI') || name.includes('MACD') || name.includes('MA')) {
+                    categories['Technical'].push({ name, score });
+                } else if (name.includes('LSTM') || name.includes('XGBoost') || name.includes('RF')) {
+                    categories['ML Models'].push({ name, score });
+                } else {
+                    categories['On-Chain'].push({ name, score });
+                }
+            }
+            
+            // Create category cards
+            for (const [category, layers] of Object.entries(categories)) {
+                if (layers.length === 0) continue;
+                
+                // Sort by score
+                layers.sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+                
+                const categoryCard = document.createElement('div');
+                categoryCard.className = 'layer-category';
+                categoryCard.innerHTML = `
+                    <div class="layer-category-title">${category}</div>
+                    <div class="layer-bars">
+                        ${layers.map(layer => `
+                            <div class="layer-bar">
+                                <div class="layer-name" title="${layer.name}">${layer.name}</div>
+                                <div class="layer-progress">
+                                    <div class="layer-progress-fill ${layer.score < 0 ? 'negative' : ''}" 
+                                         style="width: ${Math.abs(layer.score) * 100}%">
+                                        ${(layer.score * 100).toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                grid.appendChild(categoryCard);
+            }
+        }
+        
+        // Layer symbol selector
+        document.getElementById('layer-symbol-select').addEventListener('change', (e) => {
+            const symbol = e.target.value;
+            if (layerScoresCache[symbol]) {
+                updateLayerGrid(layerScoresCache[symbol]);
+            }
+            
+            // Subscribe to updates for this symbol
+            if (socket && isConnected) {
+                socket.emit('subscribe_symbol', { symbol });
+            }
+        });
+        
+        // ================================================================
+        // PERFORMANCE CHART
+        // ================================================================
+        
+        function initializePerformanceChart() {
+            const ctx = document.getElementById('performance-canvas').getContext('2d');
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Portfolio Value (USDT)',
+                        data: [],
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#00ff88',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 31, 58, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#8892b0',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `$${context.parsed.y.toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    })}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.02)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#5a637a',
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.02)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#5a637a',
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString('en-US', {
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function handlePerformanceUpdate(data) {
+            // Update metrics
+            document.getElementById('metric-total-signals').textContent = data.total_signals || 0;
+            document.getElementById('metric-win-rate').textContent = `${(data.win_rate * 100).toFixed(1)}%`;
+            document.getElementById('metric-pnl').textContent = `$${data.total_pnl.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+            document.getElementById('metric-sharpe').textContent = (data.sharpe_ratio || 0).toFixed(2);
+            
+            // Update chart (mock data for now - will be replaced with real data)
+            if (performanceChart && data.history) {
+                performanceChart.data.labels = data.history.timestamps;
+                performanceChart.data.datasets[0].data = data.history.values;
+                performanceChart.update('none');
+            }
+        }
+        
+        // ================================================================
+        // HEALTH STATUS
+        // ================================================================
+        
+        function handleHealthStatus(data) {
+            const healthPercentage = Object.values(data).filter(v => v === true).length / 
+                                     Object.keys(data).filter(k => k !== 'last_check').length * 100;
+            
+            document.getElementById('metric-api-health').textContent = `${Math.round(healthPercentage)}%`;
+        }
+        
+        // ================================================================
+        // SYSTEM TIME
+        // ================================================================
+        
+        function updateSystemTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('system-time').textContent = timeString;
+        }
+        
+        setInterval(updateSystemTime, 1000);
+        
+        // ================================================================
+        // FETCH API DATA
+        // ================================================================
+        
+        async function fetchOpportunities() {
+            try {
+                const response = await fetch('/api/advisor/opportunities?limit=10&min_confidence=0.75');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    updateOpportunities(result.data);
+                }
+            } catch (error) {
+                console.error('Error fetching opportunities:', error);
+            }
+        }
+        
+        function updateOpportunities(opportunities) {
+            const list = document.getElementById('opportunity-list');
+            
+            // Remove empty state
+            const emptyState = list.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+            
+            // Clear existing
+            list.innerHTML = '';
+            
+            if (opportunities.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div>Şu anda fırsat bulunamadı</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            opportunities.forEach(opp => {
+                const card = document.createElement('div');
+                card.className = 'opportunity-card';
+                card.innerHTML = `
+                    <div class="opportunity-header">
+                        <div class="opportunity-symbol">${opp.symbol}</div>
+                        <div class="opportunity-score">${(opp.score * 100).toFixed(0)}%</div>
+                    </div>
+                    <div class="opportunity-details">
+                        <div>Direction: <strong>${opp.direction}</strong></div>
+                        <div>Entry: $${opp.entry_price.toFixed(2)}</div>
+                        <div>Target: $${opp.target_price.toFixed(2)} (+${opp.potential_gain.toFixed(1)}%)</div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+        
+        // Fetch opportunities every 30 seconds
+        setInterval(fetchOpportunities, 30000);
+        
+        // ================================================================
+        // INITIALIZATION
+        // ================================================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 DEMIR AI Dashboard v6.0 - Initializing...');
+            
+            // Initialize chart
+            initializePerformanceChart();
+            
+            // Connect WebSocket
+            initializeWebSocket();
+            
+            // Start system time
+            updateSystemTime();
+            
+            // Fetch initial opportunities
+            fetchOpportunities();
+            
+            console.log('✅ Dashboard initialized');
+        });
+    </script>
 </body>
 </html>
