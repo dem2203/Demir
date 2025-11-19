@@ -1,36 +1,33 @@
 # Dockerfile - DEMIR AI v7.0 - PRODUCTION READY
-# Railway auto-detects and builds
-
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ libpq-dev curl git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install first (for caching)
+# Python dependencies
 COPY requirements.txt .
-RUN pip install --default-timeout=1000 --retries 5 -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy ALL application files and folders
+# Copy entire application
 COPY . .
 
-# Create runtime directories
-RUN mkdir -p /app/logs /app/data /app/models /app/config
+# Runtime directories
+RUN mkdir -p /app/logs /app/data /app/models
 
-# Environment variables
+# Environment
 ENV PYTHONUNBUFFERED=1 \
     PORT=8000 \
-    FLASK_ENV=production \
-    DEBUG=False
+    FLASK_ENV=production
 
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/api/health 2>/dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=10s \
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
-# Start application
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} --workers ${WORKERS:-4} --worker-class sync --timeout 120 --access-logfile - --error-logfile - main:app"]
+# Start
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "main:app"]
