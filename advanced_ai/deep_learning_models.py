@@ -1,4 +1,3 @@
-```python
 import tensorflow as tf
 from tensorflow.keras.layers import (
     LSTM, GRU, Dense, Dropout, BatchNormalization,
