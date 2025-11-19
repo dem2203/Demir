@@ -80,6 +80,44 @@ CONFIDENCE_THRESHOLD = 70  # 70% minimum (upgraded from 0.65)
 SIGNAL_MIN_INTERVAL_SECONDS = 60  # Min 60 sec between signals per symbol
 SIGNAL_MAX_CONCURRENT_POSITIONS = 5  # Max 5 open positions
 
+# ============================================================
+# DEMIR AI - ADVISOR MODE (NO AUTO TRADING)
+# ============================================================
+
+# Bu bot ARTIK HİÇBİR ZAMAN EMİR AÇMAYACAK.
+# Sadece sinyal ve trade planı üretir, sen manuel işlem açarsın.
+ADVISORY_MODE: bool = True
+
+# İleride istersen env ile override edebilirsin ama şimdilik full kapalı.
+EXECUTION_POLICY = {
+    "allow_live_orders": False,     # Her zaman False
+    "allow_paper_trading": False,   # Her zaman False
+    "allow_backtest": True,         # Backtest serbest
+}
+
+# Hangi coinleri sürekli tarayacağımız (istersen çoğalt)
+DEFAULT_TRACKED_SYMBOLS = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+]
+
+# Trade plan (fırsat) üretim eşikleri
+OPPORTUNITY_THRESHOLDS = {
+    # 0–1 arası güven skoru
+    "min_confidence": 0.75,
+    # Minimum Risk:Reward oranı
+    "min_rr": 2.0,
+    # 0–1 arası risk skoru (0: düşük, 1: çok yüksek)
+    "max_risk_score": 0.65,
+    # Trend uyumu için baktığımız TF’ler
+    "trend_timeframes": ["15m", "1h", "4h"],
+    # Sadece gerçekten çok iyi fırsatlar Telegram’a gitsin
+    "min_telegram_confidence": 0.80,
+}
+
 # ============================================================================
 # TELEGRAM - YOUR EXISTING SETUP (ENHANCED)
 # ============================================================================
