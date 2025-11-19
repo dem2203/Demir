@@ -638,4 +638,133 @@ def get_advisor_opportunities():
         
         return jsonify({
             'status': 'success',
-            'data
+            'data': [opp.to_dict() for opp in opportunities],
+            'count': len(opportunities),
+            'timestamp': time.time()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting opportunities: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/layers/scores', methods=['GET'])
+def get_layer_scores():
+    """
+    Get current layer scores for a symbol
+    Real-time analysis from 50+ layers
+    """
+    try:
+        symbol = request.args.get('symbol', 'BTCUSDT')
+        
+        with layer_scores_lock:
+            if symbol not in layer_scores_cache:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'No layer scores for {symbol}'
+                }), 404
+            
+            return jsonify({
+                'status': 'success',
+                'symbol': symbol,
+                'scores': layer_scores_cache[symbol],
+                'timestamp': time.time()
+            })
+        
+    except Exception as e:
+        logger.error(f"Error getting layer scores: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/performance/current', methods=['GET'])
+def get_current_performance():
+    """
+    Get current performance metrics
+    Win rate, PnL, Sharpe ratio, etc.
+    """
+    try:
+        with performance_lock:
+            return jsonify({
+                'status': 'success',
+                'data': performance_metrics,
+                'timestamp': time.time()
+            })
+        
+    except Exception as e:
+        logger.error(f"Error getting performance: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/system/status', methods=['GET'])
+def get_system_status():
+    """
+    Get comprehensive system status
+    """
+    try:
+        with health_lock:
+            health = dict(system_health)
+        
+        with performance_lock:
+            perf = dict(performance_metrics)
+        
+        with price_cache_lock:
+            price_count = len(price_cache)
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'health': health,
+                'performance': perf,
+                'websocket': {
+                    'connected_clients': len(connected_clients),
+                    'tracked_symbols': price_count
+                },
+                'services': {
+                    'database': db_manager is not None,
+                    'websocket_manager': ws_manager is not None,
+                    'signal_engine': signal_engine is not None,
+                    'advisor_service': advisor_service is not None,
+                    'performance_engine': performance_engine is not None
+                }
+            },
+            'timestamp': time.time()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting system status: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+# ============================================================================
+# STARTUP
+# ============================================================================
+
+if __name__ == '__main__':
+    # Initialize services
+    if not initialize_services():
+        logger.error("Failed to initialize services")
+        sys.exit(1)
+    
+    # Get port from environment (Railway)
+    port = int(os.getenv('PORT', 8501))
+    
+    logger.info("="*80)
+    logger.info(f"🚀 DEMIR AI DASHBOARD starting on port {port}")
+    logger.info("="*80)
+    
+    # Run with SocketIO
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=port,
+        debug=False,
+        allow_unsafe_werkzeug=True
+    )
