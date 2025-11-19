@@ -182,7 +182,10 @@ from config import (
 from advanced_ai import AdvisorCore, MarketRegimeDetector, SignalGroupOrchestrator
 from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
 from advanced_ai.advisor_core import AdvisorCore
-from advanced_ai.causal_reasoning import CausalReasoningEngine
+try:
+    from advanced_ai.causal_reasoning import CausalReasoningEngine
+except (ImportError, ModuleNotFoundError):
+    CausalReasoningEngine = None
 
 # Analytics Components
 from analytics.advisor_opportunity_service import AdvisorOpportunityService
