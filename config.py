@@ -208,6 +208,7 @@ OPPORTUNITY_THRESHOLDS = {
     'min_telegram_confidence': float(os.getenv('OPP_TELEGRAM_CONFIDENCE', '0.80')),  # 80% for Telegram ← EKLENEN SATIR
     
     # Risk/Reward thresholds
+    'min_rr': float(os.getenv('OPP_MIN_RR', '2.0')),  # ← EKLEYIN!
     'min_rr_ratio': float(os.getenv('OPP_MIN_RR', '2.0')),  # 1:2
     'excellent_rr_ratio': float(os.getenv('OPP_EXCELLENT_RR', '3.0')),  # 1:3
     
