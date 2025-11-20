@@ -184,13 +184,20 @@ from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
 from advanced_ai.advisor_core import AdvisorCore
 try:
     from advanced_ai.causal_reasoning import CausalReasoningEngine
-except (ImportError, ModuleNotFoundError):
+    logger.info("✅ CausalReasoningEngine loaded")
+except (ImportError, ModuleNotFoundError) as e:
+    logger.warning(f"⚠️  CausalReasoningEngine disabled: {e}")
     CausalReasoningEngine = None
 
 # Analytics Components
 from analytics.advisor_opportunity_service import AdvisorOpportunityService
 from analytics.performance_engine import PerformanceEngine
-from analytics.backtest_engine_production import BacktestEngine
+try:
+    from analytics.backtest_engine_production import BacktestEngine
+    logger.info("✅ BacktestEngine loaded")
+except (ImportError, AttributeError) as e:
+    logger.warning(f"⚠️  BacktestEngine disabled: {e}")
+    BacktestEngine = None
 from analytics.trade_analyzer import TradeAnalyzer
 from analytics.report_generator import ReportGenerator
 
