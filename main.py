@@ -206,7 +206,7 @@ from analytics.report_generator import ReportGenerator
 # Integration Components
 from integrations.binance_websocket_v3 import BinanceWebSocketManager
 from integrations.multi_exchange_api import MultiExchangeDataFetcher
-from integrations.market_intelligence import MarketIntelligenceAggregator
+from integrations.market_intelligence import MarketIntelligenceEngine
 from integrations.sentiment_aggregator import SentimentAggregator
 from integrations.macro_data_aggregator import MacroDataAggregator
 
