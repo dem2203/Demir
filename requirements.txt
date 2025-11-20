@@ -44,13 +44,15 @@ scipy==1.11.4
 statsmodels==0.14.0
 
 # ============================================================================
-# MACHINE LEARNING (CPU-ONLY)
+# MACHINE LEARNING (LIGHTWEIGHT)
 # ============================================================================
 scikit-learn==1.3.2
 xgboost==2.0.3
 
-# ✅ FIXED: TensorFlow 2.17.0 for Python 3.12 compatibility
-tensorflow-cpu==2.17.0
+# ⚠️ TensorFlow REMOVED - Optional dependency, causing Railway build issues
+# TensorFlow layers are wrapped in try/except blocks in code
+# System will function without it using other ML models
+# To re-enable: tensorflow-cpu==2.17.0
 
 # ✅ NetworkX for causal reasoning and graph analysis
 networkx==3.2.1
