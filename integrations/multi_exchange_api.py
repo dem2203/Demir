@@ -126,11 +126,9 @@ class MultiExchangeDataFetcher:
         }
         
         # Circuit breakers (one per exchange)
-        self.circuit_breakers = {
-            name: CircuitBreaker(
-                failure_threshold=5,
-                timeout=60,
-                name=f"{name}_CB"
+        self.circuit_breaker = CircuitBreaker(
+    failure_threshold=3,
+    recovery_timeout=300
             )
             for name in self.exchanges.keys()
         }
