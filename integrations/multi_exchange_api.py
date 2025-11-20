@@ -115,8 +115,11 @@ class MultiExchangeDataFetcher:
         - Data validation
     """
     
-    def __init__(self):
-        """Initialize multi-exchange fetcher"""
+     def __init__(self, ...):
+        self.circuit_breaker = CircuitBreaker(
+            failure_threshold=3,
+            recovery_timeout=300
+        )
         
         # Exchange configurations
         self.exchanges = {
