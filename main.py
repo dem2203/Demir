@@ -177,6 +177,8 @@ from config import (
     TELEGRAM_TOKEN,
     TELEGRAM_CHAT_ID
 )
+import logging
+logger = logging.getLogger(__name__)
 
 # Advanced AI Components
 from advanced_ai import AdvisorCore, MarketRegimeDetector, SignalGroupOrchestrator
@@ -184,9 +186,9 @@ from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
 from advanced_ai.advisor_core import AdvisorCore
 try:
     from advanced_ai.causal_reasoning import CausalReasoningEngine
-    logger.info("✅ CausalReasoningEngine loaded")
+    print("✅ CausalReasoningEngine loaded")
 except (ImportError, ModuleNotFoundError) as e:
-    logger.warning(f"⚠️  CausalReasoningEngine disabled: {e}")
+    print(f"⚠️  CausalReasoningEngine disabled: {e}")
     CausalReasoningEngine = None
 
 # Analytics Components
@@ -194,9 +196,9 @@ from analytics.advisor_opportunity_service import AdvisorOpportunityService
 from analytics.performance_engine import PerformanceEngine
 try:
     from analytics.backtest_engine_production import BacktestEngine
-    logger.info("✅ BacktestEngine loaded")
+    print("✅ BacktestEngine loaded")
 except (ImportError, AttributeError) as e:
-    logger.warning(f"⚠️  BacktestEngine disabled: {e}")
+    print(f"⚠️  BacktestEngine disabled: {e}")
     BacktestEngine = None
 from analytics.trade_analyzer import TradeAnalyzer
 from analytics.report_generator import ReportGenerator
