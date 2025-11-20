@@ -131,7 +131,14 @@ except (ImportError, ModuleNotFoundError, SyntaxError) as e:
     MarketIntelligenceEngine = None
     MarketIntelligenceAggregator = None
 from integrations.sentiment_aggregator import SentimentAggregator
-from integrations.macro_data_aggregator import MacroDataAggregator
+try:
+    from integrations.macro_data_aggregator import MacroAggregator
+    MacroDataAggregator = MacroAggregator  # Alias for compatibility
+    print("✅ MacroAggregator loaded")
+except (ImportError, ModuleNotFoundError, SyntaxError) as e:
+    print(f"⚠️  MacroAggregator skipped: {e}")
+    MacroAggregator = None
+    MacroDataAggregator = None
 
 # Utility Components
 from utils.logger_setup import setup_logger
