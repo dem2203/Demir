@@ -122,7 +122,14 @@ from analytics.report_generator import ReportGenerator
 # Integration Components
 from integrations.binance_websocket_v3 import BinanceWebSocketManager
 from integrations.multi_exchange_api import MultiExchangeDataFetcher
-from integrations.market_intelligence import MarketIntelligenceAggregator
+try:
+    from integrations.market_intelligence import MarketIntelligenceEngine
+    MarketIntelligenceAggregator = MarketIntelligenceEngine  # Alias for compatibility
+    print("✅ MarketIntelligenceEngine loaded")
+except (ImportError, ModuleNotFoundError, SyntaxError) as e:
+    print(f"⚠️  MarketIntelligenceEngine skipped: {e}")
+    MarketIntelligenceEngine = None
+    MarketIntelligenceAggregator = None
 from integrations.sentiment_aggregator import SentimentAggregator
 from integrations.macro_data_aggregator import MacroDataAggregator
 
