@@ -100,7 +100,12 @@ from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
 from advanced_ai.advisor_core import AdvisorCore
 from advanced_ai.regime_detector import MarketRegimeDetector
 from advanced_ai.layer_optimizer import LayerOptimizer
-from advanced_ai.causal_reasoning import CausalReasoningEngine
+try:
+    from advanced_ai.causal_reasoning import CausalReasoningEngine
+    print("✅ CausalReasoningEngine loaded")
+except (ImportError, ModuleNotFoundError, SyntaxError) as e:
+    print(f"⚠️  CausalReasoningEngine skipped: {e}")
+    CausalReasoningEngine = None
 
 # Analytics Components
 from analytics.advisor_opportunity_service import AdvisorOpportunityService
