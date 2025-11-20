@@ -180,37 +180,27 @@ from config import (
 import logging
 logger = logging.getLogger(__name__)
 
-# Advanced AI Components
+# ============================================================================
+# CRITICAL IMPORTS (These must succeed)
+# ============================================================================
+
+# Advanced AI - Critical
 from advanced_ai import AdvisorCore, MarketRegimeDetector, SignalGroupOrchestrator
 from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
-from advanced_ai.advisor_core import AdvisorCore
-try:
-    from advanced_ai.causal_reasoning import CausalReasoningEngine
-    print("✅ CausalReasoningEngine loaded")
-except (ImportError, ModuleNotFoundError) as e:
-    print(f"⚠️  CausalReasoningEngine disabled: {e}")
-    CausalReasoningEngine = None
 
-# Analytics Components
+# Analytics - Critical
 from analytics.advisor_opportunity_service import AdvisorOpportunityService
 from analytics.performance_engine import PerformanceEngine
-try:
-    from analytics.backtest_engine_production import BacktestEngine
-    print("✅ BacktestEngine loaded")
-except (ImportError, AttributeError) as e:
-    print(f"⚠️  BacktestEngine disabled: {e}")
-    BacktestEngine = None
 from analytics.trade_analyzer import TradeAnalyzer
 from analytics.report_generator import ReportGenerator
 
-# Integration Components
+# Integrations - Critical
 from integrations.binance_websocket_v3 import BinanceWebSocketManager
 from integrations.multi_exchange_api import MultiExchangeDataFetcher
 from integrations.market_intelligence import MarketIntelligenceEngine
 from integrations.sentiment_aggregator import SentimentAggregator
-from integrations.macro_data_aggregator import MacroDataAggregator
 
-# Utility Components
+# Utilities - Critical
 from utils.logger_setup import setup_logger
 from utils.real_data_verifier_pro import RealDataVerifier
 from utils.signal_validator_comprehensive import SignalValidator
@@ -220,13 +210,77 @@ from utils.retry_manager import RetryManager
 from utils.redis_cache import RedisCache
 from utils.health_monitor import HealthMonitor
 
-# UI Components
+# UI - Critical
 from ui.data_fetcher_realtime import RealtimeDataFetcher
 from ui.telegram_tradeplan_notifier import TelegramTradePlanNotifier
 from ui.dashboard_backend import EnterpriseDashboard
 
-# Database
+# Database - Critical
 from database_manager_production import DatabaseManager
+
+# ============================================================================
+# OPTIONAL IMPORTS (Failures are OK - system continues)
+# ============================================================================
+
+print("\n" + "="*80)
+print("📦 Loading optional modules...")
+print("="*80 + "\n")
+
+# Initialize all optional modules as None
+CausalReasoningEngine = None
+BacktestEngine = None
+MacroDataAggregator = None
+DefiDataAggregator = None
+AdvancedExchangeManager = None
+LiveTradeTracker = None
+EmergencyStopLoss = None
+
+# Try loading each - silent failures OK
+try:
+    from advanced_ai.causal_reasoning import CausalReasoningEngine
+    print("✅ CausalReasoningEngine")
+except:
+    print("⚠️  CausalReasoningEngine (skipped)")
+
+try:
+    from analytics.backtest_engine_production import BacktestEngine
+    print("✅ BacktestEngine")
+except:
+    print("⚠️  BacktestEngine (skipped)")
+
+try:
+    from integrations.macro_data_aggregator import MacroAggregator as MacroDataAggregator
+    print("✅ MacroDataAggregator")
+except:
+    print("⚠️  MacroDataAggregator (skipped)")
+
+try:
+    from integrations.defi_and_onchain_api import DefiDataAggregator
+    print("✅ DefiDataAggregator")
+except:
+    print("⚠️  DefiDataAggregator (skipped)")
+
+try:
+    from integrations.advanced_exchange_manager import AdvancedExchangeManager
+    print("✅ AdvancedExchangeManager")
+except:
+    print("⚠️  AdvancedExchangeManager (skipped)")
+
+try:
+    from integrations.live_trade_tracker import LiveTradeTracker
+    print("✅ LiveTradeTracker")
+except:
+    print("⚠️  LiveTradeTracker (skipped)")
+
+try:
+    from integrations.emergency_stop_loss import EmergencyStopLoss
+    print("✅ EmergencyStopLoss")
+except:
+    print("⚠️  EmergencyStopLoss (skipped)")
+
+print("\n" + "="*80)
+print("✅ Optional modules loading completed!")
+print("="*80 + "\n")
 
 # ============================================================================
 # ENHANCED LOGGING SYSTEM
