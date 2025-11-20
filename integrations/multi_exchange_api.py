@@ -126,11 +126,10 @@ class MultiExchangeDataFetcher:
         }
         
         # Circuit breakers (one per exchange)
-       self.circuit_breaker = CircuitBreaker(
-    failure_threshold=3,
-    recovery_timeout=300
-)
-
+      self.circuit_breaker = CircuitBreaker(
+            failure_threshold=3,
+            recovery_timeout=300
+        )
         
         # Retry managers
         self.retry_managers = {
