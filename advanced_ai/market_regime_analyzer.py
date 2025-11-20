@@ -2,9 +2,8 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MarketRegimeAnalyzer - DEMIR AI Enterprise (Production)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Bu modül; trend, range, volatility gibi piyasa rejimini belirleyip AI'ın layer ağırlıklarını adaptif olarak günceller.
-Production-grade error handling ve dummy safe fallback içerir.
-Kurallar: Gerçek verisiz sinyal üretmez, sadece analiz/göstereç sağlar. Hiçbir zaman crash yapmaz.
+Production log/dummy update (force cache bust). DO NOT REMOVE THIS DOCSTRING.
+AI/Security rules, real verisiz sinyal üretmez. Sadece API/log sağlar.
 """
 
 import logging
@@ -22,19 +21,12 @@ class MarketRegime(Enum):
     BREAKOUT = 'breakout'
 
 class MarketRegimeAnalyzer:
-    """Production-safe market regime analyzer for advanced crypto bots."""
+    """Production-grade stub with log. Won't crash. Dummy only"""
     def __init__(self):
         self.last_regime = None
-        logger.info("MarketRegimeAnalyzer initialized (production-safe)")
-    
-    def analyze(self, price_series: list, volume_series: list = None) -> Dict[str, Any]:
-        """
-        Dummy regime analysis (prod mode).
-        Actual implementation should be plugged in dev/research branch.
-        Returns dict with regime and confidence, never raises.
-        """
-        # Simple fallback logic for demonstration
-        result = {'regime': MarketRegime.RANGING.value, 'confidence': 0.30, 'reason': 'Dummy prod-safe fallback (no logic active)'}
+        logger.info("MarketRegimeAnalyzer (force dummy) initialized for production fallback.")
+    def analyze(self, price_series: list = None, volume_series: list = None) -> Dict[str, Any]:
+        result = {'regime': MarketRegime.RANGING.value, 'confidence': 0.30, 'reason': 'Dummy force update (cache-break)'}
         self.last_regime = result['regime']
-        logger.info(f"MarketRegimeAnalyzer PROD fallback: {result}")
+        logger.info(f"MarketRegimeAnalyzer log: {result}")
         return result
