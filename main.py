@@ -54,6 +54,7 @@ import asyncio
 import logging
 import threading
 import traceback
+import requests  # For Telegram and HTTP requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple, Union, Callable
 from collections import defaultdict, deque
@@ -74,91 +75,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 
-# main.py - Auto-discover all Python modules
-
-import os
-import sys
-import glob
-from utils.module_health_check import health_checker
-
-def discover_project_modules():
-    """
-    Otomatik olarak tüm Python dosyalarını bul ve listeye ekle
-    
-    Returns:
-        List of module names to track
-    """
-    modules = []
-    
-    # Proje klasörleri
-    folders_to_scan = [
-        'advanced_ai',
-        'analytics',
-        'integrations',
-        'ui',
-        'utils',
-        'layers',
-    ]
-    
-    for folder in folders_to_scan:
-        if not os.path.exists(folder):
-            continue
-        
-        # Tüm .py dosyalarını bul
-        pattern = f"{folder}/**/*.py"
-        py_files = glob.glob(pattern, recursive=True)
-        
-        for py_file in py_files:
-            # __init__.py ve __pycache__ dosyalarını atla
-            if '__pycache__' in py_file or py_file.endswith('__init__.py'):
-                continue
-            
-            # Dosya yolunu modül adına çevir
-            # Örnek: "advanced_ai/advisor_core.py" -> "advanced_ai.advisor_core"
-            module_name = py_file.replace('/', '.').replace('\\', '.').replace('.py', '')
-            modules.append(module_name)
-    
-    return sorted(modules)
-
-# ============================================================================
-# MODULE HEALTH TRACKING (AUTO-DISCOVER)
-# ============================================================================
-
-print("\n" + "="*80)
-print("📊 MODULE HEALTH CHECK - Scanning all Python modules...")
-print("="*80)
-
-# Tüm modülleri otomatik bul
-all_modules = discover_project_modules()
-print(f"\n✅ Found {len(all_modules)} Python modules to track\n")
-
-# Her modülü kontrol et
-loaded_count = 0
-failed_count = 0
-
-for module_name in all_modules:
-    status = health_checker.check_module(module_name)
-    health_checker.register_module(
-        module_name,
-        status['status'],
-        status['error']
-    )
-    
-    if '✅' in status['status']:
-        loaded_count += 1
-        print(f"  ✅ {module_name}")
-    else:
-        failed_count += 1
-        print(f"  ❌ {module_name} - {status['error']}")
-
-print(f"\n{'='*80}")
-print(f"📊 MODULE HEALTH SUMMARY")
-print(f"{'='*80}")
-print(f"✅ Loaded: {loaded_count}/{len(all_modules)}")
-print(f"❌ Failed: {failed_count}/{len(all_modules)}")
-print(f"📈 Success Rate: {loaded_count/len(all_modules)*100:.1f}%")
-print(f"{'='*80}\n")
-
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
@@ -177,30 +93,30 @@ from config import (
     TELEGRAM_TOKEN,
     TELEGRAM_CHAT_ID
 )
-import logging
-logger = logging.getLogger(__name__)
 
-# ============================================================================
-# CRITICAL IMPORTS (These must succeed)
-# ============================================================================
-
-# Advanced AI - Critical
-from advanced_ai import AdvisorCore, MarketRegimeDetector, SignalGroupOrchestrator
+# Advanced AI Components
+from advanced_ai.signal_engine_integration import SignalGroupOrchestrator
 from advanced_ai.opportunity_engine import OpportunityEngine, TradePlan
+from advanced_ai.advisor_core import AdvisorCore
+from advanced_ai.regime_detector import MarketRegimeDetector
+from advanced_ai.layer_optimizer import LayerOptimizer
+from advanced_ai.causal_reasoning import CausalReasoningEngine
 
-# Analytics - Critical
+# Analytics Components
 from analytics.advisor_opportunity_service import AdvisorOpportunityService
 from analytics.performance_engine import PerformanceEngine
+from analytics.backtest_engine_production import BacktestEngine
 from analytics.trade_analyzer import TradeAnalyzer
 from analytics.report_generator import ReportGenerator
 
-# Integrations - Critical
+# Integration Components
 from integrations.binance_websocket_v3 import BinanceWebSocketManager
 from integrations.multi_exchange_api import MultiExchangeDataFetcher
-from integrations.market_intelligence import MarketIntelligenceEngine
+from integrations.market_intelligence import MarketIntelligenceAggregator
 from integrations.sentiment_aggregator import SentimentAggregator
+from integrations.macro_data_aggregator import MacroDataAggregator
 
-# Utilities - Critical
+# Utility Components
 from utils.logger_setup import setup_logger
 from utils.real_data_verifier_pro import RealDataVerifier
 from utils.signal_validator_comprehensive import SignalValidator
@@ -210,79 +126,13 @@ from utils.retry_manager import RetryManager
 from utils.redis_cache import RedisCache
 from utils.health_monitor import HealthMonitor
 
-# UI - Critical
+# UI Components
 from ui.data_fetcher_realtime import RealtimeDataFetcher
 from ui.telegram_tradeplan_notifier import TelegramTradePlanNotifier
-try:
-    from ui.dashboard_backend import EnterpriseDashboard
-except: EnterpriseDashboard = None
+from ui.dashboard_backend import EnterpriseDashboard
 
-# Database - Critical
+# Database
 from database_manager_production import DatabaseManager
-
-# ============================================================================
-# OPTIONAL IMPORTS (Failures are OK - system continues)
-# ============================================================================
-
-print("\n" + "="*80)
-print("📦 Loading optional modules...")
-print("="*80 + "\n")
-
-# Initialize all optional modules as None
-CausalReasoningEngine = None
-BacktestEngine = None
-MacroDataAggregator = None
-DefiDataAggregator = None
-AdvancedExchangeManager = None
-LiveTradeTracker = None
-EmergencyStopLoss = None
-
-# Try loading each - silent failures OK
-try:
-    from advanced_ai.causal_reasoning import CausalReasoningEngine
-    print("✅ CausalReasoningEngine")
-except:
-    print("⚠️  CausalReasoningEngine (skipped)")
-
-try:
-    from analytics.backtest_engine_production import BacktestEngine
-    print("✅ BacktestEngine")
-except:
-    print("⚠️  BacktestEngine (skipped)")
-
-try:
-    from integrations.macro_data_aggregator import MacroAggregator as MacroDataAggregator
-    print("✅ MacroDataAggregator")
-except:
-    print("⚠️  MacroDataAggregator (skipped)")
-
-try:
-    from integrations.defi_and_onchain_api import DefiDataAggregator
-    print("✅ DefiDataAggregator")
-except:
-    print("⚠️  DefiDataAggregator (skipped)")
-
-try:
-    from integrations.advanced_exchange_manager import AdvancedExchangeManager
-    print("✅ AdvancedExchangeManager")
-except:
-    print("⚠️  AdvancedExchangeManager (skipped)")
-
-try:
-    from integrations.live_trade_tracker import LiveTradeTracker
-    print("✅ LiveTradeTracker")
-except:
-    print("⚠️  LiveTradeTracker (skipped)")
-
-try:
-    from integrations.emergency_stop_loss import EmergencyStopLoss
-    print("✅ EmergencyStopLoss")
-except:
-    print("⚠️  EmergencyStopLoss (skipped)")
-
-print("\n" + "="*80)
-print("✅ Optional modules loading completed!")
-print("="*80 + "\n")
 
 # ============================================================================
 # ENHANCED LOGGING SYSTEM
@@ -1495,25 +1345,6 @@ def health_check():
             'status': 'error',
             'message': str(e)
         }), 500
-
-# main.py - Flask Debug Route
-
-@app.route('/api/health/modules', methods=['GET'])
-def health_modules():
-    """Get module health status - JSON API"""
-    from utils.module_health_check import health_checker
-    
-    report = health_checker.get_health_report()
-    return jsonify(report)
-
-
-@app.route('/debug/modules', methods=['GET'])
-def debug_modules():
-    """Module health dashboard - HTML"""
-    from utils.module_health_check import health_checker
-    
-    html = health_checker.get_dashboard_html()
-    return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/api/status')
 @limiter.limit("30 per minute")
