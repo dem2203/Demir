@@ -52,7 +52,7 @@ from analytics.advisor_opportunity_service import AdvisorOpportunityService
 from analytics.performance_engine import PerformanceEngine
 
 # Advanced AI
-from advanced_ai.signal_engine_integration import SignalEngineIntegration
+from advanced_ai.signal_engine_integration import SignalGroupOrchestrator as SignalEngineIntegration
 
 logger = setup_logger(__name__)
 
