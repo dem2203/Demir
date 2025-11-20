@@ -38,6 +38,17 @@ GLASSNODE_API_KEY = os.getenv('GLASSNODE_API_KEY', '')
 CRYPTOPANIC_API_KEY = os.getenv('CRYPTOPANIC_API_KEY', '')
 # --------- SYSTEM PARAMS ---------
 DEFAULT_TRACKED_SYMBOLS = [ ... ] # orijinal listen korunuyor (kısaltıldı buraya)
+# --------- OPPORTUNITY THRESHOLDS GERİ EKLENEN ---------
+OPPORTUNITY_THRESHOLDS = {
+    'min_confidence': 0.75,
+    'high_confidence': 0.85,
+    'min_telegram_confidence': 0.80,
+    'min_rr': 2.0,
+    'excellent_rr_ratio': 3.0,
+    'max_drawdown_pct': 15.0,
+    'min_volume_24h': 10000000,
+    'max_exposure_pct': 25.0,
+}
 # --------- EXTRA THRESHOLDS (Opsiyonel) ---------
 ORDERBOOK_WHALE_THRESHOLD = float(os.getenv('ORDERBOOK_WHALE_THRESHOLD', '1000000'))
 FLOW_STALE_LIMIT_MINUTES = int(os.getenv('FLOW_STALE_LIMIT_MINUTES', '60'))
@@ -63,4 +74,4 @@ def validate_config():
     print("✅ Config validated - ALL CRITICAL KEYS PRESENT!")
 # ------- ENTEGRE OLDUĞUNU GÖSTER -------
 print(f"[CONFIG] DEMIR AI config.py yüklendi. Version: {VERSION}, Advisory Mode: {ADVISORY_MODE}")
-# --- Eski export listesi, fonksiyonlar ve thresholdlar aşağıda korunur ---
+# --- Export edilen eski fonksiyonlar ve thresholdlar aşağıda korunur ---
