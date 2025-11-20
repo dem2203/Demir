@@ -25,6 +25,7 @@ import time
 import asyncio
 import logging
 import threading
+import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Callable, Any
 from collections import defaultdict, deque
