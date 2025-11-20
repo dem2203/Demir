@@ -213,7 +213,9 @@ from utils.health_monitor import HealthMonitor
 # UI - Critical
 from ui.data_fetcher_realtime import RealtimeDataFetcher
 from ui.telegram_tradeplan_notifier import TelegramTradePlanNotifier
-from ui.dashboard_backend import EnterpriseDashboard
+try:
+    from ui.dashboard_backend import EnterpriseDashboard
+except: EnterpriseDashboard = None
 
 # Database - Critical
 from database_manager_production import DatabaseManager
