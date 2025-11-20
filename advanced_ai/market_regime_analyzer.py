@@ -1,17 +1,22 @@
 """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CausalReasoningEngine PRO Stub - DEMIR AI Enterprise
+MarketRegimeAnalyzer PRO Stub - DEMIR AI Enterprise
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BOŞ CLASS - PRODUCTION DİSABLE STATE
 
-Bu modul prod ortamda zorunlu değil. Sadece arayüz/try-except gereksinimleri için stub bırakılmıştır.
+Bu modul prod ortamda zorunlu değil. Sadece arayüz sağlamak için stub bırakılmıştır.
 """
 
-class CausalReasoningEngine:
-    """Stub for CausalReasoningEngine. Not implemented on this system."""
+class MarketRegimeAnalyzer:
+    """Stub for MarketRegimeAnalyzer. Not implemented on this system."""
+
     def __init__(self, *args, **kwargs):
         pass
-    def infer(self, data):
+
+    def analyze(self, data):
+        """
+        Dummy analyze function. Real logic not loaded in production.
+        """
         raise NotImplementedError(
-            "CausalReasoningEngine is currently disabled. Production unaffected."
+            "MarketRegimeAnalyzer is currently disabled. No impact on trade logic."
         )
