@@ -1,4 +1,3 @@
-```python
 import numpy as np
 import pandas as pd
 from typing import Tuple, Dict, List
@@ -6,6 +5,7 @@ import logging
 from scipy import signal
 from scipy.fft import fft
 import talib
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +55,8 @@ class AdvancedMarketDataProcessor:
         
         # Stochastic
         slowk, slowd = talib.STOCH(prices, prices, prices)
-        indicators['stoch_k'] = slowk[-1] if slowk[-1] is not np.nan else 50
-        indicators['stoch_d'] = slowd[-1] if slowd[-1] is not np.nan else 50
+        indicators['stoch_k'] = slowk[-1] if not np.isnan(slowk[-1]) else 50
+        indicators['stoch_d'] = slowd[-1] if not np.isnan(slowd[-1]) else 50
         
         # Additional indicators...
         # 50+ total indicators
@@ -94,3 +94,6 @@ class AdvancedMarketDataProcessor:
             return np.log(R/S) / np.log(len(returns)/2)
         return 0.5
 
+
+# Convenience alias for backward compatibility
+MarketDataProcessor = AdvancedMarketDataProcessor
