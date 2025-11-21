@@ -434,6 +434,60 @@ class CryptoDominanceTracker:
         
         return analysis
     
+    def get_dominance_data(self) -> Dict:
+        """
+        ⭐ NEW v8.0: Main method called by background dominance tracking thread.
+        
+        Fetches and analyzes crypto dominance metrics:
+        - BTC.D (Bitcoin dominance)
+        - ETH.D (Ethereum dominance)
+        - Altseason detection
+        - Market phase classification
+        - Trading implications
+        
+        Returns comprehensive dominance report with altseason analysis.
+        """
+        try:
+            # Call comprehensive dominance analysis
+            analysis = self.get_comprehensive_dominance_analysis()
+            
+            if not analysis:
+                logger.warning("⚠️ Dominance analysis returned empty")
+                return {
+                    'timestamp': datetime.now(pytz.UTC).isoformat(),
+                    'error': 'Failed to fetch dominance data',
+                    'btc_dominance': 0.0,
+                    'eth_dominance': 0.0,
+                    'analysis_complete': False
+                }
+            
+            # Simplify report for thread consumption
+            report = {
+                'timestamp': analysis['timestamp'],
+                'btc_dominance': analysis['current_dominance'].get('btc_dominance', 0),
+                'eth_dominance': analysis['current_dominance'].get('eth_dominance', 0),
+                'stablecoin_dominance': analysis['current_dominance'].get('stablecoin_dominance', 0),
+                'total_market_cap': analysis['current_dominance'].get('total_market_cap', 0),
+                'market_phase': analysis['market_phase'],
+                'altseason_score': analysis['altseason']['score'],
+                'trading_signal': analysis['trading_signal'],
+                'btc_trend': analysis['trends'].get('btc_trend', 'UNKNOWN'),
+                'eth_trend': analysis['trends'].get('eth_trend', 'UNKNOWN'),
+                'data_quality': 'REAL',
+                'analysis_complete': True
+            }
+            
+            logger.info(f"✅ Dominance data retrieved: BTC.D={report['btc_dominance']:.1f}%, Phase={report['market_phase']}")
+            return report
+            
+        except Exception as e:
+            logger.error(f"❌ Error in get_dominance_data: {e}")
+            return {
+                'timestamp': datetime.now(pytz.UTC).isoformat(),
+                'error': str(e),
+                'analysis_complete': False
+            }
+    
     def _generate_dominance_signal(self, dominance: Dict, altseason: Dict) -> str:
         """
         Generate trading signal based on dominance analysis
