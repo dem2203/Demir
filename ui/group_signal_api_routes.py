@@ -5,7 +5,7 @@ Professional REST API architecture
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -280,4 +280,6 @@ class GroupSignalAPIRoutes:
         return categories
 
 
-from typing import Tuple
+def create_group_signal_routes():
+    """Factory function to create routes instance."""
+    return GroupSignalAPIRoutes()
