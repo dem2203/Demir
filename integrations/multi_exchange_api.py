@@ -156,7 +156,7 @@ class MultiExchangeDataFetcher:
             'coinbase_requests': 0
         }
         
-        self.logger.info('MultiExchangeDataFetcher initialized (Binance, Bybit, Coinbase)')
+        self.logger.info('✅ MultiExchangeDataFetcher initialized (Binance, Bybit, Coinbase)')
     
     # ====================================================================
     # PRICE FETCHING
@@ -197,18 +197,18 @@ class MultiExchangeDataFetcher:
                     self.stats['successful_requests'] += 1
                     self.stats[f'{exchange_name.lower()}_requests'] += 1
                     
-                    self.logger.debug(f'Price fetched from {exchange_name}: {price:.2f}')
+                    self.logger.debug(f'✅ Price fetched from {exchange_name}: {price:.2f}')
                     return price, exchange_name
                     
             except Exception as e:
-                self.logger.warning(f'Failed to fetch from {exchange_name}: {e}')
+                self.logger.warning(f'⚠️ Failed to fetch from {exchange_name}: {e}')
                 self.circuit_breaker.record_failure()
                 self._record_failure(exchange_name)
                 continue
         
         # All exchanges failed
         self.stats['failed_requests'] += 1
-        error_msg = f'All exchanges failed for {symbol}'
+        error_msg = f'❌ All exchanges failed for {symbol}'
         self.logger.error(error_msg)
         raise Exception(error_msg)
     
@@ -256,10 +256,10 @@ class MultiExchangeDataFetcher:
                         price = float(data['price'])
                         return price
                     else:
-                        self.logger.error(f'Binance API error: {response.status}')
+                        self.logger.error(f'❌ Binance API error: {response.status}')
                         return None
         except Exception as e:
-            self.logger.error(f'Binance fetch error: {e}')
+            self.logger.error(f'❌ Binance fetch error: {e}')
             return None
     
     async def _fetch_bybit_price(self, symbol: str, config: Dict[str, Any]) -> Optional[float]:
@@ -291,7 +291,7 @@ class MultiExchangeDataFetcher:
                                 return price
                     return None
         except Exception as e:
-            self.logger.error(f'Bybit fetch error: {e}')
+            self.logger.error(f'❌ Bybit fetch error: {e}')
             return None
     
     async def _fetch_coinbase_price(self, symbol: str, config: Dict[str, Any]) -> Optional[float]:
@@ -318,7 +318,7 @@ class MultiExchangeDataFetcher:
                         return price
                     return None
         except Exception as e:
-            self.logger.error(f'Coinbase fetch error: {e}')
+            self.logger.error(f'❌ Coinbase fetch error: {e}')
             return None
     
     # ====================================================================
@@ -348,7 +348,7 @@ class MultiExchangeDataFetcher:
             if df is not None and len(df) > 0:
                 return df
         except Exception as e:
-            self.logger.warning(f'Binance OHLCV fetch failed: {e}')
+            self.logger.warning(f'⚠️ Binance OHLCV fetch failed: {e}')
         
         # Try Bybit as fallback
         try:
@@ -356,9 +356,9 @@ class MultiExchangeDataFetcher:
             if df is not None and len(df) > 0:
                 return df
         except Exception as e:
-            self.logger.warning(f'Bybit OHLCV fetch failed: {e}')
+            self.logger.warning(f'⚠️ Bybit OHLCV fetch failed: {e}')
         
-        self.logger.error(f'Failed to fetch OHLCV for {symbol} {interval}')
+        self.logger.error(f'❌ Failed to fetch OHLCV for {symbol} {interval}')
         return None
     
     async def _fetch_binance_klines(
@@ -406,7 +406,7 @@ class MultiExchangeDataFetcher:
                         return df
                     return None
         except Exception as e:
-            self.logger.error(f'Binance klines error: {e}')
+            self.logger.error(f'❌ Binance klines error: {e}')
             return None
     
     async def _fetch_bybit_klines(
@@ -460,7 +460,7 @@ class MultiExchangeDataFetcher:
                             return df
                     return None
         except Exception as e:
-            self.logger.error(f'Bybit klines error: {e}')
+            self.logger.error(f'❌ Bybit klines error: {e}')
             return None
     
     # ====================================================================
@@ -493,7 +493,7 @@ class MultiExchangeDataFetcher:
                             'close': float(data.get('lastPrice', 0))
                         }
         except Exception as e:
-            self.logger.error(f'24h ticker fetch error: {e}')
+            self.logger.error(f'❌ 24h ticker fetch error: {e}')
         
         return None
     
@@ -518,7 +518,7 @@ class MultiExchangeDataFetcher:
         # Mark as unhealthy after 3 consecutive failures
         if health['failure_count'] >= 3:
             health['is_healthy'] = False
-            self.logger.warning(f'{exchange} marked as unhealthy')
+            self.logger.warning(f'⚠️ {exchange} marked as unhealthy')
     
     def _record_latency(self, exchange: str, latency: float) -> None:
         """Record request latency."""
@@ -558,6 +558,13 @@ class MultiExchangeDataFetcher:
             },
             'exchange_health': self.get_health_status()
         }
+
+# ============================================================================
+# BACKWARD COMPATIBILITY ALIASES
+# ============================================================================
+
+# Alias for backward compatibility with main.py imports
+MultiExchangeAPI = MultiExchangeDataFetcher
 
 # ============================================================================
 # CONVENIENCE FUNCTIONS
