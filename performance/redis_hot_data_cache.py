@@ -36,6 +36,28 @@ class RedisHotDataCache:
         self.db.set(fullkey, data, ex=exp or self.default_exp)
         logger.info(f"[REDIS] Set {fullkey} (exp={exp or self.default_exp}s)")
 
+    def set(self, key: str, value: Any, exp: int = None) -> bool:
+        """
+        ⭐ NEW v8.0: Standard Redis set() method for compatibility.
+        
+        Wrapper around set_cache() to match standard Redis API naming.
+        Used by background threads and caching layers.
+        
+        Args:
+            key: Cache key (will be prefixed)
+            value: Value to cache (JSON serializable)
+            exp: Expiration in seconds (default: self.default_exp)
+        
+        Returns:
+            True if successful
+        """
+        try:
+            self.set_cache(key, value, exp)
+            return True
+        except Exception as e:
+            logger.error(f"❌ Redis set error for key '{key}': {e}")
+            return False
+
     def get_cache(self, key:str) -> Any:
         fullkey = self.prefix + key
         v = self.db.get(fullkey)
@@ -44,6 +66,20 @@ class RedisHotDataCache:
             return json.loads(v)
         except Exception:
             return v
+
+    def get(self, key: str) -> Any:
+        """
+        ⭐ NEW v8.0: Standard Redis get() method for compatibility.
+        
+        Wrapper around get_cache() to match standard Redis API naming.
+        
+        Args:
+            key: Cache key (will be prefixed)
+        
+        Returns:
+            Cached value or None if not found
+        """
+        return self.get_cache(key)
 
     def clear_cache(self):
         filter_keys = [k for k in self.db.keys(self.prefix+'*')]
