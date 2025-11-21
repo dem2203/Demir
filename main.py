@@ -2004,7 +2004,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(120)
     
-    def _pattern_loop(self, interval: int):
+   def _pattern_loop(self, interval: int):
         """Pattern recognition continuous loop"""
         logger.info("🔍 Pattern Recognition loop started")
         while self.running:
@@ -2036,7 +2036,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(60)
     
-      def _correlation_loop(self, interval: int):
+    def _correlation_loop(self, interval: int):
         """Market correlation analysis continuous loop"""
         logger.info("📊 Correlation Engine loop started")
         while self.running:
@@ -2145,6 +2145,20 @@ class DemirUltraComprehensiveOrchestrator:
                 if DEBUG_MODE:
                     logger.debug(traceback.format_exc())
                 time.sleep(60)
+    
+    def _telegram_loop(self, interval: int):
+        """Telegram notifications continuous loop"""
+        logger.info("📢 Telegram Monitor loop started")
+        while self.running:
+            try:
+                if self.telegram_monitor:
+                    self.telegram_monitor.process_alerts()
+                time.sleep(interval)
+            except Exception as e:
+                logger.error(f"❌ Telegram loop error: {e}")
+                if DEBUG_MODE:
+                    logger.debug(traceback.format_exc())
+                time.sleep(30)
     
     # 🆕 AUTO-START: WebSocket'i ilk kez başlat
     if self.ws_manager:
