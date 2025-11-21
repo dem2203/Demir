@@ -2100,9 +2100,15 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(300)
     
-    def _websocket_loop(self, interval: int):
-    """WebSocket connection maintenance loop"""
-    logger.info("🌐 WebSocket Manager loop started")
+        def _websocket_loop(self, interval: int):
+        """WebSocket connection maintenance loop"""
+        while self.running:
+            try:
+                # Reconnect logic here
+                time.sleep(interval)
+            except Exception as e:
+                self.logger.error(f"WebSocket loop error: {e}")
+                time.sleep(5)
     
     # 🆕 AUTO-START: WebSocket'i ilk kez başlat
     if self.ws_manager:
