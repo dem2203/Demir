@@ -949,6 +949,19 @@ except ImportError as e:
     TRADING_EXECUTOR_AVAILABLE = False
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
+# ⭐ SECTION 20.5: v8.0 NEW API ROUTES MODULE (5-GROUP INDEPENDENT SIGNALS)
+# ════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+try:
+    from api_routes_group_signals import register_group_signal_routes
+    GROUP_SIGNAL_API_AVAILABLE = True
+    print("✅ Group signal API routes module loaded (9 endpoints)")
+except ImportError as e:
+    print(f"⚠️  WARNING: Group signal API routes not available - {e}")
+    register_group_signal_routes = None
+    GROUP_SIGNAL_API_AVAILABLE = False
+
+# ════════════════════════════════════════════════════════════════════════════════════════════════════════
 # SECTION 21: LOGGING CONFIGURATION
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -1746,7 +1759,8 @@ class DemirUltraComprehensiveOrchestrator:
             ("Telegram", TELEGRAM_MONITOR_AVAILABLE),
             ("Monitoring", MONITORING_AVAILABLE),
             ("Database", DATABASE_AVAILABLE),
-            ("Data Validators", VALIDATOR_AVAILABLE)
+            ("Data Validators", VALIDATOR_AVAILABLE),
+            ("NEW: Group Signal API Routes", GROUP_SIGNAL_API_AVAILABLE)
         ]
         
         for group_name, available in status_groups:
@@ -2282,7 +2296,8 @@ class DemirUltraComprehensiveOrchestrator:
                 'telegram': TELEGRAM_MONITOR_AVAILABLE,
                 'monitoring': MONITORING_AVAILABLE,
                 'database': DATABASE_AVAILABLE,
-                'validators': VALIDATOR_AVAILABLE
+                'validators': VALIDATOR_AVAILABLE,
+                'group_signal_api': GROUP_SIGNAL_API_AVAILABLE
             },
             'advisory_mode': ADVISORY_MODE,
             'debug_mode': DEBUG_MODE,
@@ -2599,7 +2614,16 @@ if FLASK_AVAILABLE and app:
                 '/api/status',
                 '/api/validators/status',
                 '/api/signals/latest',
+                '/api/signals/technical',
+                '/api/signals/sentiment',
+                '/api/signals/ml',
+                '/api/signals/onchain',
+                '/api/signals/risk',
                 '/api/opportunities',
+                '/api/smart-money/recent',
+                '/api/arbitrage/opportunities',
+                '/api/patterns/detected',
+                '/api/onchain/metrics',
                 '/api/analytics/summary',
                 '/api/prices',
                 '/api/metrics'
@@ -2767,6 +2791,28 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f"❌ Failed to register group signal routes: {e}")
     
+    # ═══════════════════════════════════════════════════════════════════════════════════════
+    # ⭐ NEW v8.0: REGISTER 9 GROUP SIGNAL API ROUTES
+    # ═══════════════════════════════════════════════════════════════════════════════════════
+    
+    if GROUP_SIGNAL_API_AVAILABLE and register_group_signal_routes:
+        try:
+            register_group_signal_routes(app, orchestrator)
+            logger.info("✅ NEW v8.0: Group Signal API routes registered (9 endpoints)")
+            logger.info("   ├─ /api/signals/technical")
+            logger.info("   ├─ /api/signals/sentiment")
+            logger.info("   ├─ /api/signals/ml")
+            logger.info("   ├─ /api/signals/onchain")
+            logger.info("   ├─ /api/signals/risk")
+            logger.info("   ├─ /api/smart-money/recent")
+            logger.info("   ├─ /api/arbitrage/opportunities")
+            logger.info("   ├─ /api/patterns/detected")
+            logger.info("   └─ /api/onchain/metrics")
+        except Exception as e:
+            logger.error(f"❌ Failed to register group signal API routes: {e}")
+            if DEBUG_MODE:
+                logger.debug(traceback.format_exc())
+    
     # Get Railway environment variables
     PORT = int(os.getenv('PORT', 5000))
     HOST = '0.0.0.0'
@@ -2778,6 +2824,15 @@ if __name__ == '__main__':
     print(f"📊 API Status: https://demir1988.up.railway.app/api/status")
     print(f"🔐 Validator Status: https://demir1988.up.railway.app/api/validators/status (NEW v8.0)")
     print(f"📈 Signals API: https://demir1988.up.railway.app/api/signals/latest")
+    print(f"🎯 Technical: https://demir1988.up.railway.app/api/signals/technical?symbol=BTCUSDT (NEW)")
+    print(f"💬 Sentiment: https://demir1988.up.railway.app/api/signals/sentiment?symbol=BTCUSDT (NEW)")
+    print(f"🤖 ML: https://demir1988.up.railway.app/api/signals/ml?symbol=BTCUSDT (NEW)")
+    print(f"⛓️ On-Chain: https://demir1988.up.railway.app/api/signals/onchain?symbol=BTCUSDT (NEW)")
+    print(f"⚠️  Risk: https://demir1988.up.railway.app/api/signals/risk?symbol=BTCUSDT (NEW)")
+    print(f"🐳 Smart Money: https://demir1988.up.railway.app/api/smart-money/recent (NEW)")
+    print(f"🔄 Arbitrage: https://demir1988.up.railway.app/api/arbitrage/opportunities (NEW)")
+    print(f"🔍 Patterns: https://demir1988.up.railway.app/api/patterns/detected (NEW)")
+    print(f"📊 OnChain Metrics: https://demir1988.up.railway.app/api/onchain/metrics (NEW)")
     print(f"💡 Opportunities: https://demir1988.up.railway.app/api/opportunities")
     print(f"📋 Analytics: https://demir1988.up.railway.app/api/analytics/summary")
     print("="*100)
@@ -2785,6 +2840,7 @@ if __name__ == '__main__':
     print("🔒 ZERO Mock Data | 100% Real Exchange Data Only")
     print("⚠️  Advisory Mode: Analysis & Recommendations Only")
     print("✨ NEW v8.0: Enhanced Validator Monitoring & Telegram Alerts")
+    print("✨ NEW v8.0: 9 Group Signal API Endpoints for Dashboard")
     print("="*100)
     
     try:
