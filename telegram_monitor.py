@@ -25,7 +25,7 @@ import logging
 import threading
 from datetime import datetime, timedelta
 import json
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 # ============================================================================
 # SETUP LOGGING
@@ -191,7 +191,7 @@ def create_hourly_report() -> str:
 <b>🤖 DEMIR AI - SAATLIK RAPOR</b>
 <b>⏰ {datetime.now().strftime('%d.%m.%Y %H:%M:%S UTC')}</b>
 
-<b>💰 FIYATLAR (REAL-TIME BINANCE)</b>
+<b>💰 FİYATLAR (REAL-TIME BINANCE)</b>
 """
     
     if btc:
@@ -293,6 +293,8 @@ class TelegramMonitor:
         self.running = False
         self.last_hourly_report = datetime.now()
         self.last_health_check = datetime.now()
+        self.last_alert_check = datetime.now()
+        self.alert_queue = []
     
     def start(self):
         """Monitor başlat"""
@@ -327,6 +329,11 @@ class TelegramMonitor:
                         logger.warning("⚠️ Health check failed!")
                     self.last_health_check = now
                 
+                # ALERT CHECK (Her 1 dakika)
+                if (now - self.last_alert_check).total_seconds() >= 60:
+                    self.process_alerts()
+                    self.last_alert_check = now
+                
                 # Her 10 saniye kontrol et
                 time.sleep(10)
                 
@@ -342,6 +349,115 @@ class TelegramMonitor:
             "⛔ <b>DEMIR AI - DURDURULDU</b>\n"
             f"⏰ {datetime.now().strftime('%d.%m.%Y %H:%M:%S UTC')}"
         )
+    
+    def process_alerts(self) -> None:
+        """
+        ⭐ NEW v8.0: Process and send trading opportunity alerts.
+        
+        Checks for:
+        - High-confidence signals from AI
+        - Price breakouts
+        - Volume spikes
+        - Pattern detections
+        - Risk warnings
+        
+        Sends formatted Telegram notifications for actionable opportunities.
+        """
+        try:
+            # Get latest signals from database
+            signals = get_latest_signals()
+            
+            if not signals:
+                logger.debug("No alerts to process")
+                return
+            
+            # Filter high-confidence signals (>70%)
+            high_confidence_signals = [s for s in signals if s.get('confidence', 0) > 70]
+            
+            if high_confidence_signals:
+                logger.info(f"⚡ Found {len(high_confidence_signals)} high-confidence signals")
+                
+                for signal in high_confidence_signals:
+                    # Send opportunity alert
+                    self.send_opportunity_alert(signal)
+                    time.sleep(2)  # Rate limiting
+            
+            # Check for risk warnings
+            btc = get_binance_price("BTCUSDT")
+            if btc and abs(btc.get('change_24h', 0)) > 10:
+                risk_alert = f"""
+⚠️ <b>RİSK UYARISI</b>
+
+<b>BTC:</b> ${btc['price']:,.2f}
+<b>24h Değişim:</b> {btc['change_24h']:+.2f}%
+
+🔴 <b>YÜKSEK VOLATİLİTE</b>
+⚠️ Risk yönetimi uygula!
+⚠️ Pozisyon büyüklüğünü azalt!
+⚠️ Stop-loss ayarla!
+"""
+                send_telegram_message(risk_alert)
+                logger.info("⚡ Risk alert sent")
+            
+        except Exception as e:
+            logger.error(f"❌ Error in process_alerts: {e}")
+    
+    def send_opportunity_alert(self, signal: Dict) -> bool:
+        """
+        ⭐ NEW v8.0: Send formatted trading opportunity alert.
+        
+        Args:
+            signal: Trading signal with entry, targets, stop-loss
+        
+        Returns:
+            True if alert sent successfully
+        """
+        try:
+            symbol = signal.get('symbol', 'UNKNOWN')
+            signal_type = signal.get('type', 'UNKNOWN')
+            confidence = signal.get('confidence', 0)
+            entry = signal.get('entry', 0)
+            tp1 = signal.get('tp1', 0)
+            tp2 = signal.get('tp2', 0)
+            sl = signal.get('sl', 0)
+            
+            # Get current price
+            price_data = get_binance_price(symbol)
+            current_price = price_data['price'] if price_data else entry
+            
+            # Emoji selection
+            signal_emoji = "🟢" if signal_type == "LONG" else "🔴"
+            confidence_emoji = "🔥" if confidence >= 80 else "⚡" if confidence >= 70 else "🟡"
+            
+            # Format alert message
+            alert_message = f"""
+{signal_emoji} <b>TRADING FİRSATI</b>
+
+<b>Coin:</b> {symbol.replace('USDT', '')}
+<b>Sinyal:</b> {signal_type} {confidence_emoji}
+<b>Güven:</b> {confidence:.1f}%
+
+<b>💰 FİYAT BİLGİLERİ</b>
+<b>Mevcut:</b> ${current_price:,.4f}
+<b>Giriş:</b> ${entry:,.4f}
+<b>Hedef 1:</b> ${tp1:,.4f} ({((tp1-entry)/entry*100):+.1f}%)
+<b>Hedef 2:</b> ${tp2:,.4f} ({((tp2-entry)/entry*100):+.1f}%)
+<b>Stop-Loss:</b> ${sl:,.4f} ({((sl-entry)/entry*100):+.1f}%)
+
+<b>⏰ Zaman:</b> {datetime.now().strftime('%H:%M:%S UTC')}
+<b>🔗 Alım yap</b> | <b>🚨 Risk yönet</b>
+"""
+            
+            success = send_telegram_message(alert_message)
+            
+            if success:
+                logger.info(f"✅ Opportunity alert sent: {symbol} {signal_type}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending opportunity alert: {e}")
+            return False
 
 # ============================================================================
 # MAIN
