@@ -387,6 +387,13 @@ class MarketIntelligenceEngine:
         }
 
 # ============================================================================
+# BACKWARD COMPATIBILITY ALIAS
+# ============================================================================
+
+# Alias for backward compatibility with main.py imports
+MarketIntelligence = MarketIntelligenceEngine
+
+# ============================================================================
 # MAIN ENTRY POINT
 # ============================================================================
 
@@ -403,4 +410,3 @@ if __name__ == '__main__':
     
     # Print report
     print(json.dumps(report, indent=2, default=str))
-
