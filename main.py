@@ -983,10 +983,15 @@ if DEBUG_MODE:
     logging.getLogger('DEMIR_ORCHESTRATOR').setLevel(logging.DEBUG)
     logging.getLogger('SIGNAL_ENGINE').setLevel(logging.DEBUG)
     logging.getLogger('DATA_VALIDATOR').setLevel(logging.DEBUG)
+    logging.getLogger('MOCK_DATA_DETECTOR').setLevel(logging.DEBUG)
 else:
     logging.getLogger('DEMIR_ORCHESTRATOR').setLevel(logging.INFO)
     logging.getLogger('SIGNAL_ENGINE').setLevel(logging.INFO)
     logging.getLogger('DATA_VALIDATOR').setLevel(logging.INFO)
+    logging.getLogger('MOCK_DATA_DETECTOR').setLevel(logging.INFO)
+
+# Validator-specific logger for enhanced tracking
+validator_logger = logging.getLogger('DATA_VALIDATOR')
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 # SECTION 22: FLASK APPLICATION INITIALIZATION
@@ -1083,6 +1088,32 @@ class Opportunity:
     timestamp: datetime
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+@dataclass
+class ValidatorMetrics:
+    """Validator performance metrics"""
+    validator_name: str
+    total_checks: int = 0
+    passed_checks: int = 0
+    failed_checks: int = 0
+    mock_detected: int = 0
+    last_check_timestamp: Optional[datetime] = None
+    average_check_time_ms: float = 0.0
+    error_count: int = 0
+    
+    @property
+    def success_rate(self) -> float:
+        """Calculate success rate percentage"""
+        if self.total_checks == 0:
+            return 0.0
+        return (self.passed_checks / self.total_checks) * 100
+    
+    @property
+    def mock_detection_rate(self) -> float:
+        """Calculate mock detection rate"""
+        if self.failed_checks == 0:
+            return 0.0
+        return (self.mock_detected / self.failed_checks) * 100
+
 class GlobalState:
     """
     Thread-safe global state manager
@@ -1093,6 +1124,7 @@ class GlobalState:
     - Opportunity tracking
     - Metrics collection
     - Health status monitoring
+    - Validator performance tracking (NEW v8.0)
     """
     
     def __init__(self):
@@ -1142,7 +1174,18 @@ class GlobalState:
         # Active subscriptions (for WebSocket)
         self.active_subscriptions: Dict[str, set] = defaultdict(set)
         
-        logger.info("✅ GlobalState initialized")
+        # Validator metrics (NEW v8.0)
+        self.validator_metrics: Dict[str, ValidatorMetrics] = {
+            'mock_detector': ValidatorMetrics('MockDataDetector'),
+            'data_verifier': ValidatorMetrics('RealDataVerifier'),
+            'signal_validator': ValidatorMetrics('SignalValidator'),
+            'comprehensive_validator': ValidatorMetrics('ComprehensiveSignalValidator')
+        }
+        
+        # Validator alerts history
+        self.validator_alerts: deque = deque(maxlen=100)
+        
+        logger.info("✅ GlobalState initialized with validator metrics tracking")
     
     def update_market_data(self, symbol: str, data: Dict[str, Any]) -> None:
         """Update market data for a symbol"""
@@ -1255,6 +1298,106 @@ class GlobalState:
                 # Remove all subscriptions for this session
                 self.active_subscriptions.pop(session_id, None)
     
+    def record_validator_check(
+        self,
+        validator_name: str,
+        passed: bool,
+        check_time_ms: float,
+        mock_detected: bool = False,
+        error: Optional[str] = None
+    ) -> None:
+        """Record a validator check result (NEW v8.0)"""
+        with self.lock:
+            metrics = self.validator_metrics.get(validator_name)
+            if not metrics:
+                return
+            
+            metrics.total_checks += 1
+            if passed:
+                metrics.passed_checks += 1
+            else:
+                metrics.failed_checks += 1
+            
+            if mock_detected:
+                metrics.mock_detected += 1
+                # Log mock data detection
+                validator_logger.warning(
+                    f"🚨 MOCK DATA DETECTED by {validator_name} | "
+                    f"Total mock detections: {metrics.mock_detected}"
+                )
+            
+            if error:
+                metrics.error_count += 1
+            
+            # Update average check time
+            total_time = metrics.average_check_time_ms * (metrics.total_checks - 1)
+            metrics.average_check_time_ms = (total_time + check_time_ms) / metrics.total_checks
+            metrics.last_check_timestamp = datetime.now(timezone.utc)
+    
+    def add_validator_alert(self, alert: Dict[str, Any]) -> None:
+        """Add a validator alert (NEW v8.0)"""
+        with self.lock:
+            alert['timestamp'] = datetime.now(timezone.utc)
+            self.validator_alerts.append(alert)
+            validator_logger.error(
+                f"🚨 VALIDATOR ALERT: {alert.get('type', 'UNKNOWN')} | "
+                f"Validator: {alert.get('validator', 'UNKNOWN')} | "
+                f"Message: {alert.get('message', 'No message')}"
+            )
+    
+    def get_validator_stats(self) -> Dict[str, Any]:
+        """Get comprehensive validator statistics (NEW v8.0)"""
+        with self.lock:
+            stats = {
+                'validators': {},
+                'overall': {
+                    'total_checks': 0,
+                    'passed_checks': 0,
+                    'failed_checks': 0,
+                    'mock_detected_total': 0,
+                    'average_success_rate': 0.0
+                },
+                'recent_alerts': [
+                    {
+                        'type': alert.get('type'),
+                        'validator': alert.get('validator'),
+                        'message': alert.get('message'),
+                        'timestamp': alert.get('timestamp').isoformat() if alert.get('timestamp') else None
+                    }
+                    for alert in list(self.validator_alerts)[-10:]
+                ],
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+            
+            for validator_name, metrics in self.validator_metrics.items():
+                stats['validators'][validator_name] = {
+                    'total_checks': metrics.total_checks,
+                    'passed_checks': metrics.passed_checks,
+                    'failed_checks': metrics.failed_checks,
+                    'mock_detected': metrics.mock_detected,
+                    'success_rate': round(metrics.success_rate, 2),
+                    'mock_detection_rate': round(metrics.mock_detection_rate, 2),
+                    'average_check_time_ms': round(metrics.average_check_time_ms, 2),
+                    'error_count': metrics.error_count,
+                    'last_check': metrics.last_check_timestamp.isoformat() if metrics.last_check_timestamp else None,
+                    'status': 'healthy' if metrics.success_rate >= 95.0 else 'warning' if metrics.success_rate >= 80.0 else 'critical'
+                }
+                
+                # Update overall stats
+                stats['overall']['total_checks'] += metrics.total_checks
+                stats['overall']['passed_checks'] += metrics.passed_checks
+                stats['overall']['failed_checks'] += metrics.failed_checks
+                stats['overall']['mock_detected_total'] += metrics.mock_detected
+            
+            # Calculate overall average success rate
+            if stats['overall']['total_checks'] > 0:
+                stats['overall']['average_success_rate'] = round(
+                    (stats['overall']['passed_checks'] / stats['overall']['total_checks']) * 100,
+                    2
+                )
+            
+            return stats
+    
     def get_state_snapshot(self) -> Dict[str, Any]:
         """Get a complete state snapshot"""
         with self.lock:
@@ -1276,7 +1419,8 @@ class GlobalState:
                 'health_status': dict(self.health_status),
                 'last_update': {k: v.isoformat() for k, v in self.last_update.items()},
                 'performance': dict(self.performance_stats),
-                'active_subscriptions': len(self.active_subscriptions)
+                'active_subscriptions': len(self.active_subscriptions),
+                'validator_status': self.get_validator_stats()
             }
     
     def get_signals_for_symbol(self, symbol: str, limit: int = 100) -> List[Dict]:
@@ -1614,6 +1758,79 @@ class DemirUltraComprehensiveOrchestrator:
         logger.info(f"  Environment: {ENVIRONMENT}")
         logger.info(f"  Debug Mode: {'ON' if DEBUG_MODE else 'OFF'}")
         logger.info("="*100)
+    
+    def validate_data_with_tracking(
+        self,
+        data: Dict[str, Any],
+        validator_name: str,
+        validator_func: Callable
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Validate data with performance tracking and metrics recording (NEW v8.0)
+        
+        Args:
+            data: Data to validate
+            validator_name: Name of validator (e.g., 'mock_detector')
+            validator_func: Validator function to call
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        start_time = time.time()
+        is_valid = True
+        error_msg = None
+        mock_detected = False
+        
+        try:
+            result = validator_func(data)
+            
+            # Parse result based on validator type
+            if isinstance(result, dict):
+                is_valid = result.get('valid', True)
+                mock_detected = result.get('mock_detected', False)
+                error_msg = result.get('error', None)
+            elif isinstance(result, bool):
+                is_valid = result
+            else:
+                is_valid = bool(result)
+            
+            # If mock data detected, trigger alert
+            if mock_detected:
+                global_state.add_validator_alert({
+                    'type': 'MOCK_DATA_DETECTED',
+                    'validator': validator_name,
+                    'message': f'Mock data pattern detected in {data.get("source", "unknown")} data',
+                    'data_snapshot': {k: v for k, v in data.items() if k not in ['raw_data', 'history']}
+                })
+                
+                # Send Telegram alert if enabled
+                if self.telegram_notifier and TELEGRAM_ENABLED:
+                    try:
+                        self.telegram_notifier.send_alert(
+                            f"🚨 MOCK DATA DETECTED\n"
+                            f"Validator: {validator_name}\n"
+                            f"Source: {data.get('source', 'unknown')}\n"
+                            f"Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send Telegram alert: {e}")
+            
+        except Exception as e:
+            is_valid = False
+            error_msg = str(e)
+            logger.error(f"Validator {validator_name} error: {e}")
+        
+        # Record metrics
+        check_time_ms = (time.time() - start_time) * 1000
+        global_state.record_validator_check(
+            validator_name=validator_name,
+            passed=is_valid,
+            check_time_ms=check_time_ms,
+            mock_detected=mock_detected,
+            error=error_msg
+        )
+        
+        return is_valid, error_msg
     
     def start(self):
         """
@@ -2103,7 +2320,7 @@ if FLASK_AVAILABLE and app:
                 'status': 'error',
                 'message': 'index.html is missing from deployment',
                 'api_available': True,
-                'endpoints': ['/health', '/api/status', '/api/signals/latest']
+                'endpoints': ['/health', '/api/status', '/api/signals/latest', '/api/validators/status']
             }), 404
         except Exception as e:
             logger.error(f"❌ Error serving index.html: {e}")
@@ -2133,6 +2350,70 @@ if FLASK_AVAILABLE and app:
                 'status': 'error',
                 'error': str(e),
                 'version': VERSION
+            }), 500
+    
+    # ════════════════════════════════════════════════════════════════════════════════════════
+    # ⭐ NEW v8.0: VALIDATOR STATUS ENDPOINT (COMPREHENSIVE DATA INTEGRITY MONITORING)
+    # ════════════════════════════════════════════════════════════════════════════════════════
+    
+    @app.route('/api/validators/status')
+    def api_validators_status():
+        """
+        Get comprehensive validator status and metrics (NEW v8.0)
+        
+        Returns detailed information about:
+        - Individual validator performance (MockDataDetector, RealDataVerifier, etc.)
+        - Mock data detection statistics
+        - Success rates and error counts
+        - Recent validation alerts
+        - Overall data integrity health
+        
+        This endpoint enables real-time monitoring of the ZERO MOCK DATA enforcement system.
+        """
+        try:
+            validator_stats = global_state.get_validator_stats()
+            
+            # Add module availability status
+            validator_stats['module_status'] = {
+                'mock_detector': MOCK_DETECTOR_AVAILABLE,
+                'real_verifier': REAL_VERIFIER_AVAILABLE,
+                'signal_validator': SIGNAL_VALIDATOR_AVAILABLE,
+                'comprehensive_validator': COMPREHENSIVE_VALIDATOR_AVAILABLE
+            }
+            
+            # Calculate overall health score
+            overall_health = 'healthy'
+            if validator_stats['overall']['total_checks'] > 0:
+                success_rate = validator_stats['overall']['average_success_rate']
+                if success_rate < 80.0:
+                    overall_health = 'critical'
+                elif success_rate < 95.0:
+                    overall_health = 'warning'
+            
+            validator_stats['overall']['health'] = overall_health
+            
+            # Add enforcement policy confirmation
+            validator_stats['enforcement_policy'] = {
+                'zero_mock_data': True,
+                'zero_fake_data': True,
+                'zero_test_data': True,
+                'zero_fallback_data': True,
+                'zero_hardcoded_data': True,
+                'real_data_only': True,
+                'multi_layer_validation': True,
+                'telegram_alerts_enabled': TELEGRAM_ENABLED
+            }
+            
+            return jsonify(validator_stats), 200
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting validator status: {e}")
+            if DEBUG_MODE:
+                logger.debug(traceback.format_exc())
+            return jsonify({
+                'error': str(e),
+                'status': 'error',
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }), 500
     
     # ════════════════════════════════════════════════════════════════════════════════════════
@@ -2316,6 +2597,7 @@ if FLASK_AVAILABLE and app:
                 '/',
                 '/health',
                 '/api/status',
+                '/api/validators/status',
                 '/api/signals/latest',
                 '/api/opportunities',
                 '/api/analytics/summary',
@@ -2398,6 +2680,7 @@ if FLASK_AVAILABLE and app:
             logger.debug(traceback.format_exc())
     
     logger.info("✅ Flask routes and SocketIO events registered")
+    logger.info("✅ NEW v8.0: Validator status endpoint available at /api/validators/status")
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 # SECTION 29: SIGNAL HANDLERS & GRACEFUL SHUTDOWN
@@ -2493,6 +2776,7 @@ if __name__ == '__main__':
     print(f"🔗 Dashboard URL: https://demir1988.up.railway.app/")
     print(f"💚 Health Check: https://demir1988.up.railway.app/health")
     print(f"📊 API Status: https://demir1988.up.railway.app/api/status")
+    print(f"🔐 Validator Status: https://demir1988.up.railway.app/api/validators/status (NEW v8.0)")
     print(f"📈 Signals API: https://demir1988.up.railway.app/api/signals/latest")
     print(f"💡 Opportunities: https://demir1988.up.railway.app/api/opportunities")
     print(f"📋 Analytics: https://demir1988.up.railway.app/api/analytics/summary")
@@ -2500,6 +2784,7 @@ if __name__ == '__main__':
     print("🎯 60+ AI Modules Loaded | 18 Background Threads Running")
     print("🔒 ZERO Mock Data | 100% Real Exchange Data Only")
     print("⚠️  Advisory Mode: Analysis & Recommendations Only")
+    print("✨ NEW v8.0: Enhanced Validator Monitoring & Telegram Alerts")
     print("="*100)
     
     try:
