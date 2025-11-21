@@ -120,33 +120,45 @@ class SentimentAggregator:
         self.cmc = CMCIntegration()
     
     def calculate_sentiment_score(self, text):
-        """Calculate REAL sentiment score"""
-        from textblob import TextBlob
-        
+        """Calculate REAL sentiment score - NO FALLBACK"""
         try:
+            from textblob import TextBlob
             blob = TextBlob(text)
             polarity = blob.sentiment.polarity
             return (polarity + 1) / 2  # Convert to 0-1
-        except:
-            return 0.5
+        except Exception as e:
+            logger.error(f"❌ TextBlob sentiment calculation failed: {e}")
+            # ❌ NEVER return fallback 0.5 - return None to enforce real data
+            return None
     
     def get_overall_sentiment(self):
-        """Get REAL overall market sentiment"""
+        """Get REAL overall market sentiment - NO FALLBACK"""
         try:
             news = self.news.get_crypto_news()
             tweets = self.twitter.get_crypto_tweets()
             
             all_texts = []
-            all_texts.extend([a['title'] + ' ' + a['description'] for a in news])
-            all_texts.extend([t['text'] for t in tweets])
+            all_texts.extend([a['title'] + ' ' + a.get('description', '') for a in news if a.get('title')])
+            all_texts.extend([t['text'] for t in tweets if t.get('text')])
+            
+            if not all_texts:
+                logger.warning("❌ No sentiment data available")
+                return None  # ❌ NO FALLBACK - return None if no data
             
             sentiments = [self.calculate_sentiment_score(t) for t in all_texts]
+            # Filter out None values
+            sentiments = [s for s in sentiments if s is not None]
             
-            avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0.5
+            if not sentiments:
+                logger.warning("❌ All sentiment calculations failed")
+                return None  # ❌ NO FALLBACK - return None if all failed
             
-            logger.info(f"✅ Overall Sentiment: {avg_sentiment:.2f}")
+            avg_sentiment = sum(sentiments) / len(sentiments)
+            
+            logger.info(f"✅ Overall Sentiment: {avg_sentiment:.2f} (from {len(sentiments)} sources)")
             return avg_sentiment
         
         except Exception as e:
-            logger.error(f"Sentiment aggregation error: {e}")
-            return 0.5
+            logger.error(f"❌ Sentiment aggregation error: {e}")
+            # ❌ CRITICAL: NEVER return 0.5 fallback - return None to enforce real data policy
+            return None
