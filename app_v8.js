@@ -661,6 +661,215 @@ function updatePatternWidget(data) {
 }
 
 // ================================================================
+// ★★★ NEW v8.0: VALIDATOR METRICS MONITORING (CRITICAL FEATURE) ★★★
+// Real-time monitoring of data integrity validators
+// Displays mock detection, success rates, health status
+// ================================================================
+
+async function fetchValidatorMetrics() {
+    try {
+        const response = await fetch('/api/validators/status');
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.data) {
+            console.log('✅ Validator metrics fetched successfully');
+            updateValidatorWidget(result.data);
+            updateValidatorAlerts(result.data.recent_alerts || []);
+        } else {
+            console.warn('⚠️  Validator metrics response invalid:', result);
+        }
+    } catch (error) {
+        console.error('❌ Error fetching validator metrics:', error);
+        // Don't crash dashboard if validators endpoint fails
+    }
+}
+
+function updateValidatorWidget(data) {
+    // Update overall statistics cards
+    const overall = data.overall || {};
+    
+    const totalChecks = overall.total_checks || 0;
+    document.getElementById('validator-total-checks').textContent = 
+        totalChecks.toLocaleString('en-US');
+    
+    // Success rate with color coding
+    const successRate = overall.average_success_rate || 100;
+    const successEl = document.getElementById('validator-success-rate');
+    successEl.textContent = `${successRate.toFixed(1)}%`;
+    successEl.className = 'validator-stat-value ' + 
+        (successRate >= 95 ? 'success' : successRate >= 80 ? 'warning' : 'critical');
+    
+    // Mock detected counter (CRITICAL)
+    const mockDetected = overall.mock_detected_total || 0;
+    const mockEl = document.getElementById('validator-mock-detected');
+    mockEl.textContent = mockDetected;
+    mockEl.className = 'validator-stat-value ' + 
+        (mockDetected === 0 ? 'success' : mockDetected < 10 ? 'warning' : 'critical');
+    
+    // Overall health status
+    const health = overall.health || 'healthy';
+    const healthEl = document.getElementById('validator-health');
+    healthEl.textContent = health.toUpperCase();
+    healthEl.className = 'validator-stat-value ' + 
+        (health === 'healthy' ? 'success' : health === 'warning' ? 'warning' : 'critical');
+    
+    // Update individual validators list
+    const validators = data.validators || {};
+    const validatorList = document.getElementById('validator-list');
+    
+    // Remove loading state
+    const loading = validatorList.querySelector('.loading');
+    if (loading) loading.remove();
+    
+    validatorList.innerHTML = '';
+    
+    // Sort validators by total checks (most active first)
+    const sortedValidators = Object.entries(validators).sort(
+        (a, b) => (b[1].total_checks || 0) - (a[1].total_checks || 0)
+    );
+    
+    if (sortedValidators.length === 0) {
+        validatorList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div>Validator verileri yükleniyor...</div>
+            </div>
+        `;
+        return;
+    }
+    
+    sortedValidators.forEach(([name, stats]) => {
+        const validatorItem = document.createElement('div');
+        
+        // Determine status class based on success rate and errors
+        const status = stats.status || 'unknown';
+        const statusClass = status === 'healthy' ? 'healthy' : 
+                           status === 'warning' ? 'warning' : 'critical';
+        
+        validatorItem.className = `validator-item ${statusClass}`;
+        
+        const successRate = stats.success_rate || 0;
+        const mockDetectionRate = stats.mock_detection_rate || 0;
+        const avgCheckTime = stats.average_check_time_ms || 0;
+        const totalChecks = stats.total_checks || 0;
+        const passedChecks = stats.passed_checks || 0;
+        const failedChecks = stats.failed_checks || 0;
+        const mockDetectedCount = stats.mock_detected || 0;
+        
+        validatorItem.innerHTML = `
+            <div class="validator-item-header">
+                <div class="validator-name">${formatValidatorName(name)}</div>
+                <div class="validator-status-badge ${statusClass}">
+                    ${status === 'healthy' ? '✅' : status === 'warning' ? '⚠️' : '❌'} ${status.toUpperCase()}
+                </div>
+            </div>
+            
+            <div class="validator-stats-grid">
+                <div class="validator-mini-stat">
+                    <div class="validator-mini-label">Total Checks</div>
+                    <div class="validator-mini-value">${totalChecks.toLocaleString('en-US')}</div>
+                </div>
+                <div class="validator-mini-stat">
+                    <div class="validator-mini-label">Success Rate</div>
+                    <div class="validator-mini-value" style="color: ${successRate >= 95 ? '#00ff88' : successRate >= 80 ? '#fbbf24' : '#ff4444'}">
+                        ${successRate.toFixed(1)}%
+                    </div>
+                </div>
+                <div class="validator-mini-stat">
+                    <div class="validator-mini-label">Avg Time</div>
+                    <div class="validator-mini-value">${avgCheckTime.toFixed(1)}ms</div>
+                </div>
+            </div>
+            
+            <div class="validator-progress-bar">
+                <div class="validator-progress-fill" style="width: ${successRate}%"></div>
+            </div>
+            
+            <div style="font-size: 11px; color: #8892b0; margin-top: 8px; display: flex; justify-content: space-between;">
+                <span>✅ Passed: ${passedChecks.toLocaleString('en-US')}</span>
+                <span>❌ Failed: ${failedChecks}</span>
+                <span style="color: ${mockDetectedCount > 0 ? '#ff4444' : '#00ff88'}">
+                    🚨 Mock: ${mockDetectedCount}
+                </span>
+            </div>
+        `;
+        
+        validatorList.appendChild(validatorItem);
+    });
+}
+
+function updateValidatorAlerts(alerts) {
+    const alertList = document.getElementById('alert-list');
+    const alertCount = document.getElementById('alert-count');
+    
+    // Update alert counter
+    alertCount.textContent = alerts.length;
+    
+    // If no alerts, show success state
+    if (!alerts || alerts.length === 0) {
+        const emptyState = alertList.querySelector('.empty-state');
+        if (!emptyState) {
+            alertList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">✅</div>
+                    <div>Tüm validatorler sağlıklı</div>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    // Remove empty state if present
+    const emptyState = alertList.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    
+    alertList.innerHTML = '';
+    
+    // Show most recent 10 alerts (reverse chronological)
+    const recentAlerts = alerts.slice(-10).reverse();
+    
+    recentAlerts.forEach(alert => {
+        const alertItem = document.createElement('div');
+        alertItem.className = 'alert-item';
+        
+        // Parse timestamp
+        let timeString = 'Unknown time';
+        try {
+            const timestamp = new Date(alert.timestamp);
+            timeString = timestamp.toLocaleTimeString('tr-TR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        } catch (e) {
+            console.error('Error parsing alert timestamp:', e);
+        }
+        
+        const alertType = alert.type || 'ALERT';
+        const validatorName = formatValidatorName(alert.validator || 'unknown');
+        const message = alert.message || 'No details available';
+        
+        alertItem.innerHTML = `
+            <div class="alert-header">
+                <div class="alert-type">🚨 ${alertType.replace(/_/g, ' ')}</div>
+                <div class="alert-time">${timeString}</div>
+            </div>
+            <div class="alert-validator">Validator: ${validatorName}</div>
+            <div class="alert-message">${message}</div>
+        `;
+        
+        alertList.appendChild(alertItem);
+    });
+}
+
+function formatValidatorName(name) {
+    // Convert snake_case or lowercase to Title Case
+    return name.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+// ================================================================
 // HEALTH STATUS
 // ================================================================
 
@@ -759,9 +968,16 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchOpportunities();
     fetchAnalyticsSummary();
     
+    // ★ NEW v8.0: Fetch validator metrics immediately
+    fetchValidatorMetrics();
+    
     // Set up polling for v8.0 widgets (every 30 seconds)
     setInterval(fetchAnalyticsSummary, 30000);
     setInterval(fetchOpportunities, 30000);
     
-    console.log('✅ Dashboard v8.0 initialized with all Phase 1-4 widgets');
+    // ★ NEW v8.0: Poll validator metrics every 10 seconds for real-time monitoring
+    setInterval(fetchValidatorMetrics, 10000);
+    
+    console.log('✅ Dashboard v8.0 initialized - All widgets active including Validator Metrics');
+    console.log('✅ Validator monitoring: 10-second polling active');
 });
