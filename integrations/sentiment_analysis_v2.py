@@ -91,7 +91,7 @@ class SentimentAnalysisV2:
         logger.info(f"SentimentV2 - result: {result}")
         return result
 
-    def analyze_multisource_sentiment(self) -> Dict:
+    def analyze_multi_source_sentiment(self) -> Dict:
         """
         ⭐ NEW v8.0: Main method called by background sentiment thread.
         Orchestrates sentiment analysis from multiple sources:
@@ -146,7 +146,7 @@ class SentimentAnalysisV2:
             return report
             
         except Exception as e:
-            logger.error(f"❌ Error in analyze_multisource_sentiment: {e}")
+            logger.error(f"❌ Error in analyze_multi_source_sentiment: {e}")
             return {
                 'timestamp': datetime.now(pytz.UTC).isoformat(),
                 'aggregate_sentiment': 50.0,
