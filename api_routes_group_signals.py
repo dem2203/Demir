@@ -13,6 +13,7 @@ Endpoints:
 - /api/signals/ml?symbol=BTCUSDT
 - /api/signals/onchain?symbol=BTCUSDT
 - /api/signals/risk?symbol=BTCUSDT
+- /api/meta_signal?symbol=BTCUSDT (⭐ NEW v8.0 PHASE 2)
 - /api/smart-money/recent?limit=5
 - /api/arbitrage/opportunities?min_spread=0.1
 - /api/patterns/detected?min_confidence=0.7
@@ -385,6 +386,140 @@ def register_group_signal_routes(app, orchestrator):
             return jsonify({'status': 'error', 'error': str(e)}), 500
     
     # ════════════════════════════════════════════════════════════════════════════════
+    # ⭐ NEW v8.0 PHASE 2: AI META-LAYER SIGNAL ENDPOINT
+    # ════════════════════════════════════════════════════════════════════════════════
+    
+    @app.route('/api/meta_signal', methods=['GET'])
+    def api_meta_signal():
+        """
+        ⭐ NEW v8.0: Get AI META-LAYER ensemble signal
+        
+        Orchestrates all 5 group signals and produces consensus with AI reasoning:
+        - Technical Analysis Layer (25% weight)
+        - Sentiment Analysis Layer (20% weight)
+        - Machine Learning Layer (25% weight)
+        - On-Chain Analytics Layer (15% weight)
+        - Risk Management Layer (15% weight)
+        
+        Query Params:
+            - symbol: Trading pair (default: BTCUSDT)
+        
+        Returns:
+            JSON with meta-signal including:
+            - meta_signal: LONG/SHORT/NEUTRAL
+            - consensus_strength: 0-100
+            - confidence: 0-100
+            - recommended_action: BUY/SELL/HOLD/WAIT
+            - entry_price, targets[3], stop_loss, risk_reward
+            - ai_reasoning: Natural language explanation
+            - supporting_groups, opposing_groups
+            - divergences: Conflict analysis
+        """
+        try:
+            symbol = request.args.get('symbol', 'BTCUSDT')
+            
+            logger.info(f"🧠 AI META-SIGNAL requested: {symbol}")
+            
+            # Import AI Meta-Interpreter
+            try:
+                from advanced_ai.ai_meta_interpreter import AIMetaInterpreter
+                meta_interpreter = AIMetaInterpreter()
+            except ImportError as e:
+                logger.error(f"❌ AI Meta-Interpreter not available: {e}")
+                return jsonify({
+                    'status': 'error',
+                    'error': 'AI Meta-Interpreter module not loaded',
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }), 503
+            
+            # Get current price for calculations
+            current_price = None
+            if orchestrator.exchange_api:
+                try:
+                    ticker = orchestrator.exchange_api.get_ticker(symbol)
+                    current_price = float(ticker.get('last', 0)) if ticker else None
+                except Exception as e:
+                    logger.warning(f"Failed to get real-time price for meta-signal: {e}")
+            
+            # Collect signals from all 5 groups
+            group_signals = {}
+            
+            # 1. Technical signal
+            try:
+                tech_response = api_signals_technical()
+                tech_data = tech_response.get_json()
+                if tech_data.get('status') == 'success':
+                    group_signals['technical'] = tech_data['signal']
+            except Exception as e:
+                logger.warning(f"Technical signal fetch error: {e}")
+            
+            # 2. Sentiment signal
+            try:
+                sent_response = api_signals_sentiment()
+                sent_data = sent_response.get_json()
+                if sent_data.get('status') == 'success':
+                    group_signals['sentiment'] = sent_data['signal']
+            except Exception as e:
+                logger.warning(f"Sentiment signal fetch error: {e}")
+            
+            # 3. ML signal
+            try:
+                ml_response = api_signals_ml()
+                ml_data = ml_response.get_json()
+                if ml_data.get('status') == 'success':
+                    group_signals['ml'] = ml_data['signal']
+            except Exception as e:
+                logger.warning(f"ML signal fetch error: {e}")
+            
+            # 4. OnChain signal
+            try:
+                onchain_response = api_signals_onchain()
+                onchain_data = onchain_response.get_json()
+                if onchain_data.get('status') == 'success':
+                    group_signals['onchain'] = onchain_data['signal']
+            except Exception as e:
+                logger.warning(f"OnChain signal fetch error: {e}")
+            
+            # 5. Risk signal
+            try:
+                risk_response = api_signals_risk()
+                risk_data = risk_response.get_json()
+                if risk_data.get('status') == 'success':
+                    group_signals['risk'] = risk_data['signal']
+            except Exception as e:
+                logger.warning(f"Risk signal fetch error: {e}")
+            
+            # Generate meta-signal using AI interpreter
+            meta_signal = meta_interpreter.interpret_group_signals(
+                symbol=symbol,
+                group_signals=group_signals,
+                current_price=current_price
+            )
+            
+            if meta_signal.get('analysis_complete'):
+                logger.info(
+                    f"✅ META-SIGNAL generated for {symbol}: {meta_signal['meta_signal']} "
+                    f"(Strength: {meta_signal['consensus_strength']:.1f}%, "
+                    f"Confidence: {meta_signal['confidence']:.1f}%)"
+                )
+            
+            return jsonify({
+                'status': 'success',
+                'meta_signal': meta_signal,
+                'source': 'ai_ensemble_meta_layer',
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"❌ META-SIGNAL endpoint error: {e}")
+            logger.error(traceback.format_exc())
+            return jsonify({
+                'status': 'error',
+                'error': str(e),
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }), 500
+    
+    # ════════════════════════════════════════════════════════════════════════════════
     # SMART MONEY TRACKER ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
     
@@ -534,12 +669,13 @@ def register_group_signal_routes(app, orchestrator):
             logger.error(f"❌ On-chain metrics endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
     
-    logger.info("✅ All 9 group signal API routes registered successfully")
+    logger.info("✅ All 10 group signal API routes registered successfully")
     logger.info("   ├─ /api/signals/technical")
     logger.info("   ├─ /api/signals/sentiment")
     logger.info("   ├─ /api/signals/ml")
     logger.info("   ├─ /api/signals/onchain")
     logger.info("   ├─ /api/signals/risk")
+    logger.info("   ├─ /api/meta_signal (⭐ NEW AI ENSEMBLE)")
     logger.info("   ├─ /api/smart-money/recent")
     logger.info("   ├─ /api/arbitrage/opportunities")
     logger.info("   ├─ /api/patterns/detected")
