@@ -1,5 +1,5 @@
 """
-🔧 DEMIR AI v7.0 - ENTERPRISE CONFIGURATION
+🔧 DEMIR AI v8.0 - ENTERPRISE CONFIGURATION
 Gelişmiş multi-layer AI için ekstra API key desteği ve profesyonel production doğrulama.
 """
 import os
@@ -16,7 +16,7 @@ load_dotenv()
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production').lower()
 DEBUG_MODE = ENVIRONMENT == 'development'
 
-VERSION = "7.0"
+VERSION = "8.0"
 APP_NAME = "DEMIR AI"
 FULL_NAME = f"{APP_NAME} v{VERSION} Enterprise"
 
@@ -53,8 +53,14 @@ TWELVE_DATA_API_KEY = os.getenv('TWELVE_DATA_API_KEY', '')
 GLASSNODE_API_KEY = os.getenv('GLASSNODE_API_KEY', '')
 CRYPTOPANIC_API_KEY = os.getenv('CRYPTOPANIC_API_KEY', '')
 
+# Alternative News & Sentiment APIs (v8.0)
+NEWS_API_KEY = os.getenv('NEWS_API_KEY', '')  # newsapi.org
+REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID', '')
+REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET', '')
+TWITTER_BEARER_TOKEN = os.getenv('TWITTER_BEARER_TOKEN', '')
+
 # ========================================================================
-# SYSTEM PARAMETERS (MAIN.PY İÇİN EKSİK OLANLAR EKLENDİ)
+# SYSTEM PARAMETERS (MAIN.PY İÇİN EKSİK OLANLAR EKLENДİ)
 # ========================================================================
 
 # Threading & Processing
@@ -67,13 +73,76 @@ CACHE_TTL = int(os.getenv('CACHE_TTL', '300'))  # 5 minutes default
 # Rate Limiting
 RATE_LIMIT_ENABLED = os.getenv('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
 
-# Tracked Symbols
+# ========================================================================
+# TRACKED SYMBOLS - v8.0 UPDATE: PERPETUAL FUTURES ONLY
+# User can dynamically add/remove symbols via dashboard
+# ========================================================================
+
+# Default symbols - PERPETUAL FUTURES (changed per user request)
+# Users will manually add additional symbols via dashboard UI
 DEFAULT_TRACKED_SYMBOLS = [
-    'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'SOLUSDT',
-    'XRPUSDT', 'DOGEUSDT', 'DOTUSDT', 'MATICUSDT', 'AVAXUSDT',
-    'LINKUSDT', 'UNIUSDT', 'ATOMUSDT', 'LTCUSDT', 'NEARUSDT',
-    'ALGOUSDT', 'TRXUSDT', 'FTMUSDT', 'ICPUSDT', 'SANDUSDT'
+    'BTCUSDT.P',   # Bitcoin Perpetual Futures
+    'ETHUSDT.P',   # Ethereum Perpetual Futures
+    'LTCUSDT.P',   # Litecoin Perpetual Futures
 ]
+
+# Runtime symbol management - loaded from database or user input
+# This list will be dynamically updated when user adds/removes symbols
+TRACKED_SYMBOLS = DEFAULT_TRACKED_SYMBOLS.copy()
+
+# Symbol addition/removal functions
+def add_symbol(symbol: str) -> bool:
+    """
+    Add a symbol to tracked list (runtime).
+    
+    Args:
+        symbol: Symbol to add (e.g., 'BTCUSDT.P')
+        
+    Returns:
+        bool: True if added, False if already exists
+    """
+    symbol = symbol.upper().strip()
+    if symbol not in TRACKED_SYMBOLS:
+        TRACKED_SYMBOLS.append(symbol)
+        print(f"✅ Symbol added: {symbol}")
+        return True
+    print(f"⚠️  Symbol already tracked: {symbol}")
+    return False
+
+def remove_symbol(symbol: str) -> bool:
+    """
+    Remove a symbol from tracked list (runtime).
+    
+    Args:
+        symbol: Symbol to remove
+        
+    Returns:
+        bool: True if removed, False if not found
+    """
+    symbol = symbol.upper().strip()
+    if symbol in TRACKED_SYMBOLS:
+        TRACKED_SYMBOLS.remove(symbol)
+        print(f"❌ Symbol removed: {symbol}")
+        return True
+    print(f"⚠️  Symbol not found: {symbol}")
+    return False
+
+def get_tracked_symbols() -> List[str]:
+    """
+    Get current list of tracked symbols.
+    
+    Returns:
+        List of symbol strings
+    """
+    return TRACKED_SYMBOLS.copy()
+
+def reset_symbols_to_default():
+    """
+    Reset tracked symbols to default list.
+    """
+    global TRACKED_SYMBOLS
+    TRACKED_SYMBOLS = DEFAULT_TRACKED_SYMBOLS.copy()
+    print(f"♻️ Symbols reset to default: {TRACKED_SYMBOLS}")
 
 # ========================================================================
 # OPPORTUNITY THRESHOLDS
@@ -142,3 +211,4 @@ def validate_config():
 # ========================================================================
 
 print(f"[CONFIG] DEMIR AI config.py yüklendi. Version: {VERSION}, Advisory Mode: {ADVISORY_MODE}")
+print(f"🥇 Default Tracked Symbols (Perpetual Futures): {DEFAULT_TRACKED_SYMBOLS}")
