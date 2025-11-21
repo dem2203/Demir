@@ -1,4 +1,3 @@
-```python
 """
 Professional Binance API Integration
 Real-time WebSocket data collection
@@ -360,4 +359,7 @@ def create_binance_client(symbols: List[str] = None) -> BinanceAdvancedAPI:
     client = BinanceAdvancedAPI(symbols=symbols)
     client.connect_all_streams()
     return client
-```
+
+
+# For backward compatibility
+BinanceAPI = BinanceAdvancedAPI
