@@ -2052,7 +2052,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(120)
     
-    def _orderbook_loop(self, interval: int):
+     def _orderbook_loop(self, interval: int):
         """OrderBook analysis continuous loop"""
         logger.info("📖 OrderBook Analyzer loop started")
         while self.running:
@@ -2068,7 +2068,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(30)
     
-   def _dominance_loop(self, interval: int):
+    def _dominance_loop(self, interval: int):
         """Crypto dominance tracking continuous loop"""
         logger.info("🏆 Dominance Tracker loop started")
         while self.running:
@@ -2114,6 +2114,22 @@ class DemirUltraComprehensiveOrchestrator:
                 if DEBUG_MODE:
                     logger.debug(traceback.format_exc())
                 time.sleep(10)
+    
+    def _health_check_loop(self, interval: int):
+        """Health check continuous loop"""
+        logger.info("💊 Health Checker loop started")
+        while self.running:
+            try:
+                if self.health_checker:
+                    health = self.health_checker.check_system_health()
+                    global_state.update_health_status('system', health)
+                time.sleep(interval)
+            except Exception as e:
+                logger.error(f"❌ Health check loop error: {e}")
+                if DEBUG_MODE:
+                    logger.debug(traceback.format_exc())
+                time.sleep(30)
+
     
     # 🆕 AUTO-START: WebSocket'i ilk kez başlat
     if self.ws_manager:
