@@ -1,6 +1,8 @@
 """
 ⛓️ DEMIR AI v8.0 - ON-CHAIN ANALYTICS PRO
 Gerçek blockchain veriyle UTXO, token distribution, gas, DeFi TVL analiz modülü. Kesinlikle mock/fake/test yok!
+
+v8.0 UPDATE: Etherscan API V2 migration (V1 deprecated)
 """
 import os
 import requests
@@ -17,13 +19,13 @@ class OnChainAnalyticsPro:
     - Bitcoin: UTXO, large movement, borsa transferleri
     - Ethereum: Gas analysis, contract interaction, token holders
     - DeFi TVL, whale distribution, stablecoin supply
-    - Sadece canlı/prod veri (Glassnode, Etherscan, DeFiLlama, Whale Alert...)
+    - Sadece canlı/prod veri (Glassnode, Etherscan V2, DeFiLlama, Whale Alert...)
     """
     def __init__(self, glassnode:str=None, etherscan:str=None):
         self.glassnode = glassnode or os.getenv('GLASSNODE_API_KEY','')
         self.etherscan = etherscan or os.getenv('ETHERSCAN_API_KEY','')
         self.session = requests.Session()
-        logger.info("✅ OnChainAnalyticsPro başlatıldı!")
+        logger.info("✅ OnChainAnalyticsPro başlatıldı (Etherscan V2)!")
 
     def btc_utxo_stats(self) -> Dict:
         url = f'https://api.glassnode.com/v1/metrics/addresses/utxo_count'
@@ -38,16 +40,48 @@ class OnChainAnalyticsPro:
         return {}
 
     def eth_gas_stats(self) -> Dict:
-        url = f'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice&apikey={self.etherscan}'
+        """
+        ⭐ v8.0 UPDATE: Etherscan API V2 endpoint for gas price
+        V1 proxy endpoint deprecated, using V2 gastracker module
+        """
+        if not self.etherscan:
+            logger.warning("⚠️ Etherscan API key missing - skipping gas stats")
+            return {}
+            
+        # V2 API endpoint - gastracker module
+        url = 'https://api.etherscan.io/api'
+        params = {
+            'module': 'gastracker',
+            'action': 'gasoracle',
+            'apikey': self.etherscan
+        }
+        
         try:
-            r = self.session.get(url,timeout=6)
-            if r.status_code==200:
+            r = self.session.get(url, params=params, timeout=6)
+            if r.status_code == 200:
                 data = r.json()
-                wei = int(data.get('result','0x0'),16)
-                gwei = wei / 1e9
-                return {'timestamp':datetime.now(pytz.UTC).isoformat(),'gas_gwei':gwei}
+                
+                if data.get('status') == '1' and data.get('result'):
+                    result = data['result']
+                    # V2 returns SafeGasPrice, ProposeGasPrice, FastGasPrice
+                    gas_gwei = float(result.get('ProposeGasPrice', 0))
+                    
+                    logger.info(f"✅ Etherscan V2 Gas: {gas_gwei} Gwei (Safe: {result.get('SafeGasPrice')}, Fast: {result.get('FastGasPrice')})")
+                    
+                    return {
+                        'timestamp': datetime.now(pytz.UTC).isoformat(),
+                        'gas_gwei': gas_gwei,
+                        'safe_gas': float(result.get('SafeGasPrice', 0)),
+                        'fast_gas': float(result.get('FastGasPrice', 0)),
+                        'base_fee': float(result.get('suggestBaseFee', 0)),
+                        'source': 'etherscan_v2'
+                    }
+                else:
+                    logger.warning(f"Etherscan V2 API error: {data.get('message', 'Unknown error')}")
+                    
         except Exception as e:
-            logger.warning(f"Etherscan gas fetch error: {e}")
+            logger.warning(f"Etherscan V2 gas fetch error: {e}")
+            
         return {}
 
     def defi_tvl(self, protocol:str='all') -> Dict:
@@ -88,7 +122,7 @@ class OnChainAnalyticsPro:
         ⭐ NEW v8.0: Main method called by background on-chain analytics thread.
         Orchestrates comprehensive blockchain data analysis:
         - Bitcoin UTXO statistics
-        - Ethereum gas prices
+        - Ethereum gas prices (V2 API)
         - DeFi Total Value Locked (TVL)
         - Whale address distribution
         - Large transaction monitoring
@@ -109,6 +143,8 @@ class OnChainAnalyticsPro:
                 },
                 'ethereum': {
                     'gas_price_gwei': stats.get('eth_gas', {}).get('gas_gwei'),
+                    'safe_gas_gwei': stats.get('eth_gas', {}).get('safe_gas'),
+                    'fast_gas_gwei': stats.get('eth_gas', {}).get('fast_gas'),
                     'whale_distribution': stats.get('eth_whale', {}).get('whale_supply'),
                     'network_activity': self._assess_eth_activity(stats.get('eth_gas', {}))
                 },
@@ -116,11 +152,11 @@ class OnChainAnalyticsPro:
                     'total_value_locked': stats.get('defi_tvl', {}).get('tvl'),
                     'tvl_status': 'active' if stats.get('defi_tvl', {}).get('tvl') else 'unavailable'
                 },
-                'data_sources': ['Glassnode', 'Etherscan', 'DeFiLlama'],
+                'data_sources': ['Glassnode', 'Etherscan V2', 'DeFiLlama'],
                 'analysis_complete': True
             }
             
-            logger.info(f"✅ On-chain analysis complete: BTC UTXO={report['bitcoin']['utxo_count']}, ETH Gas={report['ethereum']['gas_price_gwei']}")
+            logger.info(f"✅ On-chain analysis complete: BTC UTXO={report['bitcoin']['utxo_count']}, ETH Gas={report['ethereum']['gas_price_gwei']} Gwei")
             return report
             
         except Exception as e:
