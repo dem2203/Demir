@@ -1,7 +1,12 @@
 """
 🧠 DEMIR AI v8.0 - SENTIMENT ANALYSIS v2.0
 Çok kaynaklı (haber, sosyal medya, influencer, topluluk) gerçek zamanlı kripto sentiment motoru.
-TÜM veri gerçek, mock/test yok. API: CryptoPanic, Twitter/X, Reddit, News API.
+TÜM veri gerçek, mock/test yok. API: Fear & Greed Index, Binance Funding Rate, News API.
+
+v8.0 UPDATE: 3-source mode (CryptoPanic limit reached)
+- Fear & Greed Index (50% weight) - PRIMARY
+- Binance Funding Rate (30% weight) - SECONDARY  
+- NewsAPI Headlines (20% weight) - TERTIARY
 """
 import os
 import logging
@@ -14,13 +19,10 @@ logger = logging.getLogger('SENTIMENT_ANALYZER_V2')
 
 class SentimentAnalysisV2:
     """
-    Gelişmiş sentiment motoru:
-    - CryptoPanic/News API ile haber & FUD/FOMO analizi
-    - Twitter/X ve Reddit (subredditler, influencer mention)
-    - FUD/FOMO oranı, heatmap, haber başlık etkisi
-    - Topluluk sentiment skoru, influencer duyarlılığı
-    - Fear & Greed Index (FREE API - no key required)
-    - Binance Funding Rate (real market sentiment)
+    Gelişmiş sentiment motoru (3-Source Mode):
+    - Fear & Greed Index (FREE API - no key required) [PRIMARY]
+    - Binance Funding Rate (real market sentiment) [SECONDARY]
+    - NewsAPI ile haber & FUD/FOMO analizi [TERTIARY]
     - Sadece gerçek ve canlı veri, ZERO mock, ZERO fallback, ZERO test
     """
     
@@ -28,12 +30,12 @@ class SentimentAnalysisV2:
         self.cryptopanic_key = cryptopanic_key or os.getenv('CRYPTOPANIC_API_KEY', '')
         self.newsapi_key = newsapi_key or os.getenv('NEWSAPI_API_KEY', '')
         self.session = requests.Session()
-        logger.info("✅ SentimentAnalysisV2 başlatıldı")
+        logger.info("✅ SentimentAnalysisV2 başlatıldı (3-source mode)")
     
     def get_crypto_panic_news(self, currency='BTC', limit=100):
-        """CryptoPanic API - Real crypto news sentiment"""
+        """CryptoPanic API - Real crypto news sentiment (DEPRECATED - limit reached)"""
         if not self.cryptopanic_key:
-            logger.warning("⚠️ CryptoPanic API key missing - skipping")
+            logger.debug("⚠️ CryptoPanic API key missing - skipping (expected in 3-source mode)")
             return None
             
         url = 'https://cryptopanic.com/api/v1/posts/'
@@ -54,7 +56,7 @@ class SentimentAnalysisV2:
                 return {'positive':pos, 'negative':neg, 'neutral':neu,
                        'score':round(score,2),'items':items}
         except Exception as e:
-            logger.warning(f"CryptoPanic fetch error: {e}")
+            logger.debug(f"CryptoPanic fetch error (expected): {e}")
             return None
     
     def get_newsapi_sentiment(self, query='bitcoin', page_size=50):
@@ -74,8 +76,8 @@ class SentimentAnalysisV2:
                     return None
                     
                 # Basic FUD/FOMO keyword match
-                fud_keywords = ['crash','hack','collapse','lawsuit','ban']
-                fomo_keywords = ['pump','to the moon','breakout','new high','bull']
+                fud_keywords = ['crash','hack','collapse','lawsuit','ban','scam','fraud','plunge','dump']
+                fomo_keywords = ['pump','to the moon','breakout','new high','bull','rally','surge','soar']
                 fud = sum( any(k in (a['title']+a.get('description','')).lower() for k in fud_keywords)
                           for a in articles )
                 fomo = sum( any(k in (a['title']+a.get('description','')).lower() for k in fomo_keywords)
@@ -92,7 +94,7 @@ class SentimentAnalysisV2:
     
     def get_fear_greed_index(self) -> Dict:
         """
-        ⭐ NEW v8.0: Fear & Greed Index from Alternative.me
+        ⭐ PRIMARY SOURCE (50% weight): Fear & Greed Index from Alternative.me
         FREE API - NO KEY REQUIRED
         Returns real market sentiment score 0-100
         """
@@ -120,7 +122,7 @@ class SentimentAnalysisV2:
     
     def get_binance_funding_rate(self, symbol='BTCUSDT') -> Dict:
         """
-        ⭐ NEW v8.0: Binance Funding Rate (Real Market Sentiment Indicator)
+        ⭐ SECONDARY SOURCE (30% weight): Binance Funding Rate (Real Market Sentiment Indicator)
         NO API KEY REQUIRED for public data
         Positive funding = Bullish (longs pay shorts)
         Negative funding = Bearish (shorts pay longs)
@@ -190,19 +192,13 @@ class SentimentAnalysisV2:
     
     def analyze_multi_source_sentiment(self) -> Dict:
         """
-        ⭐ NEW v8.0: Main method called by background sentiment thread.
+        ⭐ v8.0 3-SOURCE MODE: Main method called by background sentiment thread.
         
         CRITICAL CHANGES:
-        - ZERO FALLBACK VALUES - All data must be real
-        - Added Fear & Greed Index (free API, no key)
-        - Added Binance Funding Rate (real sentiment indicator)
-        - If no data available, returns None instead of fake 50
-        
-        Orchestrates sentiment analysis from multiple sources:
-        - Fear & Greed Index (0-100 scale) - PRIMARY SOURCE
-        - Binance Funding Rate (market sentiment indicator)
-        - CryptoPanic news votes (real-time crypto-specific news)
-        - NewsAPI headlines analysis (mainstream media)
+        - Fear & Greed Index: 50% weight (PRIMARY - most reliable)
+        - Binance Funding Rate: 30% weight (SECONDARY - real market indicator)
+        - NewsAPI Headlines: 20% weight (TERTIARY - media sentiment)
+        - CryptoPanic DEPRECATED (limit reached)
         
         Returns comprehensive sentiment report with:
         - aggregate_sentiment: 0-100 scale (0=extreme fear, 100=extreme greed)
@@ -210,17 +206,17 @@ class SentimentAnalysisV2:
         - Source breakdowns
         - Market mood classification
         
-        ⚠️ ZERO FALLBACK POLICY: If no real data available, returns error state
+        ⚠️ ZERO FALLBACK POLICY: Minimum 2 sources required, else error
         """
         try:
-            # PRIMARY: Fear & Greed Index (most reliable, free, no key)
+            # PRIMARY: Fear & Greed Index (most reliable, free, no key) - 50%
             fear_greed = self.get_fear_greed_index()
             
-            # SECONDARY: Binance funding rates (real market sentiment)
+            # SECONDARY: Binance funding rates (real market sentiment) - 30%
             btc_funding = self.get_binance_funding_rate('BTCUSDT')
             eth_funding = self.get_binance_funding_rate('ETHUSDT')
             
-            # TERTIARY: News-based sentiment (if API keys available)
+            # TERTIARY: News-based sentiment (if API keys available) - 20%
             btc_sentiment = self.analyze_sentiment('BTC')
             eth_sentiment = self.analyze_sentiment('ETH')
             
@@ -228,20 +224,20 @@ class SentimentAnalysisV2:
             sentiment_scores = []
             sources_used = []
             
-            # 1. Fear & Greed Index (weight: 40%)
+            # 1. Fear & Greed Index (weight: 50%)
             if fear_greed and fear_greed.get('value') is not None:
-                sentiment_scores.append(('fear_greed', fear_greed['value'], 0.40))
+                sentiment_scores.append(('fear_greed', fear_greed['value'], 0.50))
                 sources_used.append('Fear & Greed Index')
-                logger.info(f"✅ Using Fear & Greed: {fear_greed['value']}/100")
+                logger.info(f"✅ Using Fear & Greed: {fear_greed['value']}/100 (50% weight)")
             
-            # 2. Binance Funding Rates (weight: 35%)
+            # 2. Binance Funding Rates (weight: 30%)
             if btc_funding and eth_funding:
                 funding_sentiment = (btc_funding['sentiment_score'] * 0.6 + eth_funding['sentiment_score'] * 0.4)
-                sentiment_scores.append(('funding_rate', funding_sentiment, 0.35))
+                sentiment_scores.append(('funding_rate', funding_sentiment, 0.30))
                 sources_used.append('Binance Funding Rate')
-                logger.info(f"✅ Using Funding Rates: {funding_sentiment:.1f}/100")
+                logger.info(f"✅ Using Funding Rates: {funding_sentiment:.1f}/100 (30% weight)")
             
-            # 3. News Sentiment (weight: 25% - split between BTC and ETH)
+            # 3. News Sentiment (weight: 20% - split between BTC and ETH)
             news_scores = []
             if btc_sentiment and btc_sentiment.get('score') is not None:
                 btc_normalized = (btc_sentiment['score'] + 1) * 50  # -1..1 to 0..100
@@ -253,15 +249,15 @@ class SentimentAnalysisV2:
             
             if news_scores:
                 news_aggregate = sum(news_scores)
-                sentiment_scores.append(('news', news_aggregate, 0.25))
+                sentiment_scores.append(('news', news_aggregate, 0.20))
                 sources_used.append('News Sentiment')
-                logger.info(f"✅ Using News Sentiment: {news_aggregate:.1f}/100")
+                logger.info(f"✅ Using News Sentiment: {news_aggregate:.1f}/100 (20% weight)")
             
             # Calculate weighted aggregate sentiment
-            if not sentiment_scores:
-                # CRITICAL: NO FALLBACK - Return error state
-                logger.error("❌ ZERO real data sources available - cannot calculate sentiment")
-                raise ValueError("No real sentiment data available from any source")
+            if len(sentiment_scores) < 2:
+                # CRITICAL: Minimum 2 sources required
+                logger.error(f"❌ Insufficient data sources ({len(sentiment_scores)}/3) - need minimum 2")
+                raise ValueError(f"Only {len(sentiment_scores)} sentiment sources available, need minimum 2")
             
             # Normalize weights if some sources missing
             total_weight = sum(weight for _, _, weight in sentiment_scores)
@@ -300,13 +296,13 @@ class SentimentAnalysisV2:
                 }
             }
             
-            logger.info(f"✅ Multi-source sentiment: {aggregate_score:.1f}/100 from {len(sources_used)} sources ({report['market_mood']})")
+            logger.info(f"✅ 3-SOURCE SENTIMENT: {aggregate_score:.1f}/100 from {len(sources_used)} sources ({report['market_mood']})")
             return report
             
         except Exception as e:
             logger.error(f"❌ CRITICAL: Sentiment analysis failed - {e}")
             # ZERO FALLBACK POLICY - Raise error instead of returning fake data
-            raise RuntimeError(f"Sentiment analysis failed with zero real data: {str(e)}")
+            raise RuntimeError(f"Sentiment analysis failed: {str(e)}")
     
     def _get_market_mood(self, score: float) -> str:
         """Convert sentiment score (0-100) to market mood label."""
