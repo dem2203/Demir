@@ -430,6 +430,71 @@ class MarketFlowDetector:
         
         return analysis
     
+    def detect_market_flows(self) -> Dict:
+        """
+        ⭐ NEW v8.0: Main method called by background flow detection thread.
+        
+        Analyzes market flows for primary trading pairs:
+        - BTC and ETH exchange flows
+        - Volume trends and patterns
+        - Accumulation/distribution signals
+        - Smart money movements
+        
+        Returns comprehensive flow report for all monitored symbols.
+        """
+        try:
+            # Analyze primary symbols
+            btc_flows = self.get_comprehensive_flow_analysis('BTCUSDT')
+            eth_flows = self.get_comprehensive_flow_analysis('ETHUSDT')
+            
+            # Build comprehensive report
+            report = {
+                'timestamp': datetime.now(pytz.UTC).isoformat(),
+                'btc': {
+                    'signal': btc_flows.get('overall_signal', 'NEUTRAL'),
+                    'volume_24h': btc_flows.get('volume_metrics', {}).get('quote_volume_24h', 0),
+                    'pattern': btc_flows.get('accumulation_distribution', {}).get('pattern', 'UNKNOWN')
+                },
+                'eth': {
+                    'signal': eth_flows.get('overall_signal', 'NEUTRAL'),
+                    'volume_24h': eth_flows.get('volume_metrics', {}).get('quote_volume_24h', 0),
+                    'pattern': eth_flows.get('accumulation_distribution', {}).get('pattern', 'UNKNOWN')
+                },
+                'market_sentiment': self._determine_market_sentiment(btc_flows, eth_flows),
+                'data_quality': 'REAL',
+                'analysis_complete': True
+            }
+            
+            # Store in history
+            self.flow_history.append(report)
+            
+            logger.info(f"✅ Market flows detected: BTC={report['btc']['signal']}, ETH={report['eth']['signal']}")
+            return report
+            
+        except Exception as e:
+            logger.error(f"❌ Error in detect_market_flows: {e}")
+            return {
+                'timestamp': datetime.now(pytz.UTC).isoformat(),
+                'error': str(e),
+                'analysis_complete': False
+            }
+    
+    def _determine_market_sentiment(self, btc_data: Dict, eth_data: Dict) -> str:
+        """Determine overall market sentiment from BTC and ETH flows."""
+        btc_signal = btc_data.get('overall_signal', 'NEUTRAL')
+        eth_signal = eth_data.get('overall_signal', 'NEUTRAL')
+        
+        if btc_signal == 'LONG' and eth_signal == 'LONG':
+            return 'bullish'
+        elif btc_signal == 'SHORT' and eth_signal == 'SHORT':
+            return 'bearish'
+        elif btc_signal == 'LONG' or eth_signal == 'LONG':
+            return 'mixed_bullish'
+        elif btc_signal == 'SHORT' or eth_signal == 'SHORT':
+            return 'mixed_bearish'
+        else:
+            return 'neutral'
+    
     def _generate_overall_signal(self, acc_dist: Dict, net_flow: Dict) -> str:
         """
         Generate overall trading signal from flow analysis
