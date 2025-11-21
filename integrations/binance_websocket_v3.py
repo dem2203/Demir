@@ -1,6 +1,6 @@
 # integrations/binance_websocket_v3.py
 """
-🚀 DEMIR AI v6.0 - ADVANCED BINANCE WEBSOCKET MANAGER
+🚀 DEMIR AI v8.0 - ADVANCED BINANCE WEBSOCKET MANAGER
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ENTERPRISE-GRADE WEBSOCKET:
@@ -11,11 +11,14 @@ ENTERPRISE-GRADE WEBSOCKET:
     ✅ Real-time data verification (NO MOCK DATA)
     ✅ Thread-safe event handling
     ✅ Graceful shutdown
+    ✅ NEW v8.0: Global State Integration for orchestrator broadcasting
+    ✅ NEW v8.0: Multi-layer data validation pipeline
+    ✅ NEW v8.0: SocketIO real-time client push
     
 DEPLOYMENT: Railway + GitHub
 AUTHOR: DEMIR AI Research Team
-DATE: 2025-11-19
-VERSION: 6.0
+DATE: 2025-11-21
+VERSION: 8.0
 """
 
 import os
@@ -57,6 +60,8 @@ class BinanceWebSocketManager:
         - Circuit breaker for failed connections
         - Real-time data verification
         - Thread-safe callbacks
+        - NEW v8.0: Global state integration for orchestrator
+        - NEW v8.0: SocketIO broadcasting to connected clients
     """
     
     # Binance WebSocket endpoints
@@ -78,12 +83,14 @@ class BinanceWebSocketManager:
     STREAM_BOOK_TICKER = "bookTicker"
     STREAM_AGG_TRADE = "aggTrade"
     
-    def __init__(self, testnet: bool = False):
+    def __init__(self, testnet: bool = False, global_state=None, socketio=None):
         """
         Initialize WebSocket Manager
         
         Args:
             testnet: Use testnet endpoint (for testing only)
+            global_state: Global state manager for orchestrator integration (NEW v8.0)
+            socketio: SocketIO instance for real-time client broadcasting (NEW v8.0)
         """
         self.base_url = self.TESTNET_URL if testnet else self.STREAM_URL
         
@@ -113,19 +120,27 @@ class BinanceWebSocketManager:
         # Data verification
         self.data_verifier = RealDataVerifier()
         
+        # NEW v8.0: Global state integration
+        self.global_state = global_state
+        self.socketio = socketio
+        
         # Metrics
         self.metrics = {
             'messages_received': 0,
             'messages_failed': 0,
             'reconnections': 0,
             'last_message_time': None,
-            'uptime_start': None
+            'uptime_start': None,
+            'data_pushed_to_state': 0,  # NEW v8.0
+            'socketio_broadcasts': 0,    # NEW v8.0
+            'validation_passes': 0,      # NEW v8.0
+            'validation_failures': 0     # NEW v8.0
         }
         
         # Message buffer for replay on reconnect
         self.message_buffer = deque(maxlen=100)
         
-        logger.info("BinanceWebSocketManager initialized")
+        logger.info("BinanceWebSocketManager initialized with global_state integration (v8.0)")
     
     # ========================================================================
     # CONNECTION MANAGEMENT
@@ -364,7 +379,43 @@ class BinanceWebSocketManager:
             
             if not is_valid:
                 logger.warning(f"⚠️ INVALID TICKER DATA for {symbol} - REJECTED")
+                self.metrics['validation_failures'] += 1
                 return
+            
+            self.metrics['validation_passes'] += 1
+            
+            # NEW v8.0: Push to global state for orchestrator
+            if self.global_state:
+                try:
+                    self.global_state.update_market_data(symbol, {
+                        'price': price,
+                        'volume': volume,
+                        'change_24h': change_24h,
+                        'source': 'binance_websocket',
+                        'metadata': {
+                            'event_type': 'ticker',
+                            'validated': True,
+                            'timestamp': datetime.now().isoformat()
+                        }
+                    })
+                    self.metrics['data_pushed_to_state'] += 1
+                except Exception as e:
+                    logger.error(f"❌ Error pushing to global_state: {e}")
+            
+            # NEW v8.0: Broadcast to SocketIO clients
+            if self.socketio:
+                try:
+                    self.socketio.emit('market_update', {
+                        'symbol': symbol,
+                        'price': price,
+                        'change_24h': change_24h,
+                        'volume': volume,
+                        'timestamp': time.time(),
+                        'source': 'binance_websocket'
+                    })
+                    self.metrics['socketio_broadcasts'] += 1
+                except Exception as e:
+                    logger.error(f"❌ Error broadcasting via SocketIO: {e}")
             
             # Call callbacks
             await self._trigger_callbacks(f"{symbol}:ticker", {
@@ -389,6 +440,20 @@ class BinanceWebSocketManager:
             bids_parsed = [[float(p), float(q)] for p, q in bids[:20]]
             asks_parsed = [[float(p), float(q)] for p, q in asks[:20]]
             
+            # NEW v8.0: Broadcast orderbook to SocketIO clients
+            if self.socketio:
+                try:
+                    self.socketio.emit('orderbook_update', {
+                        'symbol': symbol,
+                        'bids': bids_parsed[:5],  # Top 5 for bandwidth
+                        'asks': asks_parsed[:5],
+                        'timestamp': time.time(),
+                        'source': 'binance_websocket'
+                    })
+                    self.metrics['socketio_broadcasts'] += 1
+                except Exception as e:
+                    logger.error(f"❌ Error broadcasting orderbook: {e}")
+            
             # Call callbacks
             await self._trigger_callbacks(f"{symbol}:depth", {
                 'symbol': symbol,
@@ -408,6 +473,21 @@ class BinanceWebSocketManager:
             quantity = float(data.get('q', 0))
             is_buyer_maker = data.get('m', False)
             
+            # NEW v8.0: Broadcast trade to SocketIO clients
+            if self.socketio:
+                try:
+                    self.socketio.emit('trade_update', {
+                        'symbol': symbol,
+                        'price': price,
+                        'quantity': quantity,
+                        'side': 'sell' if is_buyer_maker else 'buy',
+                        'timestamp': time.time(),
+                        'source': 'binance_websocket'
+                    })
+                    self.metrics['socketio_broadcasts'] += 1
+                except Exception as e:
+                    logger.error(f"❌ Error broadcasting trade: {e}")
+            
             # Call callbacks
             await self._trigger_callbacks(f"{symbol}:trade", {
                 'symbol': symbol,
@@ -426,8 +506,7 @@ class BinanceWebSocketManager:
             symbol = data.get('s', '')
             kline = data.get('k', {})
             
-            # Call callbacks
-            await self._trigger_callbacks(f"{symbol}:kline", {
+            kline_data = {
                 'symbol': symbol,
                 'interval': kline.get('i', ''),
                 'open': float(kline.get('o', 0)),
@@ -437,7 +516,21 @@ class BinanceWebSocketManager:
                 'volume': float(kline.get('v', 0)),
                 'closed': kline.get('x', False),
                 'timestamp': time.time()
-            })
+            }
+            
+            # NEW v8.0: Broadcast kline to SocketIO clients (only closed candles)
+            if self.socketio and kline_data['closed']:
+                try:
+                    self.socketio.emit('kline_update', {
+                        **kline_data,
+                        'source': 'binance_websocket'
+                    })
+                    self.metrics['socketio_broadcasts'] += 1
+                except Exception as e:
+                    logger.error(f"❌ Error broadcasting kline: {e}")
+            
+            # Call callbacks
+            await self._trigger_callbacks(f"{symbol}:kline", kline_data)
             
         except Exception as e:
             logger.error(f"Error handling kline: {e}")
@@ -448,13 +541,30 @@ class BinanceWebSocketManager:
             symbol = data.get('s', '')
             best_bid = float(data.get('b', 0))
             best_ask = float(data.get('a', 0))
+            spread = best_ask - best_bid
+            
+            # NEW v8.0: Broadcast book ticker to SocketIO clients
+            if self.socketio:
+                try:
+                    self.socketio.emit('book_ticker_update', {
+                        'symbol': symbol,
+                        'best_bid': best_bid,
+                        'best_ask': best_ask,
+                        'spread': spread,
+                        'spread_percentage': (spread / best_bid * 100) if best_bid > 0 else 0,
+                        'timestamp': time.time(),
+                        'source': 'binance_websocket'
+                    })
+                    self.metrics['socketio_broadcasts'] += 1
+                except Exception as e:
+                    logger.error(f"❌ Error broadcasting book ticker: {e}")
             
             # Call callbacks
             await self._trigger_callbacks(f"{symbol}:bookTicker", {
                 'symbol': symbol,
                 'best_bid': best_bid,
                 'best_ask': best_ask,
-                'spread': best_ask - best_bid,
+                'spread': spread,
                 'timestamp': time.time()
             })
             
@@ -707,7 +817,11 @@ class BinanceWebSocketManager:
             'reconnections': self.metrics['reconnections'],
             'last_message_time': self.metrics['last_message_time'],
             'uptime_seconds': uptime,
-            'last_pong_time': self.last_pong_time
+            'last_pong_time': self.last_pong_time,
+            'data_pushed_to_state': self.metrics['data_pushed_to_state'],
+            'socketio_broadcasts': self.metrics['socketio_broadcasts'],
+            'validation_passes': self.metrics['validation_passes'],
+            'validation_failures': self.metrics['validation_failures']
         }
     
     def is_healthy(self) -> bool:
@@ -832,7 +946,9 @@ class BinanceWebSocketManager:
 
 async def start_price_stream(
     symbols: List[str],
-    callback: Callable[[str, float, float], None]
+    callback: Callable[[str, float, float], None],
+    global_state=None,
+    socketio=None
 ):
     """
     Convenience function to start price stream
@@ -840,8 +956,13 @@ async def start_price_stream(
     Args:
         symbols: List of trading pairs
         callback: Callback function(symbol, price, change_24h)
+        global_state: Global state manager (NEW v8.0)
+        socketio: SocketIO instance (NEW v8.0)
     """
-    manager = BinanceWebSocketManager()
+    manager = BinanceWebSocketManager(
+        global_state=global_state,
+        socketio=socketio
+    )
     
     async def price_callback(data):
         await callback(
