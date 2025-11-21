@@ -294,9 +294,6 @@ class SentimentAnalysisV2:
                 },
                 'eth': {
                     'score': eth_sentiment.get('score') if eth_sentiment else None,
-                    'normalized': round((eth_sentiment
-                'eth': {
-                    'score': eth_sentiment.get('score') if eth_sentiment else None,
                     'normalized': round((eth_sentiment['score'] + 1) * 50, 1) if eth_sentiment and eth_sentiment.get('score') is not None else None,
                     'interpretation': eth_sentiment.get('interpretation') if eth_sentiment else None,
                     'sources': eth_sentiment.get('sources_used', []) if eth_sentiment else []
