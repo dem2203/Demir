@@ -409,6 +409,68 @@ class MarketCorrelationEngine:
         logger.info("✅ Comprehensive correlation analysis complete")
         return correlations
     
+    def analyze_correlations(self) -> Dict:
+        """
+        ⭐ NEW v8.0: Main method called by background correlation analysis thread.
+        
+        Analyzes correlations between crypto and traditional markets:
+        - BTC/ETH correlation
+        - BTC vs S&P 500
+        - BTC vs NASDAQ
+        - BTC vs Gold
+        - BTC vs VIX (fear index)
+        - Cross-market risk assessment
+        
+        Returns comprehensive correlation report with trading implications.
+        """
+        try:
+            # Call comprehensive correlation analysis
+            analysis = self.get_comprehensive_correlation_analysis(days=30)
+            
+            # Build simplified report for thread consumption
+            report = {
+                'timestamp': analysis['timestamp'],
+                'btc_eth_corr': analysis.get('btc_eth', {}).get('correlation', 0),
+                'btc_sp500_corr': analysis.get('btc_sp500', {}).get('correlation', 0),
+                'btc_nasdaq_corr': analysis.get('btc_nasdaq', {}).get('correlation', 0),
+                'btc_gold_corr': analysis.get('btc_gold', {}).get('correlation', 0),
+                'btc_vix_corr': analysis.get('btc_vix', {}).get('correlation', 0),
+                'risk_level': analysis.get('risk_assessment', {}).get('risk_level', 'UNKNOWN'),
+                'volatility': analysis.get('risk_assessment', {}).get('btc_annualized_volatility', 0),
+                'market_regime': self._determine_market_regime(analysis),
+                'data_quality': 'REAL',
+                'analysis_complete': True
+            }
+            
+            logger.info(f"✅ Correlations analyzed: BTC/ETH={report['btc_eth_corr']:.2f}, Risk={report['risk_level']}")
+            return report
+            
+        except Exception as e:
+            logger.error(f"❌ Error in analyze_correlations: {e}")
+            return {
+                'timestamp': datetime.now(pytz.UTC).isoformat(),
+                'error': str(e),
+                'analysis_complete': False
+            }
+    
+    def _determine_market_regime(self, analysis: Dict) -> str:
+        """Determine market regime from correlation patterns."""
+        btc_sp_corr = analysis.get('btc_sp500', {}).get('correlation', 0)
+        btc_vix_corr = analysis.get('btc_vix', {}).get('correlation', 0)
+        risk_level = analysis.get('risk_assessment', {}).get('risk_level', 'UNKNOWN')
+        
+        # High correlation with stocks + low VIX correlation = risk-on
+        if btc_sp_corr > 0.5 and btc_vix_corr < 0.3:
+            return 'risk_on'
+        # Low correlation with stocks + high VIX correlation = risk-off
+        elif btc_sp_corr < 0.3 and abs(btc_vix_corr) > 0.4:
+            return 'risk_off'
+        # High volatility + low correlations = crypto-specific
+        elif risk_level in ['VERY_HIGH', 'HIGH'] and abs(btc_sp_corr) < 0.4:
+            return 'crypto_specific'
+        else:
+            return 'transitional'
+    
     def _assess_cross_market_risk(self, days: int) -> Dict:
         """
         Assess cross-market risk based on correlations
