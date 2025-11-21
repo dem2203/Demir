@@ -1,8 +1,8 @@
 # utils/real_data_verifier_pro.py
 """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔍 DEMIR AI v7.0 - REAL DATA VERIFIER PRO
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CRITICAL COMPONENT - ABSOLUTE REAL DATA ENFORCEMENT
 
@@ -25,7 +25,7 @@ DEPLOYMENT: Railway Production
 AUTHOR: DEMIR AI Research Team
 DATE: 2025-11-19
 VERSION: 7.0
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 import os
@@ -608,6 +608,13 @@ class RealDataVerifier:
         }
         self.rejection_log.clear()
         logger.info("Statistics reset")
+
+# ============================================================================
+# BACKWARD COMPATIBILITY ALIASES
+# ============================================================================
+
+# Alias for backward compatibility with main.py imports
+MockDataDetector = RealDataVerifier
 
 # ============================================================================
 # GLOBAL INSTANCE
