@@ -295,3 +295,55 @@ class SentimentAnalysisV2:
                 'eth': {
                     'score': eth_sentiment.get('score') if eth_sentiment else None,
                     'normalized': round((eth_sentiment
+                'eth': {
+                    'score': eth_sentiment.get('score') if eth_sentiment else None,
+                    'normalized': round((eth_sentiment['score'] + 1) * 50, 1) if eth_sentiment and eth_sentiment.get('score') is not None else None,
+                    'interpretation': eth_sentiment.get('interpretation') if eth_sentiment else None,
+                    'sources': eth_sentiment.get('sources_used', []) if eth_sentiment else []
+                }
+            }
+            
+            logger.info(f"✅ Multi-source sentiment: {aggregate_score:.1f}/100 from {len(sources_used)} sources ({report['market_mood']})")
+            return report
+            
+        except Exception as e:
+            logger.error(f"❌ CRITICAL: Sentiment analysis failed - {e}")
+            # ZERO FALLBACK POLICY - Raise error instead of returning fake data
+            raise RuntimeError(f"Sentiment analysis failed with zero real data: {str(e)}")
+    
+    def _get_market_mood(self, score: float) -> str:
+        """Convert sentiment score (0-100) to market mood label."""
+        if score >= 75:
+            return 'extreme_greed'
+        elif score >= 60:
+            return 'greed'
+        elif score >= 40:
+            return 'neutral'
+        elif score >= 25:
+            return 'fear'
+        else:
+            return 'extreme_fear'
+    
+    def _calculate_fud_fomo_ratio(self, btc_data: Dict, eth_data: Dict) -> float:
+        """Calculate overall FUD/FOMO ratio from panic details."""
+        btc_panic = btc_data.get('panic_detail')
+        eth_panic = eth_data.get('panic_detail')
+        
+        if not btc_panic or not eth_panic:
+            return 0.0
+        
+        total_positive = btc_panic.get('positive', 0) + eth_panic.get('positive', 0)
+        total_negative = btc_panic.get('negative', 0) + eth_panic.get('negative', 0)
+        
+        if total_positive + total_negative == 0:
+            return 0.0
+        
+        return round((total_positive - total_negative) / (total_positive + total_negative), 2)
+    
+    def interpret_score(self, score: float) -> str:
+        """Interpret sentiment score with qualitative label."""
+        if score > 0.2:
+            return 'Positive - FOMO dominant'
+        elif score < -0.2:
+            return 'Negative - FUD dominant'
+        return 'Neutral - Mixed signals'
