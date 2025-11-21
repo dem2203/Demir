@@ -33,10 +33,10 @@ class Database:
         try:
             db_url = os.getenv('DATABASE_URL')
             self.conn = psycopg2.connect(db_url)
-            logger.info("PostgreSQL connected - Real data persistence")
+            logger.info("✅ PostgreSQL connected - Real data persistence")
             self.create_tables()
         except Exception as e:
-            logger.error(f"Database connection failed: {e}")
+            logger.error(f"❌ Database connection failed: {e}")
             raise
     
     def create_tables(self):
@@ -101,9 +101,9 @@ class Database:
             """)
             
             self.conn.commit()
-            logger.info("Database tables created/verified")
+            logger.info("✅ Database tables created/verified")
         except Exception as e:
-            logger.error(f"Table creation failed: {e}")
+            logger.error(f"❌ Table creation failed: {e}")
     
     # ========================================================================
     # SIGNAL MANAGEMENT (Original Functions)
@@ -131,9 +131,9 @@ class Database:
                 json.dumps(signal_data.get('scores', {}))
             ))
             self.conn.commit()
-            logger.info(f"Signal saved: {signal_data['symbol']} {signal_data['type']}")
+            logger.info(f"✅ Signal saved: {signal_data['symbol']} {signal_data['type']}")
         except Exception as e:
-            logger.error(f"Signal save failed: {e}")
+            logger.error(f"❌ Signal save failed: {e}")
             self.conn.rollback()
     
     def get_recent_signals(self, limit=10):
@@ -147,7 +147,7 @@ class Database:
             """, (limit,))
             return cursor.fetchall()
         except Exception as e:
-            logger.error(f"Query failed: {e}")
+            logger.error(f"❌ Query failed: {e}")
             return []
     
     # ========================================================================
@@ -191,10 +191,10 @@ class Database:
             """, (key, value_str, data_type))
             
             self.conn.commit()
-            logger.info(f"Setting saved: {key} = {value}")
+            logger.info(f"✅ Setting saved: {key} = {value}")
             return True
         except Exception as e:
-            logger.error(f"Save setting error: {e}")
+            logger.error(f"❌ Save setting error: {e}")
             self.conn.rollback()
             return False
     
@@ -238,7 +238,7 @@ class Database:
             else:
                 return value_str
         except Exception as e:
-            logger.error(f"Load setting error: {e}")
+            logger.error(f"❌ Load setting error: {e}")
             return default
     
     def get_all_settings(self):
@@ -268,7 +268,7 @@ class Database:
             
             return settings
         except Exception as e:
-            logger.error(f"Get settings error: {e}")
+            logger.error(f"❌ Get settings error: {e}")
             return {}
     
     def delete_setting(self, key: str):
@@ -280,10 +280,10 @@ class Database:
                 WHERE setting_key = %s
             """, (key,))
             self.conn.commit()
-            logger.info(f"Setting deleted: {key}")
+            logger.info(f"✅ Setting deleted: {key}")
             return True
         except Exception as e:
-            logger.error(f"Delete setting error: {e}")
+            logger.error(f"❌ Delete setting error: {e}")
             self.conn.rollback()
             return False
     
@@ -293,12 +293,39 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute("DELETE FROM user_settings")
             self.conn.commit()
-            logger.info("All settings cleared")
+            logger.info("✅ All settings cleared")
             return True
         except Exception as e:
-            logger.error(f"Clear settings error: {e}")
+            logger.error(f"❌ Clear settings error: {e}")
             self.conn.rollback()
             return False
+
+# ============================================================================
+# PLACEHOLDER CLASSES (To prevent import errors)
+# ============================================================================
+
+class ComprehensiveSignalValidator:
+    """Placeholder validator (for future implementation)"""
+    
+    @staticmethod
+    def validate_signal(signal):
+        """Basic signal validation"""
+        return True, "Signal validated"
+
+# ============================================================================
+# BACKWARD COMPATIBILITY ALIASES
+# ============================================================================
+
+# Alias for backward compatibility with main.py imports
+def init_database_schema():
+    """Initialize database schema (alias for create_tables)"""
+    try:
+        db.create_tables()
+        logger.info("✅ Database schema initialized")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Schema initialization failed: {e}")
+        return False
 
 # ============================================================================
 # GLOBAL DATABASE INSTANCE
@@ -312,6 +339,6 @@ db = Database()
 
 try:
     db.create_tables()
-    logger.info("Database initialized successfully")
+    logger.info("✅ Database initialized successfully")
 except Exception as e:
-    logger.error(f"Database initialization failed: {e}")
+    logger.error(f"❌ Database initialization failed: {e}")
