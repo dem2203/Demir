@@ -1,7 +1,7 @@
 # integrations/binance_websocket_v3.py
 """
 🚀 DEMIR AI v6.0 - ADVANCED BINANCE WEBSOCKET MANAGER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ENTERPRISE-GRADE WEBSOCKET:
     ✅ Auto-reconnection with exponential backoff
@@ -726,6 +726,66 @@ class BinanceWebSocketManager:
         
         return True
     
+    def maintain_connections(self) -> Dict[str, Any]:
+        """
+        ⭐ NEW v8.0: Main method called by background WebSocket maintenance thread.
+        
+        Checks connection health and performs maintenance:
+        - Verifies connection is alive
+        - Checks message reception freshness
+        - Monitors circuit breaker state
+        - Triggers reconnection if needed
+        - Returns comprehensive status report
+        
+        Returns:
+            Dict with connection status, health metrics, and actions taken
+        """
+        try:
+            status_report = {
+                'timestamp': datetime.now().isoformat(),
+                'is_healthy': self.is_healthy(),
+                'is_connected': self.is_connected,
+                'circuit_state': self.circuit_state,
+                'metrics': self.get_metrics(),
+                'actions_taken': []
+            }
+            
+            # Check connection staleness
+            if self.metrics['last_message_time']:
+                time_since_message = (datetime.now() - self.metrics['last_message_time']).total_seconds()
+                
+                if time_since_message > 120:  # 2 minutes without messages
+                    logger.warning(f"⚠️ Connection stale ({time_since_message:.0f}s since last message)")
+                    status_report['actions_taken'].append('flagged_stale_connection')
+                    
+                    if self.is_connected and time_since_message > 180:  # 3 minutes
+                        logger.error("🔄 Forcing reconnection due to stale connection")
+                        status_report['actions_taken'].append('triggered_reconnection')
+                        
+                        # Trigger reconnection in event loop
+                        if self.loop and self.loop.is_running():
+                            asyncio.run_coroutine_threadsafe(
+                                self._reconnect_for_subscription(),
+                                self.loop
+                            )
+            
+            # Log maintenance check
+            if status_report['is_healthy']:
+                logger.debug(f"✅ WebSocket maintenance check: HEALTHY")
+            else:
+                logger.warning(f"⚠️ WebSocket maintenance check: UNHEALTHY - {status_report}")
+            
+            return status_report
+            
+        except Exception as e:
+            logger.error(f"❌ Error in maintain_connections: {e}")
+            return {
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e),
+                'is_healthy': False,
+                'actions_taken': ['error_occurred']
+            }
+    
     # ========================================================================
     # SHUTDOWN
     # ========================================================================
@@ -825,4 +885,3 @@ if __name__ == "__main__":
             manager.stop()
     
     asyncio.run(main())
-
