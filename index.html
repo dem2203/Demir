@@ -857,6 +857,169 @@
             background: rgba(255, 68, 68, 0.15);
             color: var(--accent-red);
         }
+
+        /* ================================================================
+           ⭐ NEW v8.0 PHASE 2: AI META-LAYER CARD
+           ================================================================ */
+        
+        .meta-layer-widget {
+            grid-column: span 8;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
+            border: 2px solid var(--accent-purple);
+        }
+        
+        .meta-consensus {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .meta-signal-display {
+            flex: 1;
+        }
+        
+        .meta-signal-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .meta-signal-value {
+            font-size: 48px;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .meta-signal-value.short {
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .meta-action-badge {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 2px solid;
+        }
+        
+        .meta-action-badge.buy {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+        
+        .meta-action-badge.sell {
+            background: rgba(255, 68, 68, 0.2);
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+        
+        .meta-action-badge.hold {
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--accent-yellow);
+            border-color: var(--accent-yellow);
+        }
+        
+        .meta-action-badge.wait {
+            background: rgba(139, 149, 170, 0.2);
+            color: var(--text-secondary);
+            border-color: var(--text-secondary);
+        }
+        
+        .meta-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .meta-stat {
+            text-align: center;
+        }
+        
+        .meta-stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        
+        .meta-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .meta-ai-reasoning {
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            margin: 16px;
+        }
+        
+        .meta-reasoning-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-purple);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .meta-reasoning-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+        }
+        
+        .meta-groups {
+            display: flex;
+            gap: 16px;
+            padding: 0 24px 24px;
+        }
+        
+        .meta-group-list {
+            flex: 1;
+        }
+        
+        .meta-group-list-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .meta-group-list-title.supporting {
+            color: var(--accent-green);
+        }
+        
+        .meta-group-list-title.opposing {
+            color: var(--accent-red);
+        }
+        
+        .meta-group-item {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
         
         /* ================================================================
            LAYER ANALYSIS
@@ -1111,7 +1274,8 @@
             }
             
             .layer-analysis,
-            .performance-chart {
+            .performance-chart,
+            .meta-layer-widget {
                 grid-column: span 8;
             }
         }
@@ -1134,6 +1298,7 @@
             .arbitrage-widget,
             .onchain-widget,
             .pattern-widget,
+            .meta-layer-widget,
             .system-metrics {
                 grid-column: span 1;
             }
@@ -1146,6 +1311,10 @@
             
             .layer-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .meta-stats {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
             /* ================================================================
@@ -1293,6 +1462,60 @@
         <div class="price-ticker" id="price-ticker">
             <div class="loading">
                 <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <!-- ⭐ NEW v8.0 PHASE 2: AI META-LAYER CONSENSUS WIDGET -->
+        <div class="widget meta-layer-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>🧠</span>
+                    AI Meta-Layer - 5-Group Ensemble
+                </div>
+                <div class="widget-badge new">META AI</div>
+            </div>
+            
+            <div class="meta-consensus">
+                <div class="meta-signal-display">
+                    <div class="meta-signal-title">Consensus Signal</div>
+                    <div class="meta-signal-value" id="meta-signal-direction">--</div>
+                </div>
+                <div class="meta-action-badge hold" id="meta-action-badge">HOLD</div>
+            </div>
+            
+            <div class="meta-stats">
+                <div class="meta-stat">
+                    <div class="meta-stat-label">Strength</div>
+                    <div class="meta-stat-value" id="meta-strength">--</div>
+                </div>
+                <div class="meta-stat">
+                    <div class="meta-stat-label">Confidence</div>
+                    <div class="meta-stat-value" id="meta-confidence">--</div>
+                </div>
+                <div class="meta-stat">
+                    <div class="meta-stat-label">R/R Ratio</div>
+                    <div class="meta-stat-value" id="meta-rr">--</div>
+                </div>
+                <div class="meta-stat">
+                    <div class="meta-stat-label">Groups</div>
+                    <div class="meta-stat-value" id="meta-groups">--</div>
+                </div>
+            </div>
+            
+            <div class="meta-ai-reasoning">
+                <div class="meta-reasoning-title">🤖 AI Reasoning</div>
+                <div class="meta-reasoning-text" id="meta-reasoning">Waiting for group signals...</div>
+            </div>
+            
+            <div class="meta-groups">
+                <div class="meta-group-list">
+                    <div class="meta-group-list-title supporting">✅ Supporting</div>
+                    <div id="meta-supporting">--</div>
+                </div>
+                <div class="meta-group-list">
+                    <div class="meta-group-list-title opposing">❌ Opposing</div>
+                    <div id="meta-opposing">--</div>
+                </div>
             </div>
         </div>
         
