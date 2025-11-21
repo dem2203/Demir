@@ -2068,7 +2068,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(30)
     
-        def _dominance_loop(self, interval: int):
+   def _dominance_loop(self, interval: int):
         """Crypto dominance tracking continuous loop"""
         logger.info("🏆 Dominance Tracker loop started")
         while self.running:
