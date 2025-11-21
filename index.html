@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEMIR AI v6.0 - Enterprise Trading Dashboard</title>
+    <title>DEMIR AI v8.0 - Enterprise Trading Dashboard</title>
     
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -19,7 +19,7 @@
     
     <style>
         /* ================================================================
-           DEMIR AI v6.0 - ENTERPRISE DASHBOARD STYLES
+           DEMIR AI v8.0 - ENTERPRISE DASHBOARD STYLES
            ================================================================ */
         
         :root {
@@ -37,6 +37,8 @@
             --accent-blue: #3b82f6;
             --accent-yellow: #fbbf24;
             --accent-purple: #a855f7;
+            --accent-orange: #fb923c;
+            --accent-teal: #14b8a6;
             
             /* Text Colors */
             --text-primary: #ffffff;
@@ -162,6 +164,17 @@
             font-variant-numeric: tabular-nums;
         }
         
+        .version-badge {
+            background: var(--accent-purple);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
         /* ================================================================
            DASHBOARD GRID
            ================================================================ */
@@ -221,6 +234,16 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+        
+        .widget-badge.new {
+            background: var(--accent-purple);
+            animation: glow 2s infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px var(--accent-purple); }
+            50% { box-shadow: 0 0 15px var(--accent-purple); }
         }
         
         .widget-body {
@@ -429,6 +452,410 @@
             height: 100%;
             background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
             transition: width 0.5s ease;
+        }
+        
+        /* ================================================================
+           NEW v8.0 WIDGETS: SMART MONEY TRACKER
+           ================================================================ */
+        
+        .smart-money-widget {
+            grid-column: span 4;
+        }
+        
+        .whale-transaction {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--accent-yellow);
+            transition: all 0.2s ease;
+        }
+        
+        .whale-transaction:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(4px);
+        }
+        
+        .whale-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .whale-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-yellow);
+        }
+        
+        .whale-type {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .whale-type.buy {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-green);
+        }
+        
+        .whale-type.sell {
+            background: rgba(255, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+        
+        .whale-details {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* ================================================================
+           NEW v8.0 WIDGETS: RISK ENGINE
+           ================================================================ */
+        
+        .risk-widget {
+            grid-column: span 4;
+        }
+        
+        .risk-gauge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .risk-meter {
+            width: 200px;
+            height: 100px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .risk-arc {
+            width: 100%;
+            height: 100%;
+            border-radius: 100px 100px 0 0;
+            background: conic-gradient(
+                from 180deg,
+                var(--accent-green) 0deg 120deg,
+                var(--accent-yellow) 120deg 240deg,
+                var(--accent-red) 240deg 360deg
+            );
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .risk-needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 3px;
+            height: 80px;
+            background: white;
+            transform-origin: bottom;
+            transition: transform 0.5s ease;
+        }
+        
+        .risk-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        
+        .risk-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .risk-metrics {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .risk-metric {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .risk-metric-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        
+        .risk-metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        /* ================================================================
+           NEW v8.0 WIDGETS: SENTIMENT GAUGE
+           ================================================================ */
+        
+        .sentiment-widget {
+            grid-column: span 4;
+        }
+        
+        .sentiment-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+        
+        .sentiment-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+            border: 3px solid;
+            transition: all 0.5s ease;
+        }
+        
+        .sentiment-circle.bullish {
+            border-color: var(--accent-green);
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.1), transparent);
+        }
+        
+        .sentiment-circle.bearish {
+            border-color: var(--accent-red);
+            background: radial-gradient(circle, rgba(255, 68, 68, 0.1), transparent);
+        }
+        
+        .sentiment-circle.neutral {
+            border-color: var(--accent-yellow);
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.1), transparent);
+        }
+        
+        .sentiment-score {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        
+        .sentiment-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        
+        .sentiment-sources {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .sentiment-source {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        /* ================================================================
+           NEW v8.0 WIDGETS: ARBITRAGE OPPORTUNITIES
+           ================================================================ */
+        
+        .arbitrage-widget {
+            grid-column: span 4;
+        }
+        
+        .arbitrage-opportunity {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--accent-teal);
+            transition: all 0.2s ease;
+        }
+        
+        .arbitrage-opportunity:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(4px);
+        }
+        
+        .arb-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .arb-symbol {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        
+        .arb-spread {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-teal);
+        }
+        
+        .arb-exchanges {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .arb-exchange {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .arb-arrow {
+            text-align: center;
+            font-size: 16px;
+            color: var(--accent-teal);
+        }
+        
+        /* ================================================================
+           NEW v8.0 WIDGETS: ON-CHAIN METRICS
+           ================================================================ */
+        
+        .onchain-widget {
+            grid-column: span 4;
+        }
+        
+        .onchain-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .onchain-metric {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .onchain-metric-info {
+            flex: 1;
+        }
+        
+        .onchain-metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .onchain-metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .onchain-metric-change {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .onchain-metric-change.positive {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-green);
+        }
+        
+        .onchain-metric-change.negative {
+            background: rgba(255, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+        
+        /* ================================================================
+           NEW v8.0 WIDGETS: PATTERN RECOGNITION
+           ================================================================ */
+        
+        .pattern-widget {
+            grid-column: span 4;
+        }
+        
+        .pattern-alert {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--accent-purple);
+            transition: all 0.2s ease;
+        }
+        
+        .pattern-alert:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(4px);
+        }
+        
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .pattern-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-purple);
+        }
+        
+        .pattern-confidence {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .pattern-details {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        
+        .pattern-direction {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        
+        .pattern-direction.bullish {
+            background: rgba(0, 255, 136, 0.15);
+            color: var(--accent-green);
+        }
+        
+        .pattern-direction.bearish {
+            background: rgba(255, 68, 68, 0.15);
+            color: var(--accent-red);
         }
         
         /* ================================================================
@@ -673,7 +1100,13 @@
             }
             
             .signal-feed,
-            .advisor-opportunities {
+            .advisor-opportunities,
+            .smart-money-widget,
+            .risk-widget,
+            .sentiment-widget,
+            .arbitrage-widget,
+            .onchain-widget,
+            .pattern-widget {
                 grid-column: span 4;
             }
             
@@ -695,6 +1128,12 @@
             .layer-analysis,
             .performance-chart,
             .advisor-opportunities,
+            .smart-money-widget,
+            .risk-widget,
+            .sentiment-widget,
+            .arbitrage-widget,
+            .onchain-widget,
+            .pattern-widget,
             .system-metrics {
                 grid-column: span 1;
             }
@@ -719,12 +1158,14 @@
         <div class="logo">
             <div class="logo-icon">AI</div>
             <div class="logo-text">
-                <div class="logo-title">DEMIR AI v6.0</div>
+                <div class="logo-title">DEMIR AI v8.0</div>
                 <div class="logo-subtitle">Enterprise Trading System</div>
             </div>
         </div>
         
         <div class="header-right">
+            <div class="version-badge">Phase 1-4 Active</div>
+            
             <div class="connection-status">
                 <div class="status-dot" id="connection-dot"></div>
                 <span id="connection-text">Bağlanıyor...</span>
@@ -758,6 +1199,136 @@
                 <div class="empty-state">
                     <div class="empty-icon">📊</div>
                     <div>Sinyal bekleniyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW v8.0: Smart Money Tracker -->
+        <div class="widget smart-money-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>🐳</span>
+                    Smart Money Tracker
+                </div>
+                <div class="widget-badge new">NEW</div>
+            </div>
+            <div class="widget-body" id="smart-money-list">
+                <div class="empty-state">
+                    <div class="empty-icon">🐳</div>
+                    <div>Whale hareketleri takip ediliyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW v8.0: Risk Engine -->
+        <div class="widget risk-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>⚠️</span>
+                    Risk Engine v2
+                </div>
+                <div class="widget-badge new">NEW</div>
+            </div>
+            <div class="risk-gauge">
+                <div class="risk-meter">
+                    <div class="risk-arc">
+                        <div class="risk-needle" id="risk-needle"></div>
+                    </div>
+                </div>
+                <div class="risk-value" id="risk-var">--</div>
+                <div class="risk-label">Value at Risk (VAR)</div>
+                <div class="risk-metrics">
+                    <div class="risk-metric">
+                        <div class="risk-metric-label">Sharpe</div>
+                        <div class="risk-metric-value" id="risk-sharpe">--</div>
+                    </div>
+                    <div class="risk-metric">
+                        <div class="risk-metric-label">Kelly</div>
+                        <div class="risk-metric-value" id="risk-kelly">--</div>
+                    </div>
+                    <div class="risk-metric">
+                        <div class="risk-metric-label">Max DD</div>
+                        <div class="risk-metric-value" id="risk-drawdown">--</div>
+                    </div>
+                    <div class="risk-metric">
+                        <div class="risk-metric-label">Position</div>
+                        <div class="risk-metric-value" id="risk-position">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW v8.0: Sentiment Gauge -->
+        <div class="widget sentiment-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>💬</span>
+                    Sentiment Analysis
+                </div>
+                <div class="widget-badge new">NEW</div>
+            </div>
+            <div class="sentiment-display">
+                <div class="sentiment-circle neutral" id="sentiment-circle">
+                    <div class="sentiment-score" id="sentiment-score">50</div>
+                    <div class="sentiment-label" id="sentiment-label">NEUTRAL</div>
+                </div>
+                <div class="sentiment-sources" id="sentiment-sources">
+                    <span class="sentiment-source">Twitter</span>
+                    <span class="sentiment-source">Reddit</span>
+                    <span class="sentiment-source">News</span>
+                    <span class="sentiment-source">Fear & Greed</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW v8.0: Arbitrage Opportunities -->
+        <div class="widget arbitrage-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>🔄</span>
+                    Arbitrage Scanner
+                </div>
+                <div class="widget-badge new">NEW</div>
+            </div>
+            <div class="widget-body" id="arbitrage-list">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div>Arbitrage fırsatları aranıyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW v8.0: On-Chain Analytics -->
+        <div class="widget onchain-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>⛓️</span>
+                    On-Chain Metrics
+                </div>
+                <div class="widget-badge new">NEW</div>
+            </div>
+            <div class="widget-body">
+                <div class="onchain-metrics" id="onchain-metrics">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW v8.0: Pattern Recognition -->
+        <div class="widget pattern-widget">
+            <div class="widget-header">
+                <div class="widget-title">
+                    <span>🔍</span>
+                    Pattern Recognition
+                </div>
+                <div class="widget-badge new">NEW</div>
+            </div>
+            <div class="widget-body" id="pattern-list">
+                <div class="empty-state">
+                    <div class="empty-icon">📈</div>
+                    <div>Pattern'ler analiz ediliyor...</div>
                 </div>
             </div>
         </div>
@@ -844,7 +1415,7 @@
             
             <div class="metric-card">
                 <div class="metric-label">Active Layers</div>
-                <div class="metric-value" id="metric-layers">50</div>
+                <div class="metric-value" id="metric-layers">60</div>
             </div>
             
             <div class="metric-card">
@@ -857,525 +1428,6 @@
     <!-- ================================================================
          JAVASCRIPT
          ================================================================ -->
-    <script>
-        // ================================================================
-        // GLOBAL STATE
-        // ================================================================
-        
-        let socket = null;
-        let isConnected = false;
-        let signalCount = 0;
-        let performanceChart = null;
-        
-        const priceCache = {};
-        const layerScoresCache = {};
-        
-        // ================================================================
-        // WEBSOCKET CONNECTION
-        // ================================================================
-        
-        function initializeWebSocket() {
-            console.log('🔌 Connecting to WebSocket...');
-            
-            // Connect to current host
-            socket = io({
-                transports: ['websocket', 'polling'],
-                reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000,
-                reconnectionAttempts: Infinity
-            });
-            
-            // Connection events
-            socket.on('connect', () => {
-                console.log('✅ WebSocket connected');
-                isConnected = true;
-                updateConnectionStatus(true);
-                
-                // Subscribe to primary symbols
-                socket.emit('subscribe_symbol', { symbol: 'BTCUSDT' });
-                socket.emit('subscribe_symbol', { symbol: 'ETHUSDT' });
-                socket.emit('subscribe_symbol', { symbol: 'BNBUSDT' });
-            });
-            
-            socket.on('disconnect', () => {
-                console.log('❌ WebSocket disconnected');
-                isConnected = false;
-                updateConnectionStatus(false);
-            });
-            
-            socket.on('connect_error', (error) => {
-                console.error('WebSocket error:', error);
-                isConnected = false;
-                updateConnectionStatus(false);
-            });
-            
-            // Data events
-            socket.on('price_update', handlePriceUpdate);
-            socket.on('price_bulk', handlePriceBulk);
-            socket.on('signal', handleNewSignal);
-            socket.on('layer_scores', handleLayerScores);
-            socket.on('performance_update', handlePerformanceUpdate);
-            socket.on('health_status', handleHealthStatus);
-        }
-        
-        function updateConnectionStatus(connected) {
-            const dot = document.getElementById('connection-dot');
-            const text = document.getElementById('connection-text');
-            
-            if (connected) {
-                dot.classList.remove('disconnected');
-                text.textContent = 'Bağlı';
-            } else {
-                dot.classList.add('disconnected');
-                text.textContent = 'Bağlantı Kesildi';
-            }
-        }
-        
-        // ================================================================
-        // PRICE UPDATES
-        // ================================================================
-        
-        function handlePriceUpdate(data) {
-            const { symbol, price, change_24h } = data;
-            
-            // Update cache
-            priceCache[symbol] = { price, change_24h, timestamp: Date.now() };
-            
-            // Update UI
-            updatePriceCard(symbol, price, change_24h);
-        }
-        
-        function handlePriceBulk(data) {
-            for (const [symbol, info] of Object.entries(data)) {
-                priceCache[symbol] = info;
-                updatePriceCard(symbol, info.price, info.change_24h);
-            }
-        }
-        
-        function updatePriceCard(symbol, price, change_24h) {
-            const ticker = document.getElementById('price-ticker');
-            
-            // Check if card exists
-            let card = document.getElementById(`price-card-${symbol}`);
-            
-            if (!card) {
-                // Create new card
-                card = document.createElement('div');
-                card.id = `price-card-${symbol}`;
-                card.className = 'price-card';
-                card.innerHTML = `
-                    <div class="price-symbol">
-                        <span>${symbol}</span>
-                        <span class="status-dot"></span>
-                    </div>
-                    <div class="price-value">$${formatPrice(price)}</div>
-                    <div class="price-change ${change_24h >= 0 ? 'positive' : 'negative'}">
-                        <span class="price-change-icon">${change_24h >= 0 ? '▲' : '▼'}</span>
-                        <span>${change_24h >= 0 ? '+' : ''}${change_24h.toFixed(2)}%</span>
-                    </div>
-                `;
-                
-                // Remove loading if present
-                const loading = ticker.querySelector('.loading');
-                if (loading) loading.remove();
-                
-                ticker.appendChild(card);
-            } else {
-                // Update existing card
-                card.querySelector('.price-value').textContent = `$${formatPrice(price)}`;
-                
-                const changeEl = card.querySelector('.price-change');
-                changeEl.className = `price-change ${change_24h >= 0 ? 'positive' : 'negative'}`;
-                changeEl.innerHTML = `
-                    <span class="price-change-icon">${change_24h >= 0 ? '▲' : '▼'}</span>
-                    <span>${change_24h >= 0 ? '+' : ''}${change_24h.toFixed(2)}%</span>
-                `;
-            }
-        }
-        
-        function formatPrice(price) {
-            return price.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        }
-        
-        // ================================================================
-        // SIGNALS
-        // ================================================================
-        
-        function handleNewSignal(data) {
-            signalCount++;
-            document.getElementById('signal-count').textContent = signalCount;
-            
-            const signalList = document.getElementById('signal-list');
-            
-            // Remove empty state
-            const emptyState = signalList.querySelector('.empty-state');
-            if (emptyState) emptyState.remove();
-            
-            // Create signal item
-            const signalItem = document.createElement('div');
-            signalItem.className = `signal-item ${data.direction.toLowerCase()}`;
-            signalItem.innerHTML = `
-                <div class="signal-header">
-                    <div class="signal-symbol">${data.symbol}</div>
-                    <div class="signal-direction ${data.direction.toLowerCase()}">${data.direction}</div>
-                </div>
-                <div class="signal-details">
-                    Entry: $${data.entry.toFixed(2)} | 
-                    TP1: $${data.tp1.toFixed(2)} | 
-                    SL: $${data.sl.toFixed(2)}
-                </div>
-                <div class="signal-confidence">
-                    <span>Confidence:</span>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" style="width: ${data.confidence * 100}%"></div>
-                    </div>
-                    <span>${(data.confidence * 100).toFixed(1)}%</span>
-                </div>
-            `;
-            
-            // Add to top
-            signalList.insertBefore(signalItem, signalList.firstChild);
-            
-            // Keep only last 20 signals
-            while (signalList.children.length > 20) {
-                signalList.removeChild(signalList.lastChild);
-            }
-            
-            // Play notification sound
-            playNotificationSound();
-        }
-        
-        function playNotificationSound() {
-            // Simple beep using Web Audio API
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
-            } catch (e) {
-                console.log('Audio not supported');
-            }
-        }
-        
-        // ================================================================
-        // LAYER SCORES
-        // ================================================================
-        
-        function handleLayerScores(data) {
-            const { symbol, scores } = data;
-            
-            layerScoresCache[symbol] = scores;
-            
-            // Update UI if this symbol is selected
-            const selectedSymbol = document.getElementById('layer-symbol-select').value;
-            if (symbol === selectedSymbol) {
-                updateLayerGrid(scores);
-            }
-        }
-        
-        function updateLayerGrid(scores) {
-            const grid = document.getElementById('layer-grid');
-            
-            // Remove loading
-            const loading = grid.querySelector('.loading');
-            if (loading) loading.remove();
-            
-            // Clear existing
-            grid.innerHTML = '';
-            
-            // Group scores by category
-            const categories = {
-                'Sentiment': [],
-                'Technical': [],
-                'ML Models': [],
-                'On-Chain': []
-            };
-            
-            for (const [name, score] of Object.entries(scores)) {
-                if (name.includes('Sentiment') || name.includes('News') || name.includes('Fear')) {
-                    categories['Sentiment'].push({ name, score });
-                } else if (name.includes('RSI') || name.includes('MACD') || name.includes('MA')) {
-                    categories['Technical'].push({ name, score });
-                } else if (name.includes('LSTM') || name.includes('XGBoost') || name.includes('RF')) {
-                    categories['ML Models'].push({ name, score });
-                } else {
-                    categories['On-Chain'].push({ name, score });
-                }
-            }
-            
-            // Create category cards
-            for (const [category, layers] of Object.entries(categories)) {
-                if (layers.length === 0) continue;
-                
-                // Sort by score
-                layers.sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
-                
-                const categoryCard = document.createElement('div');
-                categoryCard.className = 'layer-category';
-                categoryCard.innerHTML = `
-                    <div class="layer-category-title">${category}</div>
-                    <div class="layer-bars">
-                        ${layers.map(layer => `
-                            <div class="layer-bar">
-                                <div class="layer-name" title="${layer.name}">${layer.name}</div>
-                                <div class="layer-progress">
-                                    <div class="layer-progress-fill ${layer.score < 0 ? 'negative' : ''}" 
-                                         style="width: ${Math.abs(layer.score) * 100}%">
-                                        ${(layer.score * 100).toFixed(1)}%
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-                
-                grid.appendChild(categoryCard);
-            }
-        }
-        
-        // Layer symbol selector
-        document.getElementById('layer-symbol-select').addEventListener('change', (e) => {
-            const symbol = e.target.value;
-            if (layerScoresCache[symbol]) {
-                updateLayerGrid(layerScoresCache[symbol]);
-            }
-            
-            // Subscribe to updates for this symbol
-            if (socket && isConnected) {
-                socket.emit('subscribe_symbol', { symbol });
-            }
-        });
-        
-        // ================================================================
-        // PERFORMANCE CHART
-        // ================================================================
-        
-        function initializePerformanceChart() {
-            const ctx = document.getElementById('performance-canvas').getContext('2d');
-            
-            performanceChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Portfolio Value (USDT)',
-                        data: [],
-                        borderColor: '#00ff88',
-                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#00ff88',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(26, 31, 58, 0.9)',
-                            titleColor: '#fff',
-                            bodyColor: '#8892b0',
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return `$${context.parsed.y.toLocaleString('en-US', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
-                                    })}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.02)',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#5a637a',
-                                font: {
-                                    size: 11
-                                }
-                            }
-                        },
-                        y: {
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.02)',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#5a637a',
-                                font: {
-                                    size: 11
-                                },
-                                callback: function(value) {
-                                    return '$' + value.toLocaleString('en-US', {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 0
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function handlePerformanceUpdate(data) {
-            // Update metrics
-            document.getElementById('metric-total-signals').textContent = data.total_signals || 0;
-            document.getElementById('metric-win-rate').textContent = `${(data.win_rate * 100).toFixed(1)}%`;
-            document.getElementById('metric-pnl').textContent = `$${data.total_pnl.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
-            document.getElementById('metric-sharpe').textContent = (data.sharpe_ratio || 0).toFixed(2);
-            
-            // Update chart (mock data for now - will be replaced with real data)
-            if (performanceChart && data.history) {
-                performanceChart.data.labels = data.history.timestamps;
-                performanceChart.data.datasets[0].data = data.history.values;
-                performanceChart.update('none');
-            }
-        }
-        
-        // ================================================================
-        // HEALTH STATUS
-        // ================================================================
-        
-        function handleHealthStatus(data) {
-            const healthPercentage = Object.values(data).filter(v => v === true).length / 
-                                     Object.keys(data).filter(k => k !== 'last_check').length * 100;
-            
-            document.getElementById('metric-api-health').textContent = `${Math.round(healthPercentage)}%`;
-        }
-        
-        // ================================================================
-        // SYSTEM TIME
-        // ================================================================
-        
-        function updateSystemTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('tr-TR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('system-time').textContent = timeString;
-        }
-        
-        setInterval(updateSystemTime, 1000);
-        
-        // ================================================================
-        // FETCH API DATA
-        // ================================================================
-        
-        async function fetchOpportunities() {
-            try {
-                const response = await fetch('/api/advisor/opportunities?limit=10&min_confidence=0.75');
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    updateOpportunities(result.data);
-                }
-            } catch (error) {
-                console.error('Error fetching opportunities:', error);
-            }
-        }
-        
-        function updateOpportunities(opportunities) {
-            const list = document.getElementById('opportunity-list');
-            
-            // Remove empty state
-            const emptyState = list.querySelector('.empty-state');
-            if (emptyState) emptyState.remove();
-            
-            // Clear existing
-            list.innerHTML = '';
-            
-            if (opportunities.length === 0) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">🔍</div>
-                        <div>Şu anda fırsat bulunamadı</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            opportunities.forEach(opp => {
-                const card = document.createElement('div');
-                card.className = 'opportunity-card';
-                card.innerHTML = `
-                    <div class="opportunity-header">
-                        <div class="opportunity-symbol">${opp.symbol}</div>
-                        <div class="opportunity-score">${(opp.score * 100).toFixed(0)}%</div>
-                    </div>
-                    <div class="opportunity-details">
-                        <div>Direction: <strong>${opp.direction}</strong></div>
-                        <div>Entry: $${opp.entry_price.toFixed(2)}</div>
-                        <div>Target: $${opp.target_price.toFixed(2)} (+${opp.potential_gain.toFixed(1)}%)</div>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
-        }
-        
-        // Fetch opportunities every 30 seconds
-        setInterval(fetchOpportunities, 30000);
-        
-        // ================================================================
-        // INITIALIZATION
-        // ================================================================
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 DEMIR AI Dashboard v6.0 - Initializing...');
-            
-            // Initialize chart
-            initializePerformanceChart();
-            
-            // Connect WebSocket
-            initializeWebSocket();
-            
-            // Start system time
-            updateSystemTime();
-            
-            // Fetch initial opportunities
-            fetchOpportunities();
-            
-            console.log('✅ Dashboard initialized');
-        });
-    </script>
+    <script src="app_v8.js"></script>
 </body>
 </html>
