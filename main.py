@@ -2084,7 +2084,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(120)
     
-    def _macro_loop(self, interval: int):
+        def _macro_loop(self, interval: int):
         """Macro data aggregation continuous loop"""
         logger.info("🌍 Macro Data Aggregator loop started")
         while self.running:
@@ -2100,15 +2100,23 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(300)
     
-        def _websocket_loop(self, interval: int):
+    def _websocket_loop(self, interval: int):
         """WebSocket connection maintenance loop"""
+        logger.info("🔌 WebSocket Manager loop started")
         while self.running:
             try:
-                # Reconnect logic here
+                if self.ws_manager:
+                    # WebSocket health check and reconnection
+                    if hasattr(self.ws_manager, 'maintain_connections'):
+                        self.ws_manager.maintain_connections()
+                    elif hasattr(self.ws_manager, 'reconnect'):
+                        self.ws_manager.reconnect()
                 time.sleep(interval)
             except Exception as e:
-                self.logger.error(f"WebSocket loop error: {e}")
-                time.sleep(5)
+                logger.error(f"❌ WebSocket loop error: {e}")
+                if DEBUG_MODE:
+                    logger.debug(traceback.format_exc())
+                time.sleep(10)
     
     # 🆕 AUTO-START: WebSocket'i ilk kez başlat
     if self.ws_manager:
