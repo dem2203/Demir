@@ -18,6 +18,8 @@
  * - Validator Metrics Dashboard (Zero Mock Data Enforcement)
  * - Performance Charts (Chart.js)
  * - System Health Monitoring
+ * - Symbol Management (Add/Remove/Remove All)
+ * - Direct Binance WebSocket Integration
  * 
  * @version 8.0.0 - PRODUCTION READY
  * @author DEMIR AI Professional Team
@@ -56,7 +58,12 @@ const DashboardState = {
     performanceChart: null,
     currentSymbol: 'BTCUSDT',
     updateInterval: null,
-    validatorInterval: null
+    validatorInterval: null,
+    
+    // ★ NEW v8.0: Symbol Management with Binance WebSocket
+    activeSymbols: new Set(['BTCUSDT.P', 'ETHUSDT.P', 'BNBUSDT.P', 'SOLUSDT.P', 'ADAUSDT.P']),
+    binanceWebSockets: new Map(),
+    wsReconnectTimers: new Map()
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -71,9 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize all components
     initializeWebSocket();
     initializePerformanceChart();
+    initializeBinanceWebSockets();
     startSystemClock();
     loadInitialData();
     setupEventListeners();
+    
+    // Render initial symbol chips
+    renderActiveSymbols();
     
     // Start periodic updates
     DashboardState.updateInterval = setInterval(updateAllData, 5000); // 5 seconds
@@ -85,12 +96,230 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WEBSOCKET CONNECTION
+// ★ NEW v8.0: SYMBOL MANAGEMENT SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function addSymbol(symbolInput) {
+    let symbol = symbolInput.trim().toUpperCase();
+    
+    if (!symbol) {
+        showToast('⚠️ Lütfen geçerli bir symbol girin', 'warning');
+        return;
+    }
+    
+    // Auto-append .P for perpetual futures if not present
+    if (!symbol.endsWith('.P') && !symbol.includes('.')  ) {
+        symbol += '.P';
+    }
+    
+    if (DashboardState.activeSymbols.has(symbol)) {
+        showToast(`⚠️ ${symbol} zaten eklendi`, 'warning');
+        return;
+    }
+    
+    console.log(`➕ Adding symbol: ${symbol}`);
+    DashboardState.activeSymbols.add(symbol);
+    
+    // Connect Binance WebSocket for this symbol
+    connectBinanceWebSocket(symbol);
+    
+    // Render updated symbol list
+    renderActiveSymbols();
+    
+    showToast(`✅ ${symbol} eklendi`, 'success');
+}
+
+function removeSymbol(symbol) {
+    if (!DashboardState.activeSymbols.has(symbol)) return;
+    
+    console.log(`➖ Removing symbol: ${symbol}`);
+    
+    DashboardState.activeSymbols.delete(symbol);
+    
+    // Disconnect Binance WebSocket
+    disconnectBinanceWebSocket(symbol);
+    
+    // Remove price data
+    delete DashboardState.prices[symbol];
+    
+    // Render updated symbol list
+    renderActiveSymbols();
+    
+    showToast(`🗑️ ${symbol} kaldırıldı`, 'info');
+}
+
+function removeAllSymbols() {
+    if (!confirm('Tüm sembolleri kaldırmak istediğinize emin misiniz?')) {
+        return;
+    }
+    
+    console.log('🗑️ Removing all symbols...');
+    
+    // Disconnect all WebSockets
+    for (const symbol of DashboardState.activeSymbols) {
+        disconnectBinanceWebSocket(symbol);
+    }
+    
+    // Clear state
+    DashboardState.activeSymbols.clear();
+    DashboardState.prices = {};
+    DashboardState.binanceWebSockets.clear();
+    DashboardState.wsReconnectTimers.clear();
+    
+    // Render empty state
+    renderActiveSymbols();
+    
+    showToast('🗑️ Tüm semboller kaldırıldı', 'info');
+}
+
+function renderActiveSymbols() {
+    const container = document.getElementById('active-symbols');
+    const countEl = document.getElementById('symbol-count');
+    
+    if (!container) return;
+    
+    const count = DashboardState.activeSymbols.size;
+    if (countEl) countEl.textContent = count;
+    
+    if (count === 0) {
+        container.innerHTML = `
+            <div style="width: 100%; text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px;">
+                Henüz symbol eklenmedi. Yukarıdan perpetual futures symbol ekleyin.
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort symbols alphabetically
+    const sortedSymbols = Array.from(DashboardState.activeSymbols).sort();
+    
+    container.innerHTML = sortedSymbols.map(symbol => `
+        <div class="symbol-chip">
+            <span>${symbol}</span>
+            <button class="symbol-chip-remove" onclick="removeSymbol('${symbol}')">
+                ×
+            </button>
+        </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ★ NEW v8.0: DIRECT BINANCE WEBSOCKET INTEGRATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function initializeBinanceWebSockets() {
+    console.log('🔌 Initializing direct Binance WebSocket connections...');
+    
+    // Connect to all active symbols
+    for (const symbol of DashboardState.activeSymbols) {
+        connectBinanceWebSocket(symbol);
+    }
+    
+    console.log(`✅ ${DashboardState.activeSymbols.size} Binance WebSocket connections initiated`);
+}
+
+function connectBinanceWebSocket(symbol) {
+    // Prevent duplicate connections
+    if (DashboardState.binanceWebSockets.has(symbol)) {
+        console.warn(`⚠️ WebSocket already exists for ${symbol}`);
+        return;
+    }
+    
+    // Convert symbol format: BTCUSDT.P -> btcusdt
+    const binanceSymbol = symbol.replace('.P', '').toLowerCase();
+    const wsUrl = `wss://stream.binance.com:9443/ws/${binanceSymbol}@ticker`;
+    
+    console.log(`🔌 Connecting to Binance: ${symbol} (${binanceSymbol})`);
+    
+    try {
+        const ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            console.log(`✅ Binance WebSocket connected: ${symbol}`);
+            
+            // Clear any reconnect timer
+            const timerId = DashboardState.wsReconnectTimers.get(symbol);
+            if (timerId) {
+                clearTimeout(timerId);
+                DashboardState.wsReconnectTimers.delete(symbol);
+            }
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.e === '24hrTicker') {
+                    // Update price data
+                    const priceData = {
+                        symbol: symbol,
+                        price: parseFloat(data.c),
+                        change_24h: parseFloat(data.P),
+                        volume: parseFloat(data.v),
+                        high_24h: parseFloat(data.h),
+                        low_24h: parseFloat(data.l),
+                        timestamp: Date.now(),
+                        source: 'binance_direct_ws'
+                    };
+                    
+                    DashboardState.prices[symbol] = priceData;
+                    updatePriceCard(symbol, priceData.price, priceData.change_24h);
+                }
+            } catch (error) {
+                console.error(`❌ Binance WS message error [${symbol}]:`, error);
+            }
+        };
+        
+        ws.onerror = (error) => {
+            console.error(`❌ Binance WebSocket error [${symbol}]:`, error);
+        };
+        
+        ws.onclose = () => {
+            console.log(`🔌 Binance WebSocket closed: ${symbol}`);
+            DashboardState.binanceWebSockets.delete(symbol);
+            
+            // Auto-reconnect after 5 seconds if symbol still active
+            if (DashboardState.activeSymbols.has(symbol)) {
+                const timerId = setTimeout(() => {
+                    console.log(`🔄 Reconnecting Binance WebSocket: ${symbol}`);
+                    connectBinanceWebSocket(symbol);
+                }, 5000);
+                
+                DashboardState.wsReconnectTimers.set(symbol, timerId);
+            }
+        };
+        
+        DashboardState.binanceWebSockets.set(symbol, ws);
+        
+    } catch (error) {
+        console.error(`❌ Failed to connect Binance WebSocket [${symbol}]:`, error);
+    }
+}
+
+function disconnectBinanceWebSocket(symbol) {
+    const ws = DashboardState.binanceWebSockets.get(symbol);
+    
+    if (ws) {
+        ws.close();
+        DashboardState.binanceWebSockets.delete(symbol);
+        console.log(`🔌 Disconnected Binance WebSocket: ${symbol}`);
+    }
+    
+    // Clear any reconnect timer
+    const timerId = DashboardState.wsReconnectTimers.get(symbol);
+    if (timerId) {
+        clearTimeout(timerId);
+        DashboardState.wsReconnectTimers.delete(symbol);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEBSOCKET CONNECTION (Flask-SocketIO Backend)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function initializeWebSocket() {
     try {
-        console.log('🔌 Initializing WebSocket connection...');
+        console.log('🔌 Initializing Flask-SocketIO connection...');
         
         // Connect to Flask-SocketIO server
         DashboardState.socket = io({
@@ -103,7 +332,7 @@ function initializeWebSocket() {
         
         // Connection events
         DashboardState.socket.on('connect', () => {
-            console.log('✅ WebSocket connected');
+            console.log('✅ Flask-SocketIO connected');
             DashboardState.connected = true;
             updateConnectionStatus(true);
             
@@ -114,13 +343,13 @@ function initializeWebSocket() {
         });
         
         DashboardState.socket.on('disconnect', () => {
-            console.log('⚠️ WebSocket disconnected');
+            console.log('⚠️ Flask-SocketIO disconnected');
             DashboardState.connected = false;
             updateConnectionStatus(false);
         });
         
         DashboardState.socket.on('connect_error', (error) => {
-            console.error('❌ WebSocket connection error:', error);
+            console.error('❌ Flask-SocketIO connection error:', error);
             updateConnectionStatus(false);
         });
         
@@ -138,10 +367,10 @@ function initializeWebSocket() {
         DashboardState.socket.on('health_status', handleHealthStatus);
         DashboardState.socket.on('layer_scores', handleLayerScores);
         
-        console.log('✅ WebSocket event handlers registered');
+        console.log('✅ Flask-SocketIO event handlers registered');
         
     } catch (error) {
-        console.error('❌ WebSocket initialization error:', error);
+        console.error('❌ Flask-SocketIO initialization error:', error);
         updateConnectionStatus(false);
     }
 }
@@ -199,7 +428,7 @@ async function updateAllData() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// API CALLS
+// API CALLS - CORE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function apiCall(endpoint, options = {}) {
@@ -238,25 +467,37 @@ async function fetchPrices() {
     }
 }
 
-// ★★★ NEW v8.0: INDEPENDENT GROUP SIGNALS ★★★
+// ═══════════════════════════════════════════════════════════════════════════════
+// ★★★ NEW v8.0: 9 API ENDPOINT FUNCTIONS ★★★
+// ═══════════════════════════════════════════════════════════════════════════════
+
 async function fetchGroupSignals() {
     try {
-        const symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'];
+        // Get first 5 active symbols for group signal fetching
+        const symbols = Array.from(DashboardState.activeSymbols)
+            .map(s => s.replace('.P', ''))
+            .slice(0, 5);
+        
+        if (symbols.length === 0) {
+            console.warn('⚠️ No active symbols for group signal fetching');
+            return;
+        }
+        
         const groups = ['technical', 'sentiment', 'ml', 'onchain', 'risk'];
         
-        console.log('🔄 Fetching independent group signals...');
+        console.log('🔄 Fetching independent group signals for:', symbols);
         
         for (const symbol of symbols) {
             for (const group of groups) {
                 try {
                     const endpoint = `/api/signals/${group}?symbol=${symbol}`;
-                    const data = await apiCall(endpoint);
+                    const response = await apiCall(endpoint);
                     
-                    if (data && data.signal) {
+                    if (response && response.status === 'success' && response.signal) {
                         if (!DashboardState.groupSignals[group]) {
                             DashboardState.groupSignals[group] = {};
                         }
-                        DashboardState.groupSignals[group][symbol] = data.signal;
+                        DashboardState.groupSignals[group][symbol] = response.signal;
                     }
                 } catch (error) {
                     console.warn(`Failed to fetch ${group} signal for ${symbol}:`, error.message);
@@ -289,12 +530,12 @@ async function fetchSmartMoney() {
     try {
         const data = await apiCall('/api/smart-money/recent?limit=5');
         
-        if (data && data.transactions) {
+        if (data && data.status === 'success' && data.transactions) {
             DashboardState.smartMoney = data.transactions;
             renderSmartMoney();
         }
     } catch (error) {
-        console.warn('Smart money data not available');
+        console.warn('Smart money data not available:', error.message);
     }
 }
 
@@ -302,12 +543,12 @@ async function fetchArbitrage() {
     try {
         const data = await apiCall('/api/arbitrage/opportunities?min_spread=0.1');
         
-        if (data && data.opportunities) {
+        if (data && data.status === 'success' && data.opportunities) {
             DashboardState.arbitrage = data.opportunities;
             renderArbitrage();
         }
     } catch (error) {
-        console.warn('Arbitrage data not available');
+        console.warn('Arbitrage data not available:', error.message);
     }
 }
 
@@ -315,12 +556,12 @@ async function fetchPatterns() {
     try {
         const data = await apiCall('/api/patterns/detected?min_confidence=0.7');
         
-        if (data && data.patterns) {
+        if (data && data.status === 'success' && data.patterns) {
             DashboardState.patterns = data.patterns;
             renderPatterns();
         }
     } catch (error) {
-        console.warn('Pattern data not available');
+        console.warn('Pattern data not available:', error.message);
     }
 }
 
@@ -328,12 +569,12 @@ async function fetchOnChainMetrics() {
     try {
         const data = await apiCall('/api/onchain/metrics');
         
-        if (data && data.metrics) {
+        if (data && data.status === 'success' && data.metrics) {
             DashboardState.onchainMetrics = data.metrics;
             renderOnChainMetrics();
         }
     } catch (error) {
-        console.warn('On-chain data not available');
+        console.warn('On-chain data not available:', error.message);
     }
 }
 
@@ -341,12 +582,12 @@ async function fetchValidatorMetrics() {
     try {
         const data = await apiCall('/api/validators/status');
         
-        if (data && data.status === 'success' && data.data) {
-            DashboardState.validatorMetrics = data.data;
-            renderValidatorMetrics(data.data);
+        if (data) {
+            DashboardState.validatorMetrics = data;
+            renderValidatorMetrics(data);
         }
     } catch (error) {
-        console.warn('Validator metrics not available');
+        console.warn('Validator metrics not available:', error.message);
     }
 }
 
@@ -354,8 +595,8 @@ async function fetchSystemMetrics() {
     try {
         const data = await apiCall('/api/analytics/summary');
         
-        if (data && data.status === 'success' && data.data) {
-            renderSystemMetrics(data.data);
+        if (data) {
+            renderSystemMetrics(data);
         }
     } catch (error) {
         console.error('Error fetching system metrics:', error);
@@ -523,15 +764,35 @@ function renderPrices() {
     const container = document.getElementById('price-ticker');
     if (!container) return;
     
-    const symbols = Object.keys(DashboardState.prices);
+    const symbols = Array.from(DashboardState.activeSymbols);
     
     if (symbols.length === 0) {
-        container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        container.innerHTML = `
+            <div class="loading">
+                <div style="text-align: center; color: var(--text-secondary);">
+                    Symbol ekleyin ve fiyatlar otomatik yüklenecek
+                </div>
+            </div>
+        `;
         return;
     }
     
     container.innerHTML = symbols.map(symbol => {
         const data = DashboardState.prices[symbol];
+        
+        if (!data) {
+            return `
+                <div class="price-card" onclick="selectSymbol('${symbol}')">
+                    <div class="price-symbol">
+                        <span>${symbol}</span>
+                        <span style="font-size: 11px; opacity: 0.5;">Yükleniyor...</span>
+                    </div>
+                    <div class="price-value">--</div>
+                    <div class="price-change">--</div>
+                </div>
+            `;
+        }
+        
         const change = data.change_24h || 0;
         const changeClass = change >= 0 ? 'positive' : 'negative';
         const changeIcon = change >= 0 ? '▲' : '▼';
@@ -703,6 +964,15 @@ function renderGroupSignalCard(group, signal, symbol) {
     `;
     
     container.innerHTML = cardHTML;
+}
+
+function renderSignals() {
+    // Fallback for generic signal rendering (not group-specific)
+    const container = document.getElementById('signal-list');
+    if (!container || DashboardState.signals.length === 0) return;
+    
+    // This would be called for generic signals, not group signals
+    // For now, we focus on group signals which are rendered by renderGroupSignals()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -939,9 +1209,25 @@ function renderOnChainMetrics() {
 function renderValidatorMetrics(data) {
     if (!data) return;
     
-    // This function would render validator metrics
-    // Implementation depends on your UI structure
-    console.log('✅ Validator metrics received:', data);
+    // Log validator status for monitoring
+    console.log('🛡️ Validator Metrics:', {
+        total_checks: data.overall?.total_checks || 0,
+        passed_checks: data.overall?.passed_checks || 0,
+        mock_detected: data.overall?.mock_detected_total || 0,
+        success_rate: data.overall?.average_success_rate || 0
+    });
+    
+    // Check for critical validation failures
+    if (data.overall?.average_success_rate < 80) {
+        console.error('🚨 CRITICAL: Validator success rate below 80%');
+        showToast('🚨 UYARI: Veri doğrulama başarı oranı düşük!', 'error');
+    }
+    
+    // Check for mock data detection
+    if (data.overall?.mock_detected_total > 0) {
+        console.error(`🚨 MOCK DATA DETECTED: ${data.overall.mock_detected_total} instances`);
+        showToast(`🚨 ${data.overall.mock_detected_total} adet mock data tespit edildi!`, 'error');
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1163,6 +1449,31 @@ function initializePerformanceChart() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function setupEventListeners() {
+    // Symbol management
+    const addBtn = document.getElementById('add-symbol-btn');
+    const removeAllBtn = document.getElementById('remove-all-btn');
+    const symbolInput = document.getElementById('symbol-input');
+    
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            addSymbol(symbolInput.value);
+            symbolInput.value = '';
+        });
+    }
+    
+    if (symbolInput) {
+        symbolInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addSymbol(e.target.value);
+                e.target.value = '';
+            }
+        });
+    }
+    
+    if (removeAllBtn) {
+        removeAllBtn.addEventListener('click', removeAllSymbols);
+    }
+    
     // Symbol selector
     const symbolSelect = document.getElementById('layer-symbol-select');
     if (symbolSelect) {
@@ -1199,7 +1510,7 @@ function selectSymbol(symbol) {
     // Update symbol selector
     const select = document.getElementById('layer-symbol-select');
     if (select) {
-        select.value = symbol;
+        select.value = symbol.replace('.P', '');
     }
     
     // Fetch and render group signals
@@ -1329,10 +1640,22 @@ window.addEventListener('beforeunload', () => {
         clearInterval(DashboardState.validatorInterval);
     }
     
-    // Disconnect WebSocket
+    // Disconnect Flask-SocketIO
     if (DashboardState.socket) {
         DashboardState.socket.disconnect();
     }
+    
+    // Disconnect all Binance WebSockets
+    for (const [symbol, ws] of DashboardState.binanceWebSockets) {
+        ws.close();
+    }
+    DashboardState.binanceWebSockets.clear();
+    
+    // Clear reconnect timers
+    for (const [symbol, timerId] of DashboardState.wsReconnectTimers) {
+        clearTimeout(timerId);
+    }
+    DashboardState.wsReconnectTimers.clear();
     
     // Destroy chart
     if (DashboardState.performanceChart) {
@@ -1375,7 +1698,14 @@ if (typeof window !== 'undefined') {
             formatNumber,
             formatPercent,
             formatTime,
-            selectSymbol
+            selectSymbol,
+            addSymbol,
+            removeSymbol,
+            removeAllSymbols
+        },
+        websocket: {
+            connectBinanceWebSocket,
+            disconnectBinanceWebSocket
         },
         version: '8.0.0',
         author: 'DEMIR AI Professional Team',
@@ -1397,5 +1727,5 @@ console.log('🚀 DEMIR AI v8.0 - Production Ready');
 console.log('📊 5-Group Independent Signal System Active');
 console.log('🛡️ Zero Mock Data Policy Enforced');
 console.log('⚡ Enterprise-Grade Quality');
-
-
+console.log('🔌 Direct Binance WebSocket Integration Active');
+console.log('🎯 Symbol Management System Active');
