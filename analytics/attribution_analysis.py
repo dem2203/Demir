@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-═══════════════════════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════════════
 AttributionAnalysis ENTERPRISE - DEMIR AI v8.0
-═══════════════════════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════════════
 Advanced performance attribution analysis for multi-layer trading system
 Identifies contribution of each layer/signal group to overall performance
 
@@ -101,7 +101,7 @@ class AttributionAnalysis:
         
         logger.info("✅ AttributionAnalysis initialized")
 
-    def calculate_layer_attribution(
+    async def calculate_layer_attribution(
         self,
         trades: List[Dict],
         layer_scores: Dict[str, float],
