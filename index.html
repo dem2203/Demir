@@ -249,7 +249,7 @@
         .widget-body {
             padding: 24px;
         }
-        
+
         /* ================================================================
            PRICE TICKER
            ================================================================ */
@@ -1148,6 +1148,67 @@
                 grid-template-columns: 1fr;
             }
         }
+            /* ================================================================
+       SYMBOL MANAGEMENT PANEL STYLES
+       ================================================================ */
+    
+    .symbol-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(59, 130, 246, 0.1));
+      border: 1px solid var(--accent-green);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      animation: chipSlideIn 0.3s ease;
+    }
+    
+    @keyframes chipSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.8) translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+    
+    .symbol-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+      border-color: var(--accent-blue);
+    }
+    
+    .symbol-chip-remove {
+      background: rgba(255, 68, 68, 0.2);
+      border: none;
+      color: var(--accent-red);
+      padding: 2px 6px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      transition: all 0.2s ease;
+    }
+    
+    .symbol-chip-remove:hover {
+      background: var(--accent-red);
+      color: white;
+      transform: scale(1.2) rotate(90deg);
+    }
+    
+    #symbol-input:focus {
+      outline: none;
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+    }
     </style>
 </head>
 <body>
@@ -1179,6 +1240,55 @@
          DASHBOARD GRID
          ================================================================ -->
     <div class="dashboard">
+            <!-- ================================================================
+         SYMBOL MANAGEMENT PANEL (NEW v8.0)
+         ================================================================ -->
+    <div class="widget" style="grid-column: span 12; background: linear-gradient(135deg, rgba(0, 255, 136, 0.05), rgba(59, 130, 246, 0.05)); border: 2px solid var(--accent-green);">
+      <div class="widget-header">
+        <div class="widget-title">
+          <span>⚙️</span>
+          Symbol Yönetimi - Perpetual Futures
+        </div>
+        <div class="widget-badge new">MANUAL</div>
+      </div>
+      <div class="widget-body" style="padding: 20px;">
+        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 20px;">
+          <input 
+            type="text" 
+            id="symbol-input" 
+            placeholder="Symbol ekle (ör: BTCUSDT.P, ETHUSDT.P, LTCUSDT.P)"
+            style="flex: 1; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 8px; font-size: 14px; font-family: 'Inter', monospace;"
+          />
+          <button 
+            id="add-symbol-btn"
+            style="background: linear-gradient(135deg, var(--accent-green), var(--accent-green-dark)); color: var(--bg-primary); border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px;"
+            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(0, 255, 136, 0.4)';"
+            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';"
+          >
+            + Ekle
+          </button>
+          <button 
+            id="remove-all-btn"
+            style="background: linear-gradient(135deg, var(--accent-red), var(--accent-red-dark)); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px;"
+            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(255, 68, 68, 0.4)';"
+            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';"
+          >
+            Tümünü Sil
+          </button>
+        </div>
+        
+        <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary);">
+          <strong>Aktif Symboller:</strong> <span id="symbol-count" style="color: var(--accent-green); font-weight: 700;">0</span>
+        </div>
+        
+        <div id="active-symbols" style="display: flex; flex-wrap: wrap; gap: 10px; min-height: 50px; padding: 16px; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px dashed var(--border-color);">
+          <!-- Dynamic symbol chips will be added here by JavaScript -->
+          <div style="width: 100%; text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px;">
+            Henüz symbol eklenmedi. Yukarıdan perpetual futures symbol ekleyin.
+          </div>
+        </div>
+      </div>
+    </div>
         <!-- Price Ticker -->
         <div class="price-ticker" id="price-ticker">
             <div class="loading">
@@ -1269,7 +1379,7 @@
             </div>
             <div class="sentiment-display">
                 <div class="sentiment-circle neutral" id="sentiment-circle">
-                    <div class="sentiment-score" id="sentiment-score">50</div>
+                    <div class="sentiment-score" id="sentiment-score">--</div>
                     <div class="sentiment-label" id="sentiment-label">NEUTRAL</div>
                 </div>
                 <div class="sentiment-sources" id="sentiment-sources">
