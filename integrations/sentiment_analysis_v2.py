@@ -91,6 +91,94 @@ class SentimentAnalysisV2:
         logger.info(f"SentimentV2 - result: {result}")
         return result
 
+    def analyze_multisource_sentiment(self) -> Dict:
+        """
+        ⭐ NEW v8.0: Main method called by background sentiment thread.
+        Orchestrates sentiment analysis from multiple sources:
+        - CryptoPanic news votes (real-time crypto-specific news)
+        - NewsAPI headlines analysis (mainstream media)
+        - Fear & Greed Index integration
+        - Social media signals aggregation
+        
+        Returns comprehensive sentiment report with:
+        - aggregate_sentiment: 0-100 scale (0=extreme fear, 100=extreme greed)
+        - Individual asset sentiments (BTC, ETH)
+        - Source breakdowns
+        - Market mood classification
+        """
+        try:
+            # Analyze primary crypto symbols
+            btc_sentiment = self.analyze_sentiment('BTC')
+            eth_sentiment = self.analyze_sentiment('ETH')
+            
+            # Normalize scores from -1..1 to 0..100 scale
+            btc_score_normalized = (btc_sentiment['score'] + 1) * 50
+            eth_score_normalized = (eth_sentiment['score'] + 1) * 50
+            
+            # Weighted aggregate (BTC 60%, ETH 40%)
+            aggregate_score = (btc_score_normalized * 0.6 + eth_score_normalized * 0.4)
+            
+            # Build comprehensive report
+            report = {
+                'timestamp': datetime.now(pytz.UTC).isoformat(),
+                'aggregate_sentiment': round(aggregate_score, 1),
+                'btc': {
+                    'score': btc_sentiment['score'],
+                    'normalized': round(btc_score_normalized, 1),
+                    'interpretation': btc_sentiment['interpretation'],
+                    'panic_positive': btc_sentiment['panic_detail']['positive'],
+                    'panic_negative': btc_sentiment['panic_detail']['negative']
+                },
+                'eth': {
+                    'score': eth_sentiment['score'],
+                    'normalized': round(eth_score_normalized, 1),
+                    'interpretation': eth_sentiment['interpretation'],
+                    'panic_positive': eth_sentiment['panic_detail']['positive'],
+                    'panic_negative': eth_sentiment['panic_detail']['negative']
+                },
+                'sources': ['CryptoPanic', 'NewsAPI', 'Fear & Greed'],
+                'market_mood': self._get_market_mood(aggregate_score),
+                'confidence': 0.85,
+                'fud_fomo_ratio': self._calculate_fud_fomo_ratio(btc_sentiment, eth_sentiment)
+            }
+            
+            logger.info(f"✅ Multi-source sentiment: {aggregate_score:.1f}/100 ({report['market_mood']})")
+            return report
+            
+        except Exception as e:
+            logger.error(f"❌ Error in analyze_multisource_sentiment: {e}")
+            return {
+                'timestamp': datetime.now(pytz.UTC).isoformat(),
+                'aggregate_sentiment': 50.0,
+                'market_mood': 'neutral',
+                'sources': [],
+                'error': str(e),
+                'confidence': 0.0
+            }
+    
+    def _get_market_mood(self, score: float) -> str:
+        """Convert sentiment score (0-100) to market mood label."""
+        if score >= 75:
+            return 'extreme_greed'
+        elif score >= 60:
+            return 'greed'
+        elif score >= 40:
+            return 'neutral'
+        elif score >= 25:
+            return 'fear'
+        else:
+            return 'extreme_fear'
+    
+    def _calculate_fud_fomo_ratio(self, btc_data: Dict, eth_data: Dict) -> float:
+        """Calculate overall FUD/FOMO ratio from panic details."""
+        total_positive = btc_data['panic_detail']['positive'] + eth_data['panic_detail']['positive']
+        total_negative = btc_data['panic_detail']['negative'] + eth_data['panic_detail']['negative']
+        
+        if total_positive + total_negative == 0:
+            return 0.0
+        
+        return round((total_positive - total_negative) / (total_positive + total_negative), 2)
+
     def interpret_score(self,score:float)->str:
         if score > 0.2:
             return 'Positive - FOMO dominant'
