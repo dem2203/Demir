@@ -1544,19 +1544,7 @@ class DemirUltraComprehensiveOrchestrator:
         # DATABASE LAYER
         # ═══════════════════════════════════════════════════════════════════════════════════════
         
-        if DatabaseManager and DATABASE_URL:
-    try:
-        self.db = DatabaseManager(database_url=DATABASE_URL)
-        logger.info("  ✅ Database Manager")
-    except Exception as e:
-        logger.error(f"  ❌ Database Manager failed: {e}")
-        if DEBUG_MODE:
-            logger.debug(f"  Traceback:\n{traceback.format_exc()}")
-        self.db = None
-else:
-    self.db = None
-    if not DATABASE_URL:
-        logger.warning("  ⚠️  DATABASE_URL not configured")
+        self.db = self._safe_init(DatabaseManager, "Database Manager") if DatabaseManager else None
         
         # ═══════════════════════════════════════════════════════════════════════════════════════
         # DATA VALIDATORS (ZERO MOCK DATA ENFORCEMENT)
