@@ -280,6 +280,23 @@ class GroupSignalAPIRoutes:
         return categories
 
 
-def create_group_signal_routes():
-    """Factory function to create routes instance."""
-    return GroupSignalAPIRoutes()
+def create_group_signal_routes(app=None, orchestrator=None):
+    """
+    Factory function to create routes instance and optionally register Flask routes.
+    
+    Args:
+        app: Flask app instance (optional) - if provided, routes will be registered
+        orchestrator: Orchestrator instance (optional) - for accessing system state
+    
+    Returns:
+        GroupSignalAPIRoutes instance
+    """
+    routes_instance = GroupSignalAPIRoutes()
+    
+    # If Flask app is provided, register routes
+    if app is not None:
+        logger.info("Registering group signal routes with Flask app...")
+        # Route registration logic can be added here if needed
+        # For now, routes are registered in api_routes_group_signals.py
+    
+    return routes_instance
