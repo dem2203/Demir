@@ -6,7 +6,7 @@ TÜM veri gerçek, mock/test yok. API: Fear & Greed Index, Binance Funding Rate,
 v8.0 UPDATE: 3-source mode (CryptoPanic limit reached)
 - Fear & Greed Index (50% weight) - PRIMARY
 - Binance Funding Rate (30% weight) - SECONDARY  
-- NewsAPI Headlines (20% weight) - TERTIARY
+- NewsAPI Headlines (20% weight) - TERTIARY (can be disabled via config)
 """
 import os
 import logging
@@ -15,6 +15,12 @@ from typing import Dict, List
 from datetime import datetime
 import pytz
 
+# Import config to access ENABLE_NEWSAPI_LAYER flag
+try:
+    from config import ENABLE_NEWSAPI_LAYER
+except ImportError:
+    ENABLE_NEWSAPI_LAYER = False  # Default to disabled if config not available
+
 logger = logging.getLogger('SENTIMENT_ANALYZER_V2')
 
 class SentimentAnalysisV2:
@@ -22,7 +28,7 @@ class SentimentAnalysisV2:
     Gelişmiş sentiment motoru (3-Source Mode):
     - Fear & Greed Index (FREE API - no key required) [PRIMARY]
     - Binance Funding Rate (real market sentiment) [SECONDARY]
-    - NewsAPI ile haber & FUD/FOMO analizi [TERTIARY]
+    - NewsAPI ile haber & FUD/FOMO analizi [TERTIARY - OPTIONAL via config]
     - Sadece gerçek ve canlı veri, ZERO mock, ZERO fallback, ZERO test
     """
     
@@ -30,7 +36,16 @@ class SentimentAnalysisV2:
         self.cryptopanic_key = cryptopanic_key or os.getenv('CRYPTOPANIC_API_KEY', '')
         self.newsapi_key = newsapi_key or os.getenv('NEWSAPI_API_KEY', '')
         self.session = requests.Session()
-        logger.info("✅ SentimentAnalysisV2 başlatıldı (3-source mode)")
+        
+        # Check if NewsAPI layer is enabled
+        self.newsapi_enabled = ENABLE_NEWSAPI_LAYER and bool(self.newsapi_key)
+        
+        if not ENABLE_NEWSAPI_LAYER:
+            logger.info("✅ SentimentAnalysisV2 başlatıldı (2-source mode: Fear&Greed + Funding Rate - NewsAPI DISABLED)")
+        elif not self.newsapi_key:
+            logger.info("✅ SentimentAnalysisV2 başlatıldı (2-source mode: Fear&Greed + Funding Rate - NewsAPI key missing)")
+        else:
+            logger.info("✅ SentimentAnalysisV2 başlatıldı (3-source mode: Fear&Greed + Funding Rate + NewsAPI)")
     
     def get_crypto_panic_news(self, currency='BTC', limit=100):
         """CryptoPanic API - Real crypto news sentiment (DEPRECATED - limit reached)"""
@@ -60,9 +75,15 @@ class SentimentAnalysisV2:
             return None
     
     def get_newsapi_sentiment(self, query='bitcoin', page_size=50):
-        """NewsAPI - Mainstream media sentiment"""
+        """NewsAPI - Mainstream media sentiment (OPTIONAL - controlled by ENABLE_NEWSAPI_LAYER flag)"""
+        # Check if NewsAPI layer is enabled via config
+        if not ENABLE_NEWSAPI_LAYER:
+            logger.debug("⚠️ NewsAPI layer DISABLED via config - skipping")
+            return None
+            
         if not self.newsapi_key:
-            logger.warning("⚠️ NewsAPI key missing - skipping")
+            # Only warn if layer is enabled but key is missing
+            logger.debug("⚠️ NewsAPI key missing - skipping")
             return None
             
         url = 'https://newsapi.org/v2/everything'
@@ -159,10 +180,14 @@ class SentimentAnalysisV2:
     def analyze_sentiment(self, symbol:str='BTC') -> Dict:
         """
         Ana orchestratora köprü, genel skor/analiz döndürür.
-        Birçok kaynak ve modaliteyi birleştirir.
+        Birkaç kaynak ve modaliteyi birleştirir.
         """
         panic_score = self.get_crypto_panic_news(symbol)
-        newsapi_score = self.get_newsapi_sentiment(symbol)
+        
+        # Only get NewsAPI sentiment if layer is enabled
+        newsapi_score = None
+        if ENABLE_NEWSAPI_LAYER:
+            newsapi_score = self.get_newsapi_sentiment(symbol)
         
         # Calculate meta score only if we have data
         meta_score = 0.0
@@ -197,7 +222,7 @@ class SentimentAnalysisV2:
         CRITICAL CHANGES:
         - Fear & Greed Index: 50% weight (PRIMARY - most reliable)
         - Binance Funding Rate: 30% weight (SECONDARY - real market indicator)
-        - NewsAPI Headlines: 20% weight (TERTIARY - media sentiment)
+        - NewsAPI Headlines: 20% weight (TERTIARY - OPTIONAL via ENABLE_NEWSAPI_LAYER flag)
         - CryptoPanic DEPRECATED (limit reached)
         
         Returns comprehensive sentiment report with:
@@ -216,7 +241,7 @@ class SentimentAnalysisV2:
             btc_funding = self.get_binance_funding_rate('BTCUSDT')
             eth_funding = self.get_binance_funding_rate('ETHUSDT')
             
-            # TERTIARY: News-based sentiment (if API keys available) - 20%
+            # TERTIARY: News-based sentiment (if enabled via config and API keys available) - 20%
             btc_sentiment = self.analyze_sentiment('BTC')
             eth_sentiment = self.analyze_sentiment('ETH')
             
@@ -237,21 +262,24 @@ class SentimentAnalysisV2:
                 sources_used.append('Binance Funding Rate')
                 logger.info(f"✅ Using Funding Rates: {funding_sentiment:.1f}/100 (30% weight)")
             
-            # 3. News Sentiment (weight: 20% - split between BTC and ETH)
+            # 3. News Sentiment (weight: 20% - split between BTC and ETH) - OPTIONAL
             news_scores = []
-            if btc_sentiment and btc_sentiment.get('score') is not None:
-                btc_normalized = (btc_sentiment['score'] + 1) * 50  # -1..1 to 0..100
-                news_scores.append(btc_normalized * 0.6)  # BTC 60%
-            
-            if eth_sentiment and eth_sentiment.get('score') is not None:
-                eth_normalized = (eth_sentiment['score'] + 1) * 50
-                news_scores.append(eth_normalized * 0.4)  # ETH 40%
-            
-            if news_scores:
-                news_aggregate = sum(news_scores)
-                sentiment_scores.append(('news', news_aggregate, 0.20))
-                sources_used.append('News Sentiment')
-                logger.info(f"✅ Using News Sentiment: {news_aggregate:.1f}/100 (20% weight)")
+            if ENABLE_NEWSAPI_LAYER:
+                if btc_sentiment and btc_sentiment.get('score') is not None:
+                    btc_normalized = (btc_sentiment['score'] + 1) * 50  # -1..1 to 0..100
+                    news_scores.append(btc_normalized * 0.6)  # BTC 60%
+                
+                if eth_sentiment and eth_sentiment.get('score') is not None:
+                    eth_normalized = (eth_sentiment['score'] + 1) * 50
+                    news_scores.append(eth_normalized * 0.4)  # ETH 40%
+                
+                if news_scores:
+                    news_aggregate = sum(news_scores)
+                    sentiment_scores.append(('news', news_aggregate, 0.20))
+                    sources_used.append('News Sentiment')
+                    logger.info(f"✅ Using News Sentiment: {news_aggregate:.1f}/100 (20% weight)")
+            else:
+                logger.debug("⚠️ NewsAPI layer disabled - using 2-source mode (Fear&Greed + Funding)")
             
             # Calculate weighted aggregate sentiment
             if len(sentiment_scores) < 2:
@@ -271,6 +299,7 @@ class SentimentAnalysisV2:
                 'source_count': len(sources_used),
                 'market_mood': self._get_market_mood(aggregate_score),
                 'confidence': round(total_weight, 2),
+                'newsapi_enabled': ENABLE_NEWSAPI_LAYER,
                 
                 # Fear & Greed details
                 'fear_greed': fear_greed if fear_greed else None,
@@ -296,7 +325,8 @@ class SentimentAnalysisV2:
                 }
             }
             
-            logger.info(f"✅ 3-SOURCE SENTIMENT: {aggregate_score:.1f}/100 from {len(sources_used)} sources ({report['market_mood']})")
+            mode = "2-SOURCE" if not ENABLE_NEWSAPI_LAYER else f"{len(sources_used)}-SOURCE"
+            logger.info(f"✅ {mode} SENTIMENT: {aggregate_score:.1f}/100 from {len(sources_used)} sources ({report['market_mood']})")
             return report
             
         except Exception as e:
