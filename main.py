@@ -2394,50 +2394,27 @@ orchestrator = DemirUltraComprehensiveOrchestrator()
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 if FLASK_AVAILABLE and app:
-    
-   # @app.route('/')
-   # def index():
-    #    """Serve main dashboard HTML"""
-     #   try:
-      #      with open('index.html', 'r', encoding='utf-8') as f:
-       #         return f.read()
-        #except FileNotFoundError:
-         #   logger.error("❌ index.html not found")
-          #  return jsonify({
-           #     'error': 'Dashboard file not found',
-            #    'status': 'error',
-             #   'message': 'index.html is missing from deployment',
-              #  'api_available': True,
-               # 'endpoints': ['/health', '/api/status', '/api/signals/latest', '/api/validators/status']
-            #}), 404
-        #except Exception as e:
-         #   logger.error(f"❌ Error serving index.html: {e}")
-          #  return jsonify({'error': str(e)}), 500
-           
-    # 🆕 PROFESSIONAL TURKISH TRADER DASHBOARD ROUTE
-@app.route('/dashboard_pro_tr.html')
-def dashboard_pro_tr():
-    """Serve Professional Turkish Trader Dashboard (v8.0 Optimized)"""
-    try:
-        with open('dashboard_pro_tr.html', 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        logger.warning("⚠️ dashboard_pro_tr.html not found - redirecting to main dashboard")
-        return jsonify({
-            'error': 'Pro TR dashboard not found',
-            'status': 'warning',
-            'message': 'Professional Turkish dashboard file missing',
-            'redirect': '/',
-            'alternative_endpoints': [
-                '/api/signals/technical?symbol=BTCUSDT',
-                '/api/signals/sentiment?symbol=BTCUSDT',
-                '/api/analytics/summary'
-            ]
-        }), 404
-    except Exception as e:
-        logger.error(f"❌ Error serving dashboard_pro_tr.html: {e}")
-        return jsonify({'error': str(e)}), 500
-
+         
+    @app.route('/')
+    def index():
+        """Serve Professional Turkish Trader Dashboard (v8.0 Optimized - Main Dashboard)"""
+        try:
+            with open('dashboard_pro_tr.html', 'r', encoding='utf-8') as f:
+                return f.read()
+        except FileNotFoundError:
+            logger.error("❌ dashboard_pro_tr.html not found")
+            return jsonify({
+                'error': 'Pro TR Dashboard not found',
+                'status': 'error',
+                'message': 'dashboard_pro_tr.html is missing from deployment',
+                'note': 'This is the optimized v8.0 dashboard (48 layers - passive layers disabled)',
+                'api_available': True,
+                'endpoints': ['/health', '/api/status', '/api/signals/latest', '/api/validators/status']
+            }), 404
+        except Exception as e:
+            logger.error(f"❌ Error serving dashboard_pro_tr.html: {e}")
+            return jsonify({'error': str(e)}), 500
+   
        @app.route('/health')
     def health():
         """Health check endpoint for Railway and monitoring"""
