@@ -2160,28 +2160,6 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(30)
     
-    # 🆕 AUTO-START: WebSocket'i ilk kez başlat
-    if self.ws_manager:
-        try:
-            logger.info("🚀 Auto-starting BinanceWebSocketManager...")
-            self.ws_manager.start()  # Eğer start() metodu varsa
-            # VEYA
-            # self.ws_manager.connect(DEFAULT_TRACKED_SYMBOLS)  # Eğer connect() metodu varsa
-            logger.info("✅ BinanceWebSocketManager auto-started")
-        except Exception as e:
-            logger.error(f"❌ WebSocket auto-start failed: {e}")
-    
-    while self.running:
-        try:
-            if self.ws_manager:
-                self.ws_manager.maintain_connections()
-            time.sleep(interval)
-        except Exception as e:
-            logger.error(f"❌ WebSocket loop error: {e}")
-            if DEBUG_MODE:
-                logger.debug(traceback.format_exc())
-            time.sleep(10)
-    
     def _health_check_loop(self, interval: int):
         """Health check continuous loop"""
         logger.info("💊 Health Checker loop started")
