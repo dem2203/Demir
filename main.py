@@ -2004,7 +2004,7 @@ class DemirUltraComprehensiveOrchestrator:
                     logger.debug(traceback.format_exc())
                 time.sleep(120)
     
-   def _pattern_loop(self, interval: int):
+    def _pattern_loop(self, interval: int):
         """Pattern recognition continuous loop"""
         logger.info("🔍 Pattern Recognition loop started")
         while self.running:
