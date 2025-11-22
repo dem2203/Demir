@@ -1,6 +1,6 @@
 # Dockerfile - DEMIR AI v8.0 - PRODUCTION READY
-# Optimized for Railway deployment with staged pip install to prevent timeout
-FROM python:3.12-slim
+# Python 3.11 (TensorFlow 2.15-2.18 compatible)
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Start with optimized gunicorn config for Railway
 # Using gevent worker for WebSocket support
