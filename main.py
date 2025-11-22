@@ -1846,7 +1846,7 @@ class DemirUltraComprehensiveOrchestrator:
         
         return is_valid, error_msg
     
-    def start(self):
+            def start(self):
         """
         Start all background processing threads
         
@@ -1872,8 +1872,7 @@ class DemirUltraComprehensiveOrchestrator:
         """
         self.running = True
         logger.info("🚀 Starting DEMIR AI v8.0 Ultra-Comprehensive Orchestrator...")
-                logger.info(f"🟢 Total {len(self.threads)} background threads running")
-             
+        
         # Thread configurations: (name, target_method, interval_seconds)
         thread_configs = [
             ("SmartMoneyThread", self._smart_money_loop, 300),
@@ -1908,7 +1907,8 @@ class DemirUltraComprehensiveOrchestrator:
             logger.info(f"  ✅ {name} started (interval: {interval}s)")
         
         logger.info(f"🟢 Total {len(self.threads)} background threads running")
-          # 🆕 WebSocket Auto-Start
+        
+        # 🆕 WebSocket Auto-Start
         if self.ws_manager:
             try:
                 logger.info("🚀 Auto-starting BinanceWebSocketManager...")
@@ -1916,7 +1916,8 @@ class DemirUltraComprehensiveOrchestrator:
                 logger.info("✅ BinanceWebSocketManager auto-started")
             except Exception as e:
                 logger.error(f"❌ WebSocket auto-start failed: {e}")
-    
+
+
     # ═══════════════════════════════════════════════════════════════════════════════════════
     # BACKGROUND THREAD LOOP METHODS
     # ═══════════════════════════════════════════════════════════════════════════════════════
