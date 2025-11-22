@@ -76,7 +76,14 @@ def register_group_signal_routes(app, orchestrator):
             current_price = None
             if orchestrator.exchange_api:
                 try:
-                    ticker = orchestrator.exchange_api.get_ticker(symbol)
+                    # Get real-time price (fallback-safe)
+                    if hasattr(orchestrator.exchange_api, 'get_current_price'):
+                        current_price = orchestrator.exchange_api.get_current_price(symbol)
+                        ticker = {'last': current_price} if current_price else None
+                    elif hasattr(orchestrator.exchange_api, 'get_ticker'):
+                        ticker = orchestrator.exchange_api.get_ticker(symbol)
+                    else:
+                        ticker = None
                     current_price = float(ticker.get('last', 0)) if ticker else None
                 except Exception as e:
                     logger.warning(f"Failed to get real-time price: {e}")
@@ -447,7 +454,7 @@ def register_group_signal_routes(app, orchestrator):
             # 1. Technical signal
             try:
                 tech_response = api_signals_technical()
-                tech_data = tech_response.get_json()
+                tech_data = tech_response[0].get_json() if isinstance(tech_response, tuple) else tech_response.get_json()
                 if tech_data.get('status') == 'success':
                     group_signals['technical'] = tech_data['signal']
             except Exception as e:
@@ -456,7 +463,7 @@ def register_group_signal_routes(app, orchestrator):
             # 2. Sentiment signal
             try:
                 sent_response = api_signals_sentiment()
-                sent_data = sent_response.get_json()
+                sent_data = sent_response[0].get_json() if isinstance(sent_response, tuple) else sent_response.get_json()
                 if sent_data.get('status') == 'success':
                     group_signals['sentiment'] = sent_data['signal']
             except Exception as e:
@@ -465,7 +472,7 @@ def register_group_signal_routes(app, orchestrator):
             # 3. ML signal
             try:
                 ml_response = api_signals_ml()
-                ml_data = ml_response.get_json()
+                ml_data = ml_response[0].get_json() if isinstance(ml_response, tuple) else ml_response.get_json()
                 if ml_data.get('status') == 'success':
                     group_signals['ml'] = ml_data['signal']
             except Exception as e:
@@ -474,7 +481,7 @@ def register_group_signal_routes(app, orchestrator):
             # 4. OnChain signal
             try:
                 onchain_response = api_signals_onchain()
-                onchain_data = onchain_response.get_json()
+                onchain_data = onchain_response[0].get_json() if isinstance(onchain_response, tuple) else onchain_response.get_json()
                 if onchain_data.get('status') == 'success':
                     group_signals['onchain'] = onchain_data['signal']
             except Exception as e:
@@ -483,7 +490,7 @@ def register_group_signal_routes(app, orchestrator):
             # 5. Risk signal
             try:
                 risk_response = api_signals_risk()
-                risk_data = risk_response.get_json()
+                risk_data = risk_response[0].get_json() if isinstance(risk_response, tuple) else risk_response.get_json()
                 if risk_data.get('status') == 'success':
                     group_signals['risk'] = risk_data['signal']
             except Exception as e:
@@ -652,7 +659,13 @@ def register_group_signal_routes(app, orchestrator):
             
             if orchestrator.onchain_pro:
                 try:
-                    data = orchestrator.onchain_pro.get_comprehensive_metrics()
+                    # Get on-chain metrics (method-safe)
+                    if hasattr(orchestrator.onchain_pro, 'analyze_onchain_metrics'):
+                        data = orchestrator.onchain_pro.analyze_onchain_metrics()
+                    elif hasattr(orchestrator.onchain_pro, 'get_onchain_metrics'):
+                        data = orchestrator.onchain_pro.get_onchain_metrics()
+                    else:
+                        data = {}
                     if data and not data.get('mock_detected', False):
                         metrics.update(data)
                         logger.info(f"✅ On-chain metrics retrieved")
