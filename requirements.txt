@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# DEMIR AI v8.0 - PRODUCTION REQUIREMENTS (Python 3.12 Compatible)
+# DEMIR AI v8.0 - PRODUCTION REQUIREMENTS (Railway Optimized)
 # Enterprise-Grade Crypto Trading AI Bot
-# ALL MODULES ACTIVE - NO MOCKS - COMPREHENSIVE
+# Python 3.12 | Zero C Dependencies | 100% Railway Compatible
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ═══ WEB FRAMEWORK ═══
@@ -42,11 +42,9 @@ xgboost==2.0.3
 tensorflow==2.18.0
 keras==3.7.0
 
-# ═══ TECHNICAL ANALYSIS ═══
-# TA-Lib requires C libraries - may fail on Railway
-# Using pure Python alternative: ta
+# ═══ TECHNICAL ANALYSIS (Pure Python - Railway Compatible) ═══
 ta==0.11.0
-ta-lib==0.5.1
+pandas-ta==0.3.14b0
 
 # ═══ VISUALIZATION & REPORTING ═══
 matplotlib==3.8.2
