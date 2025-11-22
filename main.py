@@ -1976,7 +1976,20 @@ class DemirUltraComprehensiveOrchestrator:
                     if metrics:
                         logger.info(f"⛓️ On-Chain metrics updated")
                         if self.redis_cache:
-                            self.redis_cache.set('onchain_metrics', metrics, ex=600)
+                            # Defensive Redis cache set (multi-signature support)
+                            try:
+                                # Try standard Redis 'ex' parameter (expire in seconds)
+                                self.redis_cache.set('onchain_metrics', metrics, ex=600)
+                            except TypeError:
+                                try:
+                                    # Try custom 'ttl' parameter
+                                    self.redis_cache.set('onchain_metrics', metrics, ttl=600)
+                                except TypeError:
+                                    try:
+                                        # Fallback: positional argument
+                                        self.redis_cache.set('onchain_metrics', metrics, 600)
+                                    except Exception as fallback_err:
+                                        logger.warning(f'⚠️ Redis cache set failed (all signatures): {fallback_err}')
                 time.sleep(interval)
             except Exception as e:
                 logger.error(f"❌ On-Chain loop error: {e}")
