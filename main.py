@@ -2415,7 +2415,7 @@ if FLASK_AVAILABLE and app:
             logger.error(f"❌ Error serving dashboard_pro_tr.html: {e}")
             return jsonify({'error': str(e)}), 500
    
-       @app.route('/health')
+    @app.route('/health')
     def health():
         """Health check endpoint for Railway and monitoring"""
         return jsonify({
