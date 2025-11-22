@@ -60,6 +60,13 @@ REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET', '')
 TWITTER_BEARER_TOKEN = os.getenv('TWITTER_BEARER_TOKEN', '')
 
 # ========================================================================
+# LAYER ENABLE/DISABLE FLAGS (v8.0 - Enterprise Production Control)
+# ========================================================================
+
+# NewsAPI Layer Control - Can be re-enabled when API key is available
+ENABLE_NEWSAPI_LAYER = os.getenv('ENABLE_NEWSAPI_LAYER', 'false').lower() == 'true'
+
+# ========================================================================
 # SYSTEM PARAMETERS (MAIN.PY İÇİN EKSİK OLANLAR EKLENДİ)
 # ========================================================================
 
@@ -212,3 +219,5 @@ def validate_config():
 
 print(f"[CONFIG] DEMIR AI config.py yüklendi. Version: {VERSION}, Advisory Mode: {ADVISORY_MODE}")
 print(f"🥇 Default Tracked Symbols (Perpetual Futures): {DEFAULT_TRACKED_SYMBOLS}")
+if not ENABLE_NEWSAPI_LAYER:
+    print(f"⚠️  NewsAPI Layer: DISABLED (can be re-enabled via ENABLE_NEWSAPI_LAYER=true)")
