@@ -1,6 +1,6 @@
 # Dockerfile - DEMIR AI v8.0 - PRODUCTION READY
-# Python 3.11 (TensorFlow 2.15-2.18 compatible)
-FROM python:3.11-slim
+# Python 3.10 (TensorFlow 2.15 stable cloud build)
+FROM python:3.10-slim
 
 WORKDIR /app
 
@@ -15,20 +15,15 @@ RUN pip install --upgrade pip
 # Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies with extended timeout and retry logic
-# This prevents Railway timeout errors for large packages (xgboost, scipy, etc.)
 RUN pip install --no-cache-dir \
     --default-timeout=300 \
     --retries=5 \
     -r requirements.txt
 
-# Copy entire application
 COPY . .
 
-# Runtime directories
 RUN mkdir -p /app/logs /app/data /app/models
 
-# Environment variables
 ENV PYTHONUNBUFFERED=1 \
     PORT=8000 \
     FLASK_ENV=production \
@@ -37,13 +32,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 8000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start with optimized gunicorn config for Railway
-# Using gevent worker for WebSocket support
-# Reduced workers to 1 for Railway's resource limits
 CMD ["gunicorn", \
      "-k", "geventwebsocket.gunicorn.workers.GeventWebSocketWorker", \
      "-w", "1", \
