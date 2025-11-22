@@ -1932,7 +1932,11 @@ class DemirUltraComprehensiveOrchestrator:
                     if signals:
                         logger.info(f"🐳 Smart Money signals detected: {len(signals)}")
                         for signal in signals:
-                            global_state.add_signal('SMART_MONEY', signal)
+                            # Safe signal format check (str → dict conversion)
+                            if isinstance(signal, dict):
+                                global_state.add_signal('SMART_MONEY', signal)
+                            elif isinstance(signal, str):
+                                global_state.add_signal('SMART_MONEY', {'type': 'smart_money', 'message': signal})
                             if self.db:
                                 self.db.save_signal(signal)
                 time.sleep(interval)
@@ -1972,7 +1976,7 @@ class DemirUltraComprehensiveOrchestrator:
                     if metrics:
                         logger.info(f"⛓️ On-Chain metrics updated")
                         if self.redis_cache:
-                            self.redis_cache.set('onchain_metrics', metrics, ttl=600)
+                            self.redis_cache.set('onchain_metrics', metrics, ex=600)
                 time.sleep(interval)
             except Exception as e:
                 logger.error(f"❌ On-Chain loop error: {e}")
