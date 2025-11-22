@@ -1846,7 +1846,7 @@ class DemirUltraComprehensiveOrchestrator:
         
         return is_valid, error_msg
     
-            def start(self):
+    def start(self):
         """
         Start all background processing threads
         
