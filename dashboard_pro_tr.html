@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEMIR AI v8.0 PRO - Profesyonel Trader Dashboard</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-darker: #060912;
+            --bg-card: #12161f;
+            --bg-card-hover: #1a1f2e;
+            
+            --green: #00ff88;
+            --green-dark: #00cc66;
+            --red: #ff4466;
+            --red-dark: #cc3344;
+            --blue: #3b82f6;
+            --yellow: #fbbf24;
+            --purple: #a855f7;
+            --orange: #fb923c;
+            --teal: #14b8a6;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #8892b0;
+            --text-muted: #5a637a;
+            
+            --border: rgba(255, 255, 255, 0.06);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        /* HEADER */
+        .header {
+            background: var(--bg-darker);
+            border-bottom: 2px solid var(--green);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--green), var(--blue));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 24px;
+            color: var(--bg-dark);
+            animation: pulse 3s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(0, 255, 136, 0); }
+        }
+        
+        .logo-text h1 {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--green), var(--blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .logo-text p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .time {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--green);
+        }
+        
+        /* MAIN GRID */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            padding: 24px;
+            max-width: 2400px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.2);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .card-title .icon {
+            font-size: 24px;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-new {
+            background: var(--purple);
+            color: white;
+            animation: glow 2s infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px var(--purple); }
+            50% { box-shadow: 0 0 20px var(--purple); }
+        }
+        
+        .badge-live {
+            background: var(--green);
+            color: var(--bg-dark);
+        }
+        
+        /* AI YORUM KARTI */
+        .ai-comment {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
+            border: 2px solid var(--purple);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-comment::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.3), transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            to { left: 100%; }
+        }
+        
+        .ai-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .ai-signal {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .signal-direction {
+            font-size: 48px;
+            font-weight: 900;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .signal-long {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--green);
+            border: 2px solid var(--green);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+        
+        .signal-short {
+            background: rgba(255, 68, 102, 0.2);
+            color: var(--red);
+            border: 2px solid var(--red);
+            box-shadow: 0 0 30px rgba(255, 68, 102, 0.3);
+        }
+        
+        .signal-neutral {
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--yellow);
+            border: 2px solid var(--yellow);
+        }
+        
+        .signal-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        
+        .ai-reasoning {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--purple);
+            margin-top: 20px;
+        }
+        
+        .reasoning-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--purple);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        
+        .reasoning-text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+        }
+        
+        .group-signals {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        .group-column {
+            flex: 1;
+        }
+        
+        .group-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .group-title.supporting {
+            color: var(--green);
+        }
+        
+        .group-title.opposing {
+            color: var(--red);
+        }
+        
+        .group-item {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            border-left: 3px solid var(--green);
+        }
+        
+        .group-item.opposing {
+            border-left-color: var(--red);
+        }
+        
+        /* SİNYAL LİSTESİ */
+        .signal-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .signal-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .signal-list::-webkit-scrollbar-thumb {
+            background: var(--green);
+            border-radius: 4px;
+        }
+        
+        .signal-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--green);
+            transition: all 0.3s ease;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .signal-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(8px);
+        }
+        
+        .signal-item.short {
+            border-left-color: var(--red);
+        }
+        
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .signal-symbol {
+            font-size: 20px;
+            font-weight: 800;
+        }
+        
+        .signal-badge {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        
+        .signal-badge.long {
+            background: var(--green);
+            color: var(--bg-dark);
+        }
+        
+        .signal-badge.short {
+            background: var(--red);
+            color: white;
+        }
+        
+        .signal-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .signal-detail {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .signal-detail strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        
+        .confidence-bar {
+            margin-top: 12px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--blue));
+            transition: width 1s ease;
+        }
+        
+        /* RİSK PANELİ */
+        .risk-panel {
+            display: grid;
+            gap: 16px;
+        }
+        
+        .risk-gauge {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+        
+        .risk-circle {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 8px solid var(--green);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.1), transparent);
+        }
+        
+        .risk-value {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--green);
+        }
+        
+        .risk-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        
+        .risk-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .risk-metric {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .risk-metric-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .risk-metric-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        
+        /* LAYER ANALİZ */
+        .layer-analysis {
+            grid-column: 1 / -1;
+        }
+        
+        .layer-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .layer-group {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .layer-group-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+        
+        .layer-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .layer-name {
+            width: 140px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .layer-progress {
+            flex: 1;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .layer-fill {
+            height: 100%;
+            background: var(--green);
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--bg-dark);
+        }
+        
+        .layer-fill.negative {
+            background: var(--red);
+        }
+        
+        /* PERFORMANS GRAFİĞİ */
+        .chart-container {
+            height: 400px;
+            position: relative;
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .ai-comment {
+                grid-column: 1;
+            }
+            
+            .layer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* LOADING */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">AI</div>
+            <div class="logo-text">
+                <h1>DEMIR AI v8.0 PRO</h1>
+                <p>Profesyonel Trader Dashboard</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status">
+                <div class="status-dot"></div>
+                <span id="status-text">Bağlanıyor...</span>
+            </div>
+            <div class="time" id="time">--:--:--</div>
+            <span class="badge badge-new">v8.0 LIVE</span>
+        </div>
+    </div>
+    
+    <div class="dashboard">
+        <!-- AI YORUM KARTI -->
+        <div class="card ai-comment">
+            <div class="ai-header">
+                <div class="card-title">
+                    <span class="icon">🧠</span>
+                    YAPAY ZEKA ANALİZİ & YORUM
+                    <span class="badge badge-live">CANLI</span>
+                </div>
+            </div>
+            
+            <div class="ai-signal">
+                <div class="signal-direction signal-neutral" id="ai-direction">BEKLİYOR</div>
+                <div class="signal-stats">
+                    <div class="stat-box">
+                        <div class="stat-label">Sinyal Gücü</div>
+                        <div class="stat-value" id="ai-strength">--%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Güven</div>
+                        <div class="stat-value" id="ai-confidence">--%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Risk/Ödül</div>
+                        <div class="stat-value" id="ai-rr">--</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Aktif Gruplar</div>
+                        <div class="stat-value" id="ai-groups">0/5</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-reasoning">
+                <div class="reasoning-title">💬 AI Uzman Yorumu (Türkçe)</div>
+                <div class="reasoning-text" id="ai-reasoning">
+Sistem başlatılıyor... Yapay zeka layer'ları analiz edilip Türkçe yorum oluşturulacak.
+
+Şu an için tüm 60+ layer'dan veri toplanıyor:
+- Technical: 19 gösterge analiz ediliyor
+- Sentiment: 15 kaynak takip ediliyor  
+- ML: 5 model tahmin üretiyor
+- On-Chain: 4 metrik inceleniyor
+- Risk: 5 risk modeli hesaplama yapıyor
+
+İlk sinyal geldiğinde detaylı Türkçe analiz burada görünecek.
+                </div>
+            </div>
+            
+            <div class="group-signals">
+                <div class="group-column">
+                    <div class="group-title supporting">✅ Destekleyen Gruplar</div>
+                    <div id="supporting-groups">
+                        <div class="group-item">Henüz veri yok...</div>
+                    </div>
+                </div>
+                <div class="group-column">
+                    <div class="group-title opposing">❌ Karşı Çıkan Gruplar</div>
+                    <div id="opposing-groups">
+                        <div class="group-item opposing">Henüz veri yok...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SİNYAL LİSTESİ -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">🎯</span>
+                CANLI SİNYALLER
+                <span class="badge badge-live" id="signal-count">0</span>
+            </div>
+            <div class="signal-list" id="signal-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Sinyal bekleniyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RİSK YÖNETİMİ -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">⚠️</span>
+                RİSK YÖNETİMİ
+            </div>
+            <div class="risk-panel">
+                <div class="risk-gauge">
+                    <div class="risk-circle" id="risk-circle">
+                        <div class="risk-value" id="risk-value">--%</div>
+                        <div class="risk-label">VAR (5%)</div>
+                    </div>
+                    <div class="risk-metrics">
+                        <div class="risk-metric">
+                            <div class="risk-metric-label">Sharpe</div>
+                            <div class="risk-metric-value" id="risk-sharpe">--</div>
+                        </div>
+                        <div class="risk-metric">
+                            <div class="risk-metric-label">Kelly</div>
+                            <div class="risk-metric-value" id="risk-kelly">--</div>
+                        </div>
+                        <div class="risk-metric">
+                            <div class="risk-metric-label">Max DD</div>
+                            <div class="risk-metric-value" id="risk-dd">--</div>
+                        </div>
+                        <div class="risk-metric">
+                            <div class="risk-metric-label">Pozisyon</div>
+                            <div class="risk-metric-value" id="risk-pos">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LAYER ANALİZİ -->
+        <div class="card layer-analysis">
+            <div class="card-title">
+                <span class="icon">🧠</span>
+                AI LAYER ANALİZ - GERÇEK ZAMANLI
+            </div>
+            <div class="layer-grid" id="layer-grid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Layer verileri yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PERFORMANS GRAFİĞİ -->
+        <div class="card">
+            <div class="card-title">
+                <span class="icon">📈</span>
+                PORTFOLIO PERFORMANSI
+            </div>
+            <div class="chart-container">
+                <canvas id="performance-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // ================================================================
+    // DEMIR AI v8.0 PRO - TÜRKÇE TRADER DASHBOARD
+    // ================================================================
+    
+    const API_URL = window.location.origin;
+    let socket = null;
+    let performanceChart = null;
+    
+    // BAŞLATMA
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeConnection();
+        startClock();
+        initializeChart();
+        setInterval(fetchLayerData, 5000); // Her 5 saniyede layer verileri çek
+        setInterval(fetchSignals, 3000); // Her 3 saniyede sinyal çek
+    });
+    
+    // SAAT
+    function startClock() {
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('time').textContent = now.toLocaleTimeString('tr-TR');
+        }, 1000);
+    }
+    
+    // BAĞLANTI
+    function initializeConnection() {
+        try {
+            socket = io(API_URL);
+            
+            socket.on('connect', () => {
+                document.getElementById('status-text').textContent = 'Bağlı - Aktif';
+                document.querySelector('.status-dot').style.background = 'var(--green)';
+            });
+            
+            socket.on('disconnect', () => {
+                document.getElementById('status-text').textContent = 'Bağlantı Kesildi';
+                document.querySelector('.status-dot').style.background = 'var(--red)';
+            });
+            
+            socket.on('signal', (data) => {
+                updateAIComment(data);
+                addSignalToList(data);
+            });
+            
+            socket.on('layers', (data) => {
+                updateLayerAnalysis(data);
+            });
+            
+        } catch (error) {
+            console.error('Socket bağlantı hatası:', error);
+            document.getElementById('status-text').textContent = 'Bağlantı Hatası';
+        }
+    }
+    
+    // AI YORUM GÜNCELLE
+    function updateAIComment(data) {
+        if (!data || !data.consensus) return;
+        
+        const consensus = data.consensus;
+        const direction = consensus.direction || 'NEUTRAL';
+        const strength = (consensus.weighted_strength * 100).toFixed(1);
+        const confidence = (consensus.consensus_confidence * 100).toFixed(1);
+        
+        // Sinyal yönü
+        const dirElement = document.getElementById('ai-direction');
+        dirElement.textContent = direction === 'LONG' ? 'ALIŞ' : direction === 'SHORT' ? 'SATIŞ' : 'NÖTR';
+        dirElement.className = `signal-direction signal-${direction.toLowerCase()}`;
+        
+        // İstatistikler
+        document.getElementById('ai-strength').textContent = `${strength}%`;
+        document.getElementById('ai-confidence').textContent = `${confidence}%`;
+        document.getElementById('ai-rr').textContent = data.risk_reward ? data.risk_reward.toFixed(2) : '--';
+        
+        // Grup sayısı
+        const groups = consensus.groups || {};
+        const agreeing = Object.values(groups).filter(g => g.direction === direction).length;
+        document.getElementById('ai-groups').textContent = `${agreeing}/5`;
+        
+        // TÜRKÇE YORUM OLUŞTUR
+        const reasoning = generateTurkishReasoning(data);
+        document.getElementById('ai-reasoning').textContent = reasoning;
+        
+        // Destekleyen/Karşı grupları göster
+        updateGroupSignals(groups, direction);
+    }
+    
+    // TÜRKÇE YORUM OLUŞTUR
+    function generateTurkishReasoning(data) {
+        const consensus = data.consensus;
+        const direction = consensus.direction;
+        const strength = (consensus.weighted_strength * 100).toFixed(1);
+        const confidence = (consensus.consensus_confidence * 100).toFixed(1);
+        const symbol = data.symbol || 'BTCUSDT';
+        
+        let reasoning = `📊 ${symbol} İÇİN DETAYLI ANALİZ:\n\n`;
+        
+        // Genel durum
+        if (direction === 'LONG') {
+            reasoning += `✅ ALIŞ SİNYALİ tespit edildi. Piyasa ${strength}% güç ile YUKARİ yönlü hareket gösteriyor.\n\n`;
+        } else if (direction === 'SHORT') {
+            reasoning += `🔻 SATIŞ SİNYALİ tespit edildi. Piyasa ${strength}% güç ile AŞAĞI yönlü baskı altında.\n\n`;
+        } else {
+            reasoning += `⚠️ NÖTR DURUM. Piyasada net bir yön belirlenmedi. Beklemek en iyi strateji.\n\n`;
+        }
+        
+        // Güven seviyesi yorumu
+        reasoning += `🎯 Güven Seviyesi: ${confidence}%\n`;
+        if (confidence >= 75) {
+            reasoning += `   → Çok yüksek güven! Tüm AI katmanları uyumlu çalışıyor.\n`;
+        } else if (confidence >= 60) {
+            reasoning += `   → İyi seviye. Çoğu katman aynı yönde sinyal veriyor.\n`;
+        } else {
+            reasoning += `   → Düşük güven. Katmanlar arasında uyumsuzluk var, dikkatli olun.\n`;
+        }
+        reasoning += `\n`;
+        
+        // Grup analizi
+        const groups = consensus.groups || {};
+        reasoning += `📈 GRUP ANALİZİ:\n`;
+        
+        if (groups.technical) {
+            const tech = groups.technical;
+            reasoning += `   • Technical (19 gösterge): ${(tech.strength * 100).toFixed(0)}% ${tech.direction}\n`;
+        }
+        if (groups.sentiment) {
+            const sent = groups.sentiment;
+            reasoning += `   • Sentiment (15 kaynak): ${(sent.strength * 100).toFixed(0)}% ${sent.direction}\n`;
+        }
+        if (groups.ml) {
+            const ml = groups.ml;
+            reasoning += `   • ML Models (5 model): ${(ml.strength * 100).toFixed(0)}% ${ml.direction}\n`;
+        }
+        if (groups.onchain) {
+            const chain = groups.onchain;
+            reasoning += `   • On-Chain (4 metrik): ${(chain.strength * 100).toFixed(0)}% ${chain.direction}\n`;
+        }
+        if (groups.risk) {
+            const risk = groups.risk;
+            reasoning += `   • Risk (5 model): ${(risk.strength * 100).toFixed(0)}% ${risk.direction}\n`;
+        }
+        reasoning += `\n`;
+        
+        // Öneri
+        reasoning += `💡 TAVSİYE:\n`;
+        if (direction === 'LONG' && confidence >= 70) {
+            reasoning += `   ✅ Güçlü ALIŞ fırsatı. Stop loss: ${data.stop_loss || 'N/A'}, Hedef: ${data.take_profit || 'N/A'}\n`;
+            reasoning += `   ✅ Pozisyon boyutu: Kelly criterion'a göre %${data.position_size || '2.5'} öneriliyor.\n`;
+        } else if (direction === 'SHORT' && confidence >= 70) {
+            reasoning += `   🔻 Güçlü SATIŞ fırsatı. Stop loss: ${data.stop_loss || 'N/A'}, Hedef: ${data.take_profit || 'N/A'}\n`;
+            reasoning += `   🔻 Kısa pozisyon al, risk yönetimine özen göster.\n`;
+        } else {
+            reasoning += `   ⚠️ Bekle ve gözle. Daha net sinyaller için güven seviyesi %70+ olmalı.\n`;
+            reasoning += `   ⚠️ Şu an piyasaya girmek riskli, sabırlı ol.\n`;
+        }
+        
+        reasoning += `\n⏰ Analiz Zamanı: ${new Date().toLocaleString('tr-TR')}`;
+        
+        return reasoning;
+    }
+    
+    // GRUP SİNYALLERİNİ GÖSTER
+    function updateGroupSignals(groups, mainDirection) {
+        const supporting = document.getElementById('supporting-groups');
+        const opposing = document.getElementById('opposing-groups');
+        
+        supporting.innerHTML = '';
+        opposing.innerHTML = '';
+        
+        Object.entries(groups).forEach(([name, data]) => {
+            const item = document.createElement('div');
+            item.className = 'group-item';
+            item.textContent = `${name.toUpperCase()}: ${(data.strength * 100).toFixed(0)}% ${data.direction}`;
+            
+            if (data.direction === mainDirection) {
+                supporting.appendChild(item);
+            } else {
+                item.classList.add('opposing');
+                opposing.appendChild(item);
+            }
+        });
+        
+        if (supporting.children.length === 0) {
+            supporting.innerHTML = '<div class="group-item">Destekleyen grup yok</div>';
+        }
+        if (opposing.children.length === 0) {
+            opposing.innerHTML = '<div class="group-item opposing">Karşı çıkan grup yok</div>';
+        }
+    }
+    
+    // SİNYAL LİSTESİNE EKLE
+    function addSignalToList(data) {
+        const list = document.getElementById('signal-list');
+        const count = document.getElementById('signal-count');
+        
+        if (list.querySelector('.loading')) {
+            list.innerHTML = '';
+        }
+        
+        const item = document.createElement('div');
+        item.className = `signal-item ${data.consensus.direction.toLowerCase()}`;
+        
+        const strength = (data.consensus.weighted_strength * 100).toFixed(1);
+        const confidence = (data.consensus.consensus_confidence * 100).toFixed(1);
+        
+        item.innerHTML = `
+            <div class="signal-header">
+                <div class="signal-symbol">${data.symbol}</div>
+                <div class="signal-badge ${data.consensus.direction.toLowerCase()}">
+                    ${data.consensus.direction === 'LONG' ? 'ALIŞ' : 'SATIŞ'}
+                </div>
+            </div>
+            <div class="signal-info">
+                <div class="signal-detail"><strong>Güç:</strong> ${strength}%</div>
+                <div class="signal-detail"><strong>Güven:</strong> ${confidence}%</div>
+                <div class="signal-detail"><strong>Entry:</strong> ${data.entry_price || 'N/A'}</div>
+                <div class="signal-detail"><strong>Stop:</strong> ${data.stop_loss || 'N/A'}</div>
+                <div class="signal-detail"><strong>Target:</strong> ${data.take_profit || 'N/A'}</div>
+                <div class="signal-detail"><strong>R/R:</strong> ${data.risk_reward ? data.risk_reward.toFixed(2) : 'N/A'}</div>
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" style="width: ${confidence}%"></div>
+            </div>
+        `;
+        
+        list.insertBefore(item, list.firstChild);
+        
+        // Maksimum 20 sinyal tut
+        while (list.children.length > 20) {
+            list.removeChild(list.lastChild);
+        }
+        
+        count.textContent = list.children.length;
+    }
+    
+    // LAYER ANALİZİ GÜNCELLE
+    function updateLayerAnalysis(data) {
+        const grid = document.getElementById('layer-grid');
+        
+        if (!data || !data.layers) return;
+        
+        grid.innerHTML = '';
+        
+        const categories = {
+            'TECHNICAL': [],
+            'SENTIMENT': [],
+            'ML': [],
+            'ONCHAIN': [],
+            'RISK': []
+        };
+        
+        // Layer'ları kategorilere ayır
+        Object.entries(data.layers).forEach(([name, value]) => {
+            const score = typeof value === 'object' ? value.score : value;
+            const percentage = (score * 100).toFixed(0);
+            const isNegative = score < 0.4;
+            
+            const layerItem = {
+                name: name,
+                score: score,
+                percentage: percentage,
+                isNegative: isNegative
+            };
+            
+            // Kategori belirle
+            if (name.includes('technical') || name.includes('indicator')) {
+                categories.TECHNICAL.push(layerItem);
+            } else if (name.includes('sentiment') || name.includes('social')) {
+                categories.SENTIMENT.push(layerItem);
+            } else if (name.includes('ml') || name.includes('model')) {
+                categories.ML.push(layerItem);
+            } else if (name.includes('onchain') || name.includes('blockchain')) {
+                categories.ONCHAIN.push(layerItem);
+            } else if (name.includes('risk') || name.includes('var')) {
+                categories.RISK.push(layerItem);
+            }
+        });
+        
+        // Her kategori için grup oluştur
+        Object.entries(categories).forEach(([category, layers]) => {
+            if (layers.length === 0) return;
+            
+            const group = document.createElement('div');
+            group.className = 'layer-group';
+            
+            const title = document.createElement('div');
+            title.className = 'layer-group-title';
+            title.textContent = `${category} (${layers.length})`;
+            group.appendChild(title);
+            
+            layers.forEach(layer => {
+                const bar = document.createElement('div');
+                bar.className = 'layer-bar';
+                bar.innerHTML = `
+                    <div class="layer-name">${layer.name}</div>
+                    <div class="layer-progress">
+                        <div class="layer-fill ${layer.isNegative ? 'negative' : ''}" 
+                             style="width: ${Math.abs(layer.percentage)}%">
+                            ${layer.percentage}%
+                        </div>
+                    </div>
+                `;
+                group.appendChild(bar);
+            });
+            
+            grid.appendChild(group);
+        });
+    }
+    
+    // PERFORMANS GRAFİĞİ
+    function initializeChart() {
+        const ctx = document.getElementById('performance-chart');
+        if (!ctx) return;
+        
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: [],
+                    borderColor: '#00ff88',
+                    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { color: '#8892b0' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    },
+                    x: {
+                        ticks: { color: '#8892b0' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    }
+                }
+            }
+        });
+        
+        // Demo data
+        updateChart();
+    }
+    
+    function updateChart() {
+        if (!performanceChart) return;
+        
+        const now = new Date();
+        const labels = [];
+        const data = [];
+        let value = 10000;
+        
+        for (let i = 23; i >= 0; i--) {
+            const time = new Date(now - i * 3600000);
+            labels.push(time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }));
+            value += (Math.random() - 0.5) * 200;
+            data.push(value.toFixed(2));
+        }
+        
+        performanceChart.data.labels = labels;
+        performanceChart.data.datasets[0].data = data;
+        performanceChart.update();
+    }
+    
+    // API'DEN VERİ ÇEK
+    async function fetchLayerData() {
+        try {
+            const response = await fetch(`${API_URL}/api/layers?symbol=BTCUSDT`);
+            if (response.ok) {
+                const data = await response.json();
+                updateLayerAnalysis(data);
+            }
+        } catch (error) {
+            console.error('Layer data fetch error:', error);
+        }
+    }
+    
+    async function fetchSignals() {
+        try {
+            const response = await fetch(`${API_URL}/api/signals/latest?symbol=BTCUSDT`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    updateAIComment(data.data);
+                }
+            }
+        } catch (error) {
+            console.error('Signal fetch error:', error);
+        }
+    }
+    </script>
+</body>
+</html>
