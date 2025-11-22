@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════════════════════════
 # DEMIR AI v8.0 - PRODUCTION REQUIREMENTS
-# Railway Tested | Python 3.11 | Zero C Dependencies
+# Railway Tested | Python 3.11 | Zero C Dependencies | Production Ready
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ═══ WEB FRAMEWORK ═══
@@ -41,9 +41,9 @@ xgboost==2.0.3
 tensorflow==2.15.0
 keras==2.15.0
 
-# ═══ TECHNICAL ANALYSIS (Pure Python) ═══
+# ═══ TECHNICAL ANALYSIS (Pure Python - Railway Compatible) ═══
 ta==0.11.0
-pandas-ta==0.3.14b
+pandas-ta
 
 # ═══ VISUALIZATION & REPORTING ═══
 matplotlib==3.8.2
