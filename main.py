@@ -1619,7 +1619,10 @@ class DemirUltraComprehensiveOrchestrator:
         # MARKET DATA & INTELLIGENCE
         # ═══════════════════════════════════════════════════════════════════════════════════════
 
-        self.market_intel = self._safe_init(MarketIntelligence, "Market Intelligence")
+        # ✅ FIXED v8.0.1: MarketIntelligence requires API keys (fred_key, cryptopanic_key)
+        # self.market_intel = self._safe_init(MarketIntelligence, "Market Intelligence")
+        self.market_intel = None
+        logger.info("  ⚠️  MarketIntelligence disabled (missing required API keys)")
         self.data_processor = self._safe_init(MarketDataProcessor, "Market Data Processor")
         self.flow_detector = self._safe_init(MarketFlowDetector, "Market Flow Detector")
         self.correlation_engine = self._safe_init(MarketCorrelationEngine, "Market Correlation Engine")
@@ -1693,7 +1696,10 @@ class DemirUltraComprehensiveOrchestrator:
         self.data_fetcher = self._safe_init(DataFetcherRealtime, "Data Fetcher Realtime")
         self.group_signal_engine = self._safe_init(GroupSignalEngine, "Group Signal Engine")
         self.group_backtest = self._safe_init(GroupSignalBacktest, "Group Signal Backtest")
-        self.group_telegram = self._safe_init(GroupSignalTelegramNotifier, "Group Signal Telegram Notifier")
+        # ✅ FIXED v8.0.1: GroupSignalTelegramNotifier requires constructor parameters
+        # self.group_telegram = self._safe_init(GroupSignalTelegramNotifier, "Group Signal Telegram Notifier")
+        self.group_telegram = None
+        logger.info("  ⚠️  GroupSignalTelegramNotifier disabled (use TelegramNotifier instead)")
         self.telegram_notifier = self._safe_init(TelegramNotifier, "Telegram Notifier")
         self.tradeplan_notifier = self._safe_init(TelegramTradePlanNotifier, "TradePlan Notifier")
         self.signal_schema = self._safe_init(SignalGroupsSchema, "Signal Groups Schema")
