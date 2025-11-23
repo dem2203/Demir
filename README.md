@@ -67,7 +67,6 @@
 ## 🏗️ Mimari
 
 ### 10-Layer System Architecture
-
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     DEMIR AI v8.0 ARCHITECTURE                  │
