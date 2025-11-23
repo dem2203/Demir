@@ -141,13 +141,14 @@ def get_latest_signals() -> Dict:
         
         # Son 1 saatin sinyalleri
         cursor.execute("""
-            SELECT symbol, signal_type, confidence, entry_price, 
-                   takeprofit_1, takeprofit_2, stoploss
-            FROM trades
-            WHERE timestamp > NOW() - INTERVAL '1 hour'
-            ORDER BY timestamp DESC
-            LIMIT 10
-        """)
+    SELECT symbol, direction as signal_type, 
+           signal_confidence as confidence, entry_price, 
+           take_profit_1, take_profit_2, stop_loss
+    FROM active_positions
+    WHERE opened_at > NOW() - INTERVAL '1 hour'
+    ORDER BY opened_at DESC
+    LIMIT 10
+""")
         
         signals = []
         for row in cursor.fetchall():
