@@ -2452,394 +2452,567 @@ if FLASK_AVAILABLE and app:
     def index():
         """Serve Professional Turkish Trader Dashboard (v8.0 Optimized - Inline HTML)"""
         # Inline HTML - Railway deployment-proof (no external file dependency)
-        html_content = """<!DOCTYPE html>
+               html_content = """<!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEMIR AI v8.0 PRO - Profesyonel Trader Dashboard</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-primary: #0a0e27;
-            --bg-secondary: #141937;
-            --bg-card: #1a1f3a;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --accent: #3b82f6;
-            --green: #10b981;
-            --red: #ef4444;
-            --yellow: #f59e0b;
-            --border: #1e293b;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-        }
-        
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .logo {
-            font-size: 24px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--bg-card);
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-        
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--green);
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-card {
-            background: var(--bg-card);
-            border-radius: 10px;
-            padding: 20px;
-            border: 1px solid var(--border);
-            transition: transform 0.2s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent);
-        }
-        
-        .stat-label {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-        
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-        
-        .signal-long { color: var(--green); }
-        .signal-short { color: var(--red); }
-        .signal-neutral { color: var(--yellow); }
-        
-        .card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-        }
-        
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .ai-reasoning {
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            padding: 15px;
-            white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            border-left: 3px solid var(--accent);
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin-top: 15px;
-        }
-        
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
-        
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DEMIR AI | Ultra Pro Trader Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #06080d;
+      --bg-panel: linear-gradient(165deg, #0a0e1a 0%, #050810 100%);
+      --bg-card: rgba(18, 24, 38, 0.85);
+      --bg-card-hover: rgba(24, 32, 52, 0.95);
+      --accent-cyan: #00f5ff;
+      --accent-purple: #b24bf3;
+      --accent-gold: #ffd700;
+      --success: #00ff88;
+      --danger: #ff3366;
+      --text-main: #f5f7fa;
+      --text-dim: #8a93a8;
+      --border: rgba(255,255,255,0.04);
+      --border-glow: rgba(0,245,255,0.25);
+      --shadow-deep: 0 25px 70px -20px rgba(0,0,0,0.9);
+      --shadow-neon: 0 0 50px rgba(0,245,255,0.2);
+      --radius: 18px;
+      --transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      background-image: 
+        radial-gradient(ellipse at 10% 10%, rgba(0,245,255,0.1) 0%, transparent 40%),
+        radial-gradient(ellipse at 90% 90%, rgba(178,75,243,0.08) 0%, transparent 40%),
+        radial-gradient(ellipse at 50% 50%, rgba(255,215,0,0.03) 0%, transparent 60%);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        repeating-linear-gradient(0deg, transparent 0px, rgba(255,255,255,0.005) 1px, transparent 2px),
+        repeating-linear-gradient(90deg, transparent 0px, rgba(255,255,255,0.005) 1px, transparent 2px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      opacity: 0.4;
+      z-index: 0;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 40px auto;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 30px 40px;
+      background: var(--bg-panel);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-glow);
+      margin-bottom: 36px;
+      box-shadow: var(--shadow-deep), var(--shadow-neon);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; right: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-purple), transparent);
+      animation: slide 4s infinite linear;
+    }
+    @keyframes slide {
+      0% { left: -100%; right: 100%; }
+      50% { left: 0%; right: 0%; }
+      100% { left: 100%; right: -100%; }
+    }
+    .logo {
+      font-size: 2.6rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 60%, var(--accent-gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1.5px;
+      text-shadow: 0 0 40px rgba(0,245,255,0.4);
+      filter: drop-shadow(0 0 20px rgba(178,75,243,0.3));
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0,255,136,0.08);
+      padding: 12px 26px;
+      border-radius: 40px;
+      font-size: 15px;
+      font-weight: 700;
+      border: 1px solid rgba(0,255,136,0.35);
+      color: var(--success);
+      box-shadow: 0 0 30px rgba(0,255,136,0.25), inset 0 0 20px rgba(0,255,136,0.05);
+      backdrop-filter: blur(10px);
+    }
+    .status-badge .pulse-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 15px var(--success), 0 0 30px var(--success), 0 0 45px var(--success);
+      animation: pulse-anim 2s infinite ease-in-out;
+    }
+    @keyframes pulse-anim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.15); }
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 2.2fr 1.5fr;
+      gap: 32px;
+    }
+    .panel {
+      background: var(--bg-panel);
+      border-radius: var(--radius);
+      padding: 32px 36px;
+      margin-bottom: 32px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-deep);
+      position: relative;
+      transition: var(--transition);
+      backdrop-filter: blur(20px);
+    }
+    .panel::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: var(--radius);
+      background: linear-gradient(165deg, rgba(0,245,255,0.03) 0%, transparent 50%, rgba(178,75,243,0.02) 100%);
+      pointer-events: none;
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .panel:hover {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-deep), var(--shadow-neon);
+      transform: translateY(-3px);
+    }
+    .panel:hover::after {
+      opacity: 1;
+    }
+    h2 {
+      font-size: 1.7rem;
+      margin: 0 0 24px 0;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h2::before {
+      content: '';
+      width: 5px;
+      height: 28px;
+      background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+      border-radius: 3px;
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .stat-box {
+      background: var(--bg-card);
+      border-radius: 14px;
+      padding: 22px;
+      border: 1px solid var(--border);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-gold));
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .stat-box:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-glow);
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,245,255,0.15);
+    }
+    .stat-box:hover::before {
+      opacity: 1;
+    }
+    .stat-box .label {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .stat-box .value {
+      font-size: 2.2rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--text-main), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+    .price-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 1.5rem;
+      background: var(--bg-card);
+      padding: 20px 28px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      font-weight: 700;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+    .price-row:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-glow);
+      transform: translateX(6px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 0 15px rgba(0,245,255,0.1);
+    }
+    .price-up {
+      color: var(--success);
+      background: rgba(0,255,136,0.06);
+      border-color: rgba(0,255,136,0.25);
+    }
+    .price-down {
+      color: var(--danger);
+      background: rgba(255,51,102,0.06);
+      border-color: rgba(255,51,102,0.25);
+    }
+    .price-neutral { color: var(--text-main); }
+    .price-row b {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+    .price-row span {
+      font-size: 1.7rem;
+      font-weight: 900;
+      font-family: 'Consolas', monospace;
+    }
+    .ai-box {
+      background: linear-gradient(145deg, rgba(0,245,255,0.06), rgba(178,75,243,0.06));
+      border-radius: var(--radius);
+      padding: 24px 30px;
+      font-family: 'Consolas', monospace;
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-glow);
+      line-height: 1.9;
+      box-shadow: inset 0 0 30px rgba(0,245,255,0.04);
+      backdrop-filter: blur(10px);
+    }
+    .ai-box ul {
+      margin: 12px 0 12px 24px;
+      padding: 0;
+    }
+    .ai-box li {
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+    .signal-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-card);
+      font-size: 15px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .signal-table th, .signal-table td {
+      padding: 16px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      transition: var(--transition);
+    }
+    .signal-table th {
+      color: var(--text-dim);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 1px;
+      background: rgba(0,245,255,0.04);
+    }
+    .signal-table tbody tr {
+      transition: var(--transition);
+    }
+    .signal-table tbody tr:hover {
+      background: rgba(0,245,255,0.06);
+      transform: scale(1.01);
+    }
+    .signal-table .s-long {
+      color: var(--success);
+      font-weight: 800;
+      text-shadow: 0 0 12px rgba(0,255,136,0.4);
+    }
+    .signal-table .s-short {
+      color: var(--danger);
+      font-weight: 800;
+      text-shadow: 0 0 12px rgba(255,51,102,0.4);
+    }
+    .signal-table .s-neutral {
+      color: var(--accent-gold);
+      font-weight: 800;
+    }
+    .chart-wrapper {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      color: var(--text-dim);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    @media(max-width:1000px){
+      .main-grid { grid-template-columns: 1fr; }
+      .panel { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-top">
-                <div class="logo">🚀 DEMIR AI v8.0 PRO</div>
-                <div class="status">
-                    <div class="status-dot"></div>
-                    <span id="status-text">Bağlanıyor...</span>
-                    <span id="time">--:--:--</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">AI Yönü</div>
-                <div class="stat-value" id="ai-direction">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Güç</div>
-                <div class="stat-value" id="ai-strength">--%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Güven</div>
-                <div class="stat-value" id="ai-confidence">--%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Uyumlu Grup</div>
-                <div class="stat-value" id="ai-groups">-/5</div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">📊 AI Analiz & Yorum</div>
-            <div class="ai-reasoning" id="ai-reasoning">
-Sistem başlatılıyor... AI katmanları yükleniyor...
-
-✅ 48 AI Layer aktif
-✅ Real-time data stream bağlantısı kuruluyor
-✅ ZERO mock data policy aktif
-
-Lütfen bekleyin...
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">📈 Performans Grafiği</div>
-            <div class="chart-container">
-                <canvas id="performanceChart"></canvas>
-            </div>
-        </div>
-        
-        <div class="footer">
-            DEMIR AI v8.0 PRO © 2025 | Enterprise-Grade AI Crypto Trading System<br>
-            🔒 Advisory Mode | 100% Real Exchange Data | Zero Mock Data
-        </div>
+  <div class="container">
+    <div class="header">
+      <div class="logo">⚡ DEMIR AI v8.0 <span style="font-size:17px;background:linear-gradient(90deg,#00f5ff,#b24bf3,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;margin-left:10px;">ULTRA PRO</span></div>
+      <div class="status-badge"><span class="pulse-dot"></span>Bağlı - Aktif</div>
     </div>
+
+    <div class="main-grid">
+      <!-- Sol Panel -->
+      <div>
+        <!-- Fiyat Paneli -->
+        <div class="panel">
+          <h2>💰 Canlı Piyasa Fiyatları</h2>
+          <div id="prices">Yükleniyor...</div>
+        </div>
+
+        <!-- Sinyal Paneli -->
+        <div class="panel">
+          <h2>🎯 AI Sinyalleri ve Sonuçları</h2>
+          <table class="signal-table" id="signal-table">
+            <thead>
+              <tr>
+                <th>Coin</th>
+                <th>Yön</th>
+                <th>Giriş</th>
+                <th>TP1</th>
+                <th>TP2</th>
+                <th>SL</th>
+                <th>Güven</th>
+                <th>Tarih</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sağ Panel -->
+      <div>
+        <!-- AI İstatistikleri -->
+        <div class="panel">
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="label">AI Yönü</div>
+              <div class="value" id="ai-direction">-</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">Güç</div>
+              <div class="value" id="ai-power">-</div>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="label">Güven</div>
+              <div class="value" id="ai-confidence">-</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">Uyumlu Grup</div>
+              <div class="value" id="ai-groups">-</div>
+            </div>
+          </div>
+          <div class="ai-box" id="ai-analysis">
+            🔄 AI analiz sistemi başlatılıyor...
+          </div>
+        </div>
+
+        <!-- Performans Grafiği -->
+        <div class="chart-wrapper">
+          <h2>📈 Performans Grafiği</h2>
+          <canvas id="perfChart" style="width:100%;max-height:180px"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      DEMIR AI v8.0 ULTRA PRO | Enterprise-Grade AI Crypto Trading<br>
+      Tüm veriler gerçek zamanlıdır. AI katmanları kurumsal düzeyde optimizasyon sağlar.
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+  <script>
+    const API_PRICES = '/api/prices';
+    const API_SIGNALS = '/api/signals/latest?limit=10';
+    const API_STATUS = '/api/status';
     
-    <script>
-    const API_URL = window.location.origin;
-    let socket = null;
-    let performanceChart = null;
-    
+    let perfChart;
+
+    async function loadPrices() {
+      try {
+        const res = await fetch(API_PRICES);
+        const data = await res.json();
+        const div = document.getElementById('prices');
+        div.innerHTML = '';
+        for (const [sym, v] of Object.entries(data.prices || {})) {
+          let cls = 'price-neutral';
+          if (v.change24h > 0) cls = 'price-up';
+          if (v.change24h < 0) cls = 'price-down';
+          let chg = v.change24h ? ` ${v.change24h>0?'📈':'📉'} ${v.change24h.toFixed(2)}%` : '';
+          div.innerHTML += `<div class="price-row ${cls}"><b>${sym.replace('USDT','')}</b> <span>$${v.price?.toLocaleString(undefined,{maximumFractionDigits:2})||'-'}</span>${chg}</div>`;
+        }
+      } catch(e) {
+        document.getElementById('prices').innerHTML = '<span style="color:var(--danger)">Fiyatlar yüklenemedi</span>';
+      }
+    }
+
+    async function loadSignals() {
+      try {
+        const res = await fetch(API_SIGNALS);
+        const data = await res.json();
+        const tbody = document.querySelector('#signal-table tbody');
+        let rows = [];
+        if (data.signals) {
+          for (let [sym, arr] of Object.entries(data.signals)) {
+            for (let s of arr) {
+              rows.push(`<tr>
+                <td>${s.symbol||'-'}</td>
+                <td class="s-${s.direction?.toLowerCase()||'neutral'}">${s.direction||'-'}</td>
+                <td>${s.entry||'-'}</td>
+                <td>${s.tp1||'-'}</td>
+                <td>${s.tp2||'-'}</td>
+                <td>${s.sl||'-'}</td>
+                <td>${(s.confidence||'-')+'%'}</td>
+                <td>${s.timestamp?s.timestamp.split('T')[0]:'-'}</td>
+              </tr>`);
+            }
+          }
+        }
+        tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan=8>Şu anda aktif sinyal yok</td></tr>';
+      } catch(e) {
+        document.querySelector('#signal-table tbody').innerHTML = '<tr><td colspan=8>Sinyal yüklenemedi</td></tr>';
+      }
+    }
+
+    async function loadAIStatus() {
+      try {
+        const res = await fetch(API_STATUS);
+        const data = await res.json();
+        const m = data.global_state.metrics || {};
+        const s = data.global_state.signal_stats || {};
+        const groups = data.global_state.signals_count || {};
+        
+        document.getElementById('ai-direction').innerText = m.sentiment_score > 0 ? 'ALIŞ' : (m.sentiment_score < 0 ? 'SATIŞ' : 'NÖTR');
+        document.getElementById('ai-power').innerText = Math.abs(m.sentiment_score||0).toFixed(1) + '%';
+        document.getElementById('ai-confidence').innerText = (m.market_regime||0).toFixed(1) + '%';
+        document.getElementById('ai-groups').innerText = Object.keys(groups).length + '/5';
+        
+        let txt = '✅ AI Katmanları aktif ve canlı veriyle güncelleniyor.<br>';
+        txt += `<b>Risk VaR:</b> ${m.risk_var||0}<br>`;
+        txt += '<b>Sinyal Dağılımı:</b><ul>';
+        for (const [k, st] of Object.entries(s)) {
+          txt += `<li>${k}: ${st.total} | Long: ${st.long}, Short: ${st.short}, Validated: ${st.validated}</li>`;
+        }
+        txt += `</ul><hr style="opacity:.12"><small>Güncelleme: ${new Date().toLocaleString('tr-TR')}</small>`;
+        document.getElementById('ai-analysis').innerHTML = txt;
+        
+        perfChart.data.labels.push(new Date().toLocaleTimeString('tr-TR'));
+        perfChart.data.datasets[0].data.push(m.market_regime||0);
+        if (perfChart.data.labels.length > 25) {
+          perfChart.data.labels.shift();
+          perfChart.data.datasets[0].data.shift();
+        }
+        perfChart.update();
+      } catch(e) {
+        document.getElementById('ai-analysis').innerText = 'AI durumu yüklenemedi';
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        initializeConnection();
-        startClock();
-        initializeChart();
-        setInterval(fetchData, 5000);
+      const ctx = document.getElementById('perfChart').getContext('2d');
+      perfChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'AI Güven Skoru (%)',
+            data: [],
+            fill: true,
+            borderColor: '#00f5ff',
+            backgroundColor: 'rgba(0,245,255,0.1)',
+            tension: 0.4,
+            pointRadius: 0,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 100, grid: { color: '#1a2332' }, ticks: { color: '#8a93a8' } },
+            x: { display: false }
+          }
+        }
+      });
+
+      loadAll();
+      setInterval(loadAll, 6000);
+
+      function loadAll() {
+        loadPrices();
+        loadSignals();
+        loadAIStatus();
+      }
     });
-    
-    function startClock() {
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('time').textContent = now.toLocaleTimeString('tr-TR');
-        }, 1000);
-    }
-    
-    function initializeConnection() {
-        try {
-            socket = io(API_URL);
-            
-            socket.on('connect', () => {
-                document.getElementById('status-text').textContent = 'Bağlı - Aktif';
-                document.querySelector('.status-dot').style.background = 'var(--green)';
-            });
-            
-            socket.on('disconnect', () => {
-                document.getElementById('status-text').textContent = 'Bağlantı Kesildi';
-                document.querySelector('.status-dot').style.background = 'var(--red)';
-            });
-            
-        } catch (error) {
-            console.error('Socket bağlantı hatası:', error);
-            document.getElementById('status-text').textContent = 'Bağlantı Hatası';
-        }
-    }
-    
-    function initializeChart() {
-        const ctx = document.getElementById('performanceChart');
-        performanceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'AI Güven Skoru',
-                    data: [],
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: '#e2e8f0' }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#1e293b' },
-                        ticks: { color: '#94a3b8' }
-                    },
-                    x: {
-                        grid: { color: '#1e293b' },
-                        ticks: { color: '#94a3b8' }
-                    }
-                }
-            }
-        });
-    }
-    
-    async function fetchData() {
-        try {
-            const response = await fetch(`${API_URL}/api/status`);
-            const data = await response.json();
-            
-            if (data.global_state) {
-                updateStats(data.global_state);
-            }
-        } catch (error) {
-            console.error('Veri çekme hatası:', error);
-        }
-    }
-    
-    function updateStats(globalState) {
-        const metrics = globalState.metrics || {};
-        
-        document.getElementById('ai-direction').textContent = 
-            metrics.sentiment_score > 0 ? 'ALIŞ' : 
-            metrics.sentiment_score < 0 ? 'SATIŞ' : 'NÖTR';
-        
-        document.getElementById('ai-strength').textContent = 
-            Math.abs(metrics.sentiment_score || 0).toFixed(1) + '%';
-        
-        document.getElementById('ai-confidence').textContent = 
-            (metrics.market_regime || 0).toFixed(1) + '%';
-        
-        const signals = globalState.signals_count || {};
-        document.getElementById('ai-groups').textContent = 
-            Object.keys(signals).length + '/5';
-        
-        updateReasoning(globalState);
-        updateChart(metrics);
-    }
-    
-    function updateReasoning(globalState) {
-        const metrics = globalState.metrics || {};
-        const signals = globalState.signal_stats || {};
-        
-        let reasoning = `📊 SİSTEM DURUMU\\n\\n`;
-        reasoning += `✅ Aktif Sinyaller: ${globalState.signals_count ? Object.keys(globalState.signals_count).length : 0}\\n`;
-        reasoning += `✅ Fırsatlar: ${globalState.opportunities_count || 0}\\n`;
-        reasoning += `✅ Market Rejim: ${(metrics.market_regime || 0).toFixed(1)}%\\n`;
-        reasoning += `✅ Risk VaR: ${(metrics.risk_var || 0).toFixed(2)}\\n\\n`;
-        
-        reasoning += `📈 SİNYAL İSTATİSTİKLERİ:\\n`;
-        for (const [source, stats] of Object.entries(signals)) {
-            reasoning += `   • ${source}: ${stats.total} sinyal (Long: ${stats.long}, Short: ${stats.short})\\n`;
-        }
-        
-        reasoning += `\\n⏰ Son Güncelleme: ${new Date().toLocaleString('tr-TR')}`;
-        
-        document.getElementById('ai-reasoning').textContent = reasoning;
-    }
-    
-    function updateChart(metrics) {
-        if (!performanceChart) return;
-        
-        const now = new Date().toLocaleTimeString('tr-TR');
-        const confidence = metrics.market_regime || 0;
-        
-        performanceChart.data.labels.push(now);
-        performanceChart.data.datasets[0].data.push(confidence);
-        
-        if (performanceChart.data.labels.length > 20) {
-            performanceChart.data.labels.shift();
-            performanceChart.data.datasets[0].data.shift();
-        }
-        
-        performanceChart.update();
-    }
-    </script>
+  </script>
 </body>
 </html>"""
     
         return html_content
 
-      
     @app.route('/health')
     def health():
         """Health check endpoint for Railway and monitoring"""
