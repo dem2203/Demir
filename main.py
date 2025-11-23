@@ -911,6 +911,17 @@ UI_MODULES_AVAILABLE = any([
     TRADEPLAN_NOTIFIER_AVAILABLE,
     SIGNAL_SCHEMA_AVAILABLE
 ])
+# ════════════════════════════════════════════════════════════════════════════════════════════════════════
+# SECTION 17.5: PRICE FETCHER FALLBACK (NEW v8.0)
+# ════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+try:
+    from price_fetcher_fallback import PriceFetcherFallback
+    PRICE_FETCHER_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  WARNING: PriceFetcherFallback not available - {e}")
+    PriceFetcherFallback = None
+    PRICE_FETCHER_AVAILABLE = False
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 # SECTION 18: TELEGRAM & NOTIFICATIONS
@@ -1680,6 +1691,23 @@ class DemirUltraComprehensiveOrchestrator:
         self.telegram_notifier = self._safe_init(TelegramNotifier, "Telegram Notifier")
         self.tradeplan_notifier = self._safe_init(TelegramTradePlanNotifier, "TradePlan Notifier")
         self.signal_schema = self._safe_init(SignalGroupsSchema, "Signal Groups Schema")
+        # ═══════════════════════════════════════════════════════════════════════════════════════
+        # PRICE FETCHER FALLBACK (NEW v8.0)
+        # ═══════════════════════════════════════════════════════════════════════════════════════
+
+        if PRICE_FETCHER_AVAILABLE and PriceFetcherFallback:
+            try:
+                self.price_fetcher = PriceFetcherFallback(
+                    symbols=DEFAULT_TRACKED_SYMBOLS,
+                    update_interval=5,
+                    global_state=global_state
+                )
+                logger.info("  ✅ Price Fetcher Fallback (REST API)")
+            except Exception as e:
+                logger.error(f"  ❌ Price Fetcher Fallback failed: {e}")
+                self.price_fetcher = None
+        else:
+            self.price_fetcher = None
 
         # ═══════════════════════════════════════════════════════════════════════════════════════
         # TELEGRAM & NOTIFICATIONS
@@ -1916,6 +1944,15 @@ class DemirUltraComprehensiveOrchestrator:
                 logger.info("✅ BinanceWebSocketManager auto-started")
             except Exception as e:
                 logger.error(f"❌ WebSocket auto-start failed: {e}")
+
+        # 🆕 Price Fetcher Auto-Start (REST API Fallback)
+        if self.price_fetcher:
+            try:
+                logger.info("🚀 Auto-starting PriceFetcherFallback (REST API)...")
+                self.price_fetcher.start()
+                logger.info("✅ PriceFetcherFallback auto-started (5s interval)")
+            except Exception as e:
+                logger.error(f"❌ Price fetcher auto-start failed: {e}")
 
 
     # ═══════════════════════════════════════════════════════════════════════════════════════
