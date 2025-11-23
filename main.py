@@ -1695,10 +1695,14 @@ class DemirUltraComprehensiveOrchestrator:
         # PRICE FETCHER FALLBACK (NEW v8.0)
         # ═══════════════════════════════════════════════════════════════════════════════════════
 
-        if PRICE_FETCHER_AVAILABLE and PriceFetcherFallback:
+                if PRICE_FETCHER_AVAILABLE and PriceFetcherFallback:
             try:
+                # Convert perpetual symbols (.P) to spot symbols for REST API
+                spot_symbols = [s.replace('.P', '') for s in DEFAULT_TRACKED_SYMBOLS]
+                logger.info(f"  📊 Price Fetcher Symbols: {spot_symbols}")
+                
                 self.price_fetcher = PriceFetcherFallback(
-                    symbols=DEFAULT_TRACKED_SYMBOLS,
+                    symbols=spot_symbols,  # ✅ BTCUSDT, ETHUSDT, LTCUSDT (without .P)
                     update_interval=5,
                     global_state=global_state
                 )
@@ -1708,6 +1712,7 @@ class DemirUltraComprehensiveOrchestrator:
                 self.price_fetcher = None
         else:
             self.price_fetcher = None
+
 
         # ═══════════════════════════════════════════════════════════════════════════════════════
         # TELEGRAM & NOTIFICATIONS
