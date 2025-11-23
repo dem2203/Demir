@@ -1694,8 +1694,7 @@ class DemirUltraComprehensiveOrchestrator:
         # ═══════════════════════════════════════════════════════════════════════════════════════
         # PRICE FETCHER FALLBACK (NEW v8.0)
         # ═══════════════════════════════════════════════════════════════════════════════════════
-
-                if PRICE_FETCHER_AVAILABLE and PriceFetcherFallback:
+        if PRICE_FETCHER_AVAILABLE and PriceFetcherFallback:
             try:
                 # Convert perpetual symbols (.P) to spot symbols for REST API
                 spot_symbols = [s.replace('.P', '') for s in DEFAULT_TRACKED_SYMBOLS]
