@@ -71,33 +71,37 @@ def register_group_signal_routes(app, orchestrator):
             timeframe = request.args.get('timeframe', '1h')
             
             logger.info(f"[PRICE_DEBUG] TECHNICAL API: symbol='{symbol}' | timeframe={timeframe}")
+    
                        
             # Get real-time price first
             current_price = None
-            if orchestrator.exchange_api:
-                try:
-                    # Get real-time price (fallback-safe)
-                    if hasattr(orchestrator.exchange_api, 'get_current_price'):
-                        current_price = orchestrator.exchange_api.get_current_price(symbol)
-                        ticker = {'last': current_price} if current_price else None
-                    elif hasattr(orchestrator.exchange_api, 'get_ticker'):
-                        ticker = orchestrator.exchange_api.get_ticker(symbol)
-                    else:
-                        ticker = None
-                    current_price = float(ticker.get('last', 0)) if ticker else None
-                except Exception as e:
-                    logger.warning(f"Failed to get real-time price: {e}")
-            
-            # If no real price, cannot generate signal
-            if not current_price or current_price == 0:
-                return jsonify({
-                    'status': 'error',
-                    'error': 'Real-time price not available',
-                    'symbol': symbol,
-                    'message': 'Waiting for real exchange data...',
-                    'timestamp': datetime.now(timezone.utc).isoformat()
-                }), 503
-            
+
+# Önce global_state'den oku (PriceFetcherFallback ile dolduruluyor!)
+try:
+    if hasattr(orchestrator, 'global_state') and orchestrator.global_state:
+        logger.info(f"[PRICE_DEBUG] Checking global_state market_data for '{symbol}'")
+        logger.info(f"[PRICE_DEBUG] Available keys: {list(orchestrator.global_state.market_data.keys())}")
+        market_point = orchestrator.global_state.market_data.get(symbol)
+        if market_point:
+            current_price = float(getattr(market_point, 'price', 0) or 0)
+            logger.info(f"[PRICE_DEBUG] global_state price: {current_price}")
+except Exception as eg:
+    logger.warning(f"Failed to get real-time price from global_state: {eg}")
+
+# Hala yok ise eski exchange_api fallback
+if (not current_price or current_price == 0) and orchestrator.exchange_api:
+    try:
+        if hasattr(orchestrator.exchange_api, 'get_current_price'):
+            current_price = orchestrator.exchange_api.get_current_price(symbol)
+            ticker = {'last': current_price} if current_price else None
+        elif hasattr(orchestrator.exchange_api, 'get_ticker'):
+            ticker = orchestrator.exchange_api.get_ticker(symbol)
+        else:
+            ticker = None
+        current_price = float(ticker.get('last', 0)) if ticker else None
+    except Exception as e:
+        logger.warning(f"Failed to get real-time price: {e}")
+                   
             # Calculate technical indicators
             technical_signal = {
                 'symbol': symbol,
