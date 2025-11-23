@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 ════════════════════════════════════════════════════════════════════════════════════════
 🎯 DEMIR AI v8.0 - 5-GROUP INDEPENDENT SIGNAL API ROUTES
@@ -21,7 +22,7 @@ Endpoints:
 
 Author: DEMIR AI Professional Team
 Version: 8.0.0
-Date: 2025-11-21
+Date: 2025-11-23 (FIXED: global_state price reading)
 
 ════════════════════════════════════════════════════════════════════════════════════════
 """
@@ -34,6 +35,7 @@ from flask import jsonify, request
 
 # Setup logger
 logger = logging.getLogger('GROUP_SIGNAL_API')
+
 
 def register_group_signal_routes(app, orchestrator):
     """
@@ -71,37 +73,50 @@ def register_group_signal_routes(app, orchestrator):
             timeframe = request.args.get('timeframe', '1h')
             
             logger.info(f"[PRICE_DEBUG] TECHNICAL API: symbol='{symbol}' | timeframe={timeframe}")
-    
-                       
+            
             # Get real-time price first
             current_price = None
-
-# Önce global_state'den oku (PriceFetcherFallback ile dolduruluyor!)
-try:
-    if hasattr(orchestrator, 'global_state') and orchestrator.global_state:
-        logger.info(f"[PRICE_DEBUG] Checking global_state market_data for '{symbol}'")
-        logger.info(f"[PRICE_DEBUG] Available keys: {list(orchestrator.global_state.market_data.keys())}")
-        market_point = orchestrator.global_state.market_data.get(symbol)
-        if market_point:
-            current_price = float(getattr(market_point, 'price', 0) or 0)
-            logger.info(f"[PRICE_DEBUG] global_state price: {current_price}")
-except Exception as eg:
-    logger.warning(f"Failed to get real-time price from global_state: {eg}")
-
-# Hala yok ise eski exchange_api fallback
-if (not current_price or current_price == 0) and orchestrator.exchange_api:
-    try:
-        if hasattr(orchestrator.exchange_api, 'get_current_price'):
-            current_price = orchestrator.exchange_api.get_current_price(symbol)
-            ticker = {'last': current_price} if current_price else None
-        elif hasattr(orchestrator.exchange_api, 'get_ticker'):
-            ticker = orchestrator.exchange_api.get_ticker(symbol)
-        else:
-            ticker = None
-        current_price = float(ticker.get('last', 0)) if ticker else None
-    except Exception as e:
-        logger.warning(f"Failed to get real-time price: {e}")
-                   
+            
+            # 🔍 Önce global_state'den oku (PriceFetcherFallback ile dolduruluyor!)
+            try:
+                if hasattr(orchestrator, 'global_state') and orchestrator.global_state:
+                    logger.info(f"[PRICE_DEBUG] Checking global_state market_data for '{symbol}'")
+                    logger.info(f"[PRICE_DEBUG] Available keys: {list(orchestrator.global_state.market_data.keys())}")
+                    market_point = orchestrator.global_state.market_data.get(symbol)
+                    if market_point:
+                        current_price = float(getattr(market_point, 'price', 0) or 0)
+                        logger.info(f"[PRICE_DEBUG] ✅ Got price from global_state: ${current_price:,.2f}")
+            except Exception as eg:
+                logger.warning(f"Failed to get real-time price from global_state: {eg}")
+            
+            # Hala yok ise eski exchange_api fallback
+            if (not current_price or current_price == 0) and orchestrator.exchange_api:
+                try:
+                    logger.info(f"[PRICE_DEBUG] Fallback: trying exchange_api")
+                    if hasattr(orchestrator.exchange_api, 'get_current_price'):
+                        current_price = orchestrator.exchange_api.get_current_price(symbol)
+                        ticker = {'last': current_price} if current_price else None
+                    elif hasattr(orchestrator.exchange_api, 'get_ticker'):
+                        ticker = orchestrator.exchange_api.get_ticker(symbol)
+                    else:
+                        ticker = None
+                    current_price = float(ticker.get('last', 0)) if ticker else None
+                except Exception as e:
+                    logger.warning(f"Failed to get real-time price from exchange_api: {e}")
+            
+            # If no real price, cannot generate signal
+            if not current_price or current_price == 0:
+                logger.error(f"[PRICE_DEBUG] ❌ No price available for '{symbol}'")
+                return jsonify({
+                    'status': 'error',
+                    'error': 'Real-time price not available',
+                    'symbol': symbol,
+                    'message': 'Waiting for real exchange data...',
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }), 503
+            
+            logger.info(f"[PRICE_DEBUG] ✅ Final price for '{symbol}': ${current_price:,.2f}")
+            
             # Calculate technical indicators
             technical_signal = {
                 'symbol': symbol,
@@ -133,7 +148,6 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
             if technical_signal['direction'] == 'NEUTRAL' and current_price:
                 # Calculate basic support/resistance levels
                 atr_estimate = current_price * 0.02  # 2% ATR estimate
-                
                 technical_signal.update({
                     'entry_price': current_price,
                     'tp1': current_price + (atr_estimate * 1),
@@ -164,7 +178,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
                 'error': str(e),
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # SENTIMENT GROUP SIGNAL ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -205,7 +219,6 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
                     sentiment = orchestrator.sentiment_v2.analyze_multi_source_sentiment()
                     if sentiment and not sentiment.get('mock_detected', False):
                         score = sentiment.get('score', 0.5)
-                        
                         # Convert sentiment score to trading signal
                         if score > 0.6:
                             sentiment_signal['direction'] = 'LONG'
@@ -213,10 +226,8 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
                         elif score < 0.4:
                             sentiment_signal['direction'] = 'SHORT'
                             sentiment_signal['strength'] = min(1 - score, 1.0)
-                        
                         sentiment_signal['confidence'] = sentiment.get('confidence', 0.5)
                         sentiment_signal['sources'] = sentiment.get('sources', {})
-                        
                         logger.info(f"✅ SENTIMENT signal: {sentiment_signal['direction']}")
                 except Exception as e:
                     logger.error(f"Sentiment engine error: {e}")
@@ -231,7 +242,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ SENTIMENT endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # MACHINE LEARNING GROUP SIGNAL ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -286,7 +297,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ ML endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # ON-CHAIN GROUP SIGNAL ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -299,7 +310,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         try:
             symbol = request.args.get('symbol', 'BTCUSDT')
             
-            logger.info(f"⛓️ ON-CHAIN signal requested: {symbol}")
+            logger.info(f"⛓️  ON-CHAIN signal requested: {symbol}")
             
             onchain_signal = {
                 'symbol': symbol,
@@ -340,7 +351,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ ON-CHAIN endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # RISK GROUP SIGNAL ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -353,7 +364,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         try:
             symbol = request.args.get('symbol', 'BTCUSDT')
             
-            logger.info(f"⚠️ RISK signal requested: {symbol}")
+            logger.info(f"⚠️  RISK signal requested: {symbol}")
             
             risk_signal = {
                 'symbol': symbol,
@@ -395,7 +406,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ RISK endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # ⭐ NEW v8.0 PHASE 2: AI META-LAYER SIGNAL ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -404,27 +415,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
     def api_meta_signal():
         """
         ⭐ NEW v8.0: Get AI META-LAYER ensemble signal
-        
-        Orchestrates all 5 group signals and produces consensus with AI reasoning:
-        - Technical Analysis Layer (25% weight)
-        - Sentiment Analysis Layer (20% weight)
-        - Machine Learning Layer (25% weight)
-        - On-Chain Analytics Layer (15% weight)
-        - Risk Management Layer (15% weight)
-        
-        Query Params:
-            - symbol: Trading pair (default: BTCUSDT)
-        
-        Returns:
-            JSON with meta-signal including:
-            - meta_signal: LONG/SHORT/NEUTRAL
-            - consensus_strength: 0-100
-            - confidence: 0-100
-            - recommended_action: BUY/SELL/HOLD/WAIT
-            - entry_price, targets[3], stop_loss, risk_reward
-            - ai_reasoning: Natural language explanation
-            - supporting_groups, opposing_groups
-            - divergences: Conflict analysis
+        Orchestrates all 5 group signals and produces consensus with AI reasoning
         """
         try:
             symbol = request.args.get('symbol', 'BTCUSDT')
@@ -529,7 +520,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
                 'error': str(e),
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # SMART MONEY TRACKER ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -565,7 +556,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ Smart money endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # ARBITRAGE OPPORTUNITIES ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -602,7 +593,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ Arbitrage endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # PATTERN DETECTION ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -639,7 +630,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ Pattern endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     # ════════════════════════════════════════════════════════════════════════════════
     # ON-CHAIN METRICS ENDPOINT
     # ════════════════════════════════════════════════════════════════════════════════
@@ -650,7 +641,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         Get comprehensive on-chain metrics
         """
         try:
-            logger.info(f"⛓️ On-chain metrics requested")
+            logger.info(f"⛓️  On-chain metrics requested")
             
             metrics = {
                 'btc_whale_balance': 0,
@@ -670,6 +661,7 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
                         data = orchestrator.onchain_pro.get_onchain_metrics()
                     else:
                         data = {}
+                    
                     if data and not data.get('mock_detected', False):
                         metrics.update(data)
                         logger.info(f"✅ On-chain metrics retrieved")
@@ -685,15 +677,15 @@ if (not current_price or current_price == 0) and orchestrator.exchange_api:
         except Exception as e:
             logger.error(f"❌ On-chain metrics endpoint error: {e}")
             return jsonify({'status': 'error', 'error': str(e)}), 500
-    
+
     logger.info("✅ All 10 group signal API routes registered successfully")
-    logger.info("   ├─ /api/signals/technical")
-    logger.info("   ├─ /api/signals/sentiment")
-    logger.info("   ├─ /api/signals/ml")
-    logger.info("   ├─ /api/signals/onchain")
-    logger.info("   ├─ /api/signals/risk")
-    logger.info("   ├─ /api/meta_signal (⭐ NEW AI ENSEMBLE)")
-    logger.info("   ├─ /api/smart-money/recent")
-    logger.info("   ├─ /api/arbitrage/opportunities")
-    logger.info("   ├─ /api/patterns/detected")
-    logger.info("   └─ /api/onchain/metrics")
+    logger.info("  ├─ /api/signals/technical")
+    logger.info("  ├─ /api/signals/sentiment")
+    logger.info("  ├─ /api/signals/ml")
+    logger.info("  ├─ /api/signals/onchain")
+    logger.info("  ├─ /api/signals/risk")
+    logger.info("  ├─ /api/meta_signal (⭐ NEW AI ENSEMBLE)")
+    logger.info("  ├─ /api/smart-money/recent")
+    logger.info("  ├─ /api/arbitrage/opportunities")
+    logger.info("  ├─ /api/patterns/detected")
+    logger.info("  └─ /api/onchain/metrics")
