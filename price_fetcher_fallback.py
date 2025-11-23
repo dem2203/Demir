@@ -161,7 +161,7 @@ class PriceFetcherFallback:
                 for ticker in all_volumes
                 if ticker['symbol'] in self.symbols
             }
-            
+                      
             # Update global_state with fetched data
             if self.global_state:
                 for symbol in self.symbols:
@@ -177,6 +177,7 @@ class PriceFetcherFallback:
                         }
                         
                         self.global_state.update_market_data(symbol, market_data)
+                        logger.info(f"  💰 {symbol}: ${symbol_prices[symbol]:,.2f} → global_state updated")
                 
                 logger.info(
                     f"✅ Prices updated: {len(symbol_prices)} symbols | "
