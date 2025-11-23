@@ -67,11 +67,11 @@ def register_group_signal_routes(app, orchestrator):
             - indicators: Individual indicator values
         """
         try:
-            symbol = request.args.get('symbol', 'BTCUSDT')
+            symbol = request.args.get('symbol', 'BTCUSDT').strip().upper()
             timeframe = request.args.get('timeframe', '1h')
             
-            logger.info(f"📊 TECHNICAL signal requested: {symbol} {timeframe}")
-            
+            logger.info(f"[PRICE_DEBUG] TECHNICAL API: symbol='{symbol}' | timeframe={timeframe}")
+                       
             # Get real-time price first
             current_price = None
             if orchestrator.exchange_api:
