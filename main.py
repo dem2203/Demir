@@ -3307,3 +3307,4 @@ if __name__ == '__main__':
         logger.error(f"❌ FATAL: Server failed to start - {e}")
         logger.error(traceback.format_exc())
         sys.exit(1)
+
