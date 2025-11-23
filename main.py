@@ -3217,6 +3217,16 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
+# ⭐ REGISTER GROUP SIGNAL ROUTES
+if GROUP_SIGNAL_API_AVAILABLE and register_group_signal_routes:
+    try:
+        register_group_signal_routes(app, orchestrator)
+        logger.info("✅ Group signal API routes registered")
+    except Exception as e:
+        logger.error(f"❌ Route registration failed: {e}")
+
+# Start Flask server
+if __name__ == '__main__':
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 # SECTION 30: MAIN ENTRY POINT & SERVER STARTUP
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
