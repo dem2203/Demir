@@ -3225,8 +3225,6 @@ if GROUP_SIGNAL_API_AVAILABLE and register_group_signal_routes:
     except Exception as e:
         logger.error(f"❌ Route registration failed: {e}")
 
-# Start Flask server
-if __name__ == '__main__':
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
 # SECTION 30: MAIN ENTRY POINT & SERVER STARTUP
 # ════════════════════════════════════════════════════════════════════════════════════════════════════════
