@@ -2395,10 +2395,11 @@ orchestrator = DemirUltraComprehensiveOrchestrator()
 
 if FLASK_AVAILABLE and app:
 
-    @app.route('/')      # ← 4 BOŞLUK GİRİNTİ
+    @app.route('/')
     def index():
-        """Serve Professional Turkish Trader Dashboard (v8.0 Optimized - Inline HTML)"""
-        html_content = """<!DOCTYPE html>
+    """Serve Professional Turkish Trader Dashboard (v8.0 Optimized - Inline HTML)"""
+    # Inline HTML - Railway deployment-proof (no external file dependency)
+    html_content = """<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
