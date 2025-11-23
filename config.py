@@ -1,6 +1,11 @@
 """
-🔧 DEMIR AI v8.0 - ENTERPRISE CONFIGURATION
+🔧 DEMIR AI v8.0.1 - ENTERPRISE CONFIGURATION (FIXED)
 Gelişmiş multi-layer AI için ekstra API key desteği ve profesyonel production doğrulama.
+
+🆕 v8.0.1 FIX:
+- Removed .P suffix from DEFAULT_TRACKED_SYMBOLS
+- Spot symbols for REST API compatibility
+- Dashboard will now display prices correctly
 """
 import os
 import sys
@@ -16,7 +21,7 @@ load_dotenv()
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production').lower()
 DEBUG_MODE = ENVIRONMENT == 'development'
 
-VERSION = "8.0"
+VERSION = "8.0.1"
 APP_NAME = "DEMIR AI"
 FULL_NAME = f"{APP_NAME} v{VERSION} Enterprise"
 
@@ -81,19 +86,22 @@ CACHE_TTL = int(os.getenv('CACHE_TTL', '300'))  # 5 minutes default
 RATE_LIMIT_ENABLED = os.getenv('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
 
 # ========================================================================
-# TRACKED SYMBOLS - v8.0 UPDATE: PERPETUAL FUTURES ONLY
+# TRACKED SYMBOLS - v8.0.1 FIX: SPOT SYMBOLS (NO .P SUFFIX)
+# ✅ FIXED: Removed .P suffix for REST API compatibility
 # User can dynamically add/remove symbols via dashboard
 # ========================================================================
 
-# Default symbols - PERPETUAL FUTURES (changed per user request)
-# Users will manually add additional symbols via dashboard UI
+# Default symbols - SPOT (compatible with Binance REST API)
+# ✅ FIXED: No .P suffix - PriceFetcherFallback uses spot endpoints
 DEFAULT_TRACKED_SYMBOLS = [
-    'BTCUSDT.P',   # Bitcoin Perpetual Futures
-    'ETHUSDT.P',   # Ethereum Perpetual Futures
-    'LTCUSDT.P',   # Litecoin Perpetual Futures
+    'BTCUSDT',   # Bitcoin Spot
+    'ETHUSDT',   # Ethereum Spot
+    'LTCUSDT',   # Litecoin Spot
 ]
-# Spot symbols for REST API (without .P suffix)
+
+# Additional spot symbols for diversification
 DEFAULT_TRACKED_SYMBOLS_SPOT = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT', 'SOLUSDT']
+
 # Runtime symbol management - loaded from database or user input
 # This list will be dynamically updated when user adds/removes symbols
 TRACKED_SYMBOLS = DEFAULT_TRACKED_SYMBOLS.copy()
@@ -104,7 +112,7 @@ def add_symbol(symbol: str) -> bool:
     Add a symbol to tracked list (runtime).
     
     Args:
-        symbol: Symbol to add (e.g., 'BTCUSDT.P')
+        symbol: Symbol to add (e.g., 'BTCUSDT')
         
     Returns:
         bool: True if added, False if already exists
@@ -219,6 +227,7 @@ def validate_config():
 # ========================================================================
 
 print(f"[CONFIG] DEMIR AI config.py yüklendi. Version: {VERSION}, Advisory Mode: {ADVISORY_MODE}")
-print(f"🥇 Default Tracked Symbols (Perpetual Futures): {DEFAULT_TRACKED_SYMBOLS}")
+print(f"🥇 Default Tracked Symbols (Spot): {DEFAULT_TRACKED_SYMBOLS}")
+print(f"✅ FIXED v8.0.1: Removed .P suffix for REST API compatibility")
 if not ENABLE_NEWSAPI_LAYER:
     print(f"⚠️  NewsAPI Layer: DISABLED (can be re-enabled via ENABLE_NEWSAPI_LAYER=true)")
