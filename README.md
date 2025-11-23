@@ -12,7 +12,6 @@
 
 ---
 ## 📋 İçindekiler
-
 - [Özellikler](#-özellikler)
 - [Mimari](#-mimari)
 - [Kurulum](#-kurulum)
