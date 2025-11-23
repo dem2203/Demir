@@ -1210,11 +1210,14 @@ class GlobalState:
         self.validator_alerts: deque = deque(maxlen=100)
 
         logger.info("✅ GlobalState initialized with validator metrics tracking")
-
+       
     def update_market_data(self, symbol: str, data: Dict[str, Any]) -> None:
         """Update market data for a symbol"""
         with self.lock:
             try:
+                # 🔍 DEBUG: Log incoming symbol
+                logger.info(f"[PRICE_DEBUG] update_market_data: symbol='{symbol}' | price={data.get('price', 0)}")
+                
                 market_point = MarketDataPoint(
                     symbol=symbol,
                     price=float(data.get('price', 0)),
@@ -1227,10 +1230,13 @@ class GlobalState:
                 self.market_data[symbol] = market_point
                 self.market_data_history[symbol].append(market_point)
                 self.last_update[f'market_{symbol}'] = datetime.now(timezone.utc)
+                
+                # 🔍 DEBUG: Log all keys
+                logger.info(f"[PRICE_DEBUG] market_data keys: {list(self.market_data.keys())}")
 
             except Exception as e:
                 logger.error(f"Error updating market data for {symbol}: {e}")
-
+    
     def add_signal(self, symbol: str, signal: Dict[str, Any]) -> None:
         """Add a trading signal"""
         with self.lock:
