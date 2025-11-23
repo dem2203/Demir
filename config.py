@@ -92,7 +92,8 @@ DEFAULT_TRACKED_SYMBOLS = [
     'ETHUSDT.P',   # Ethereum Perpetual Futures
     'LTCUSDT.P',   # Litecoin Perpetual Futures
 ]
-
+# Spot symbols for REST API (without .P suffix)
+DEFAULT_TRACKED_SYMBOLS_SPOT = ['BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BNBUSDT', 'SOLUSDT']
 # Runtime symbol management - loaded from database or user input
 # This list will be dynamically updated when user adds/removes symbols
 TRACKED_SYMBOLS = DEFAULT_TRACKED_SYMBOLS.copy()
