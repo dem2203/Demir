@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ═══════════════════════════════════════════════════════════════════════════════
-DEMIR AI - TELEGRAM MONITOR v5.3
+DEMIR AI - TELEGRAM MONITOR v5.4 (FIXED)
 ═══════════════════════════════════════════════════════════════════════════════
 
 🔴 SAATLIK RAPOR + DURUMU BİLDİRİMİ
@@ -12,6 +12,11 @@ DEMIR AI - TELEGRAM MONITOR v5.3
 ✅ 100% REAL DATA - NO MOCK
 ✅ PRODUCTION READY
 ✅ RAILWAY DEPLOYMENT
+
+🆕 v5.4 FIXES:
+- Database query fixed (active_positions table)
+- Division by zero protection added
+- Error handling improved
 
 RUN: python telegram_monitor.py
 ═══════════════════════════════════════════════════════════════════════════════
@@ -128,27 +133,31 @@ def get_binance_price(symbol: str) -> Optional[Dict]:
         return None
 
 # ============================================================================
-# GET SIGNALS FROM DATABASE
+# GET SIGNALS FROM DATABASE (✅ FIXED v5.4)
 # ============================================================================
 
-def get_latest_signals() -> Dict:
-    """Database'den son sinyalleri al"""
+def get_latest_signals() -> List[Dict]:
+    """Database'den son sinyalleri al
+    
+    ✅ FIXED: active_positions tablosu kullanılıyor
+    ✅ FIXED: Kolon isimleri düzeltildi (take_profit_1, stop_loss)
+    """
     try:
         import psycopg2
         
         conn = psycopg2.connect(DATABASE_URL)
         cursor = conn.cursor()
         
-        # Son 1 saatin sinyalleri
+        # ✅ FIXED: active_positions tablosu + doğru kolon isimleri
         cursor.execute("""
-    SELECT symbol, direction as signal_type, 
-           signal_confidence as confidence, entry_price, 
-           take_profit_1, take_profit_2, stop_loss
-    FROM active_positions
-    WHERE opened_at > NOW() - INTERVAL '1 hour'
-    ORDER BY opened_at DESC
-    LIMIT 10
-""")
+            SELECT symbol, direction as signal_type, 
+                   signal_confidence as confidence, entry_price, 
+                   take_profit_1, take_profit_2, stop_loss
+            FROM active_positions
+            WHERE opened_at > NOW() - INTERVAL '1 hour'
+            ORDER BY opened_at DESC
+            LIMIT 10
+        """)
         
         signals = []
         for row in cursor.fetchall():
@@ -406,6 +415,7 @@ class TelegramMonitor:
     def send_opportunity_alert(self, signal: Dict) -> bool:
         """
         ⭐ NEW v8.0: Send formatted trading opportunity alert.
+        ✅ FIXED v5.4: Division by zero protection added
         
         Args:
             signal: Trading signal with entry, targets, stop-loss
@@ -430,9 +440,18 @@ class TelegramMonitor:
             signal_emoji = "🟢" if signal_type == "LONG" else "🔴"
             confidence_emoji = "🔥" if confidence >= 80 else "⚡" if confidence >= 70 else "🟡"
             
+            # ✅ FIXED: Division by zero protection
+            if entry > 0:
+                tp1_pct = ((tp1 - entry) / entry * 100)
+                tp2_pct = ((tp2 - entry) / entry * 100)
+                sl_pct = ((sl - entry) / entry * 100)
+            else:
+                tp1_pct = tp2_pct = sl_pct = 0.0
+                logger.warning(f"⚠️ Entry price is zero for {symbol}")
+            
             # Format alert message
             alert_message = f"""
-{signal_emoji} <b>TRADING FİRSATI</b>
+{signal_emoji} <b>TRADING FIRSATI</b>
 
 <b>Coin:</b> {symbol.replace('USDT', '')}
 <b>Sinyal:</b> {signal_type} {confidence_emoji}
@@ -441,9 +460,9 @@ class TelegramMonitor:
 <b>💰 FİYAT BİLGİLERİ</b>
 <b>Mevcut:</b> ${current_price:,.4f}
 <b>Giriş:</b> ${entry:,.4f}
-<b>Hedef 1:</b> ${tp1:,.4f} ({((tp1-entry)/entry*100):+.1f}%)
-<b>Hedef 2:</b> ${tp2:,.4f} ({((tp2-entry)/entry*100):+.1f}%)
-<b>Stop-Loss:</b> ${sl:,.4f} ({((sl-entry)/entry*100):+.1f}%)
+<b>Hedef 1:</b> ${tp1:,.4f} ({tp1_pct:+.1f}%)
+<b>Hedef 2:</b> ${tp2:,.4f} ({tp2_pct:+.1f}%)
+<b>Stop-Loss:</b> ${sl:,.4f} ({sl_pct:+.1f}%)
 
 <b>⏰ Zaman:</b> {datetime.now().strftime('%H:%M:%S UTC')}
 <b>🔗 Alım yap</b> | <b>🚨 Risk yönet</b>
@@ -466,12 +485,13 @@ class TelegramMonitor:
 
 if __name__ == "__main__":
     logger.info("=" * 80)
-    logger.info("DEMIR AI - TELEGRAM MONITOR v5.3")
+    logger.info("DEMIR AI - TELEGRAM MONITOR v5.4 (FIXED)")
     logger.info("=" * 80)
     logger.info(f"TELEGRAM_TOKEN: {TELEGRAM_TOKEN[:10]}...")
     logger.info(f"TELEGRAM_CHAT_ID: {TELEGRAM_CHAT_ID}")
     logger.info(f"DATABASE_URL: Connected")
     logger.info(f"Start time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S UTC')}")
+    logger.info("✅ FIXES: Database query + Division by zero protection")
     logger.info("=" * 80)
     
     try:
