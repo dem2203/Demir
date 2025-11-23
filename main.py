@@ -2396,24 +2396,396 @@ orchestrator = DemirUltraComprehensiveOrchestrator()
 if FLASK_AVAILABLE and app:
 
     @app.route('/')
-    def index():
-        """Serve Professional Turkish Trader Dashboard (v8.0 Optimized - Main Dashboard)"""
-        try:
-            with open('dashboard_pro_tr.html', 'r', encoding='utf-8') as f:
-                return f.read()
-        except FileNotFoundError:
-            logger.error("❌ dashboard_pro_tr.html not found")
-            return jsonify({
-                'error': 'Pro TR Dashboard not found',
-                'status': 'error',
-                'message': 'dashboard_pro_tr.html is missing from deployment',
-                'note': 'This is the optimized v8.0 dashboard (48 layers - passive layers disabled)',
-                'api_available': True,
-                'endpoints': ['/health', '/api/status', '/api/signals/latest', '/api/validators/status']
-            }), 404
-        except Exception as e:
-            logger.error(f"❌ Error serving dashboard_pro_tr.html: {e}")
-            return jsonify({'error': str(e)}), 500
+def index():
+    """Serve Professional Turkish Trader Dashboard (v8.0 Optimized - Inline HTML)"""
+    # Inline HTML - Railway deployment-proof (no external file dependency)
+    html_content = """<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEMIR AI v8.0 PRO - Profesyonel Trader Dashboard</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #141937;
+            --bg-card: #1a1f3a;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --border: #1e293b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-card);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .signal-long { color: var(--green); }
+        .signal-short { color: var(--red); }
+        .signal-neutral { color: var(--yellow); }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ai-reasoning {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            border-left: 3px solid var(--accent);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 15px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div class="logo">🚀 DEMIR AI v8.0 PRO</div>
+                <div class="status">
+                    <div class="status-dot"></div>
+                    <span id="status-text">Bağlanıyor...</span>
+                    <span id="time">--:--:--</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">AI Yönü</div>
+                <div class="stat-value" id="ai-direction">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Güç</div>
+                <div class="stat-value" id="ai-strength">--%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Güven</div>
+                <div class="stat-value" id="ai-confidence">--%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Uyumlu Grup</div>
+                <div class="stat-value" id="ai-groups">-/5</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">📊 AI Analiz & Yorum</div>
+            <div class="ai-reasoning" id="ai-reasoning">
+Sistem başlatılıyor... AI katmanları yükleniyor...
+
+✅ 48 AI Layer aktif
+✅ Real-time data stream bağlantısı kuruluyor
+✅ ZERO mock data policy aktif
+
+Lütfen bekleyin...
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">📈 Performans Grafiği</div>
+            <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="footer">
+            DEMIR AI v8.0 PRO © 2025 | Enterprise-Grade AI Crypto Trading System<br>
+            🔒 Advisory Mode | 100% Real Exchange Data | Zero Mock Data
+        </div>
+    </div>
+    
+    <script>
+    const API_URL = window.location.origin;
+    let socket = null;
+    let performanceChart = null;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeConnection();
+        startClock();
+        initializeChart();
+        setInterval(fetchData, 5000);
+    });
+    
+    function startClock() {
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('time').textContent = now.toLocaleTimeString('tr-TR');
+        }, 1000);
+    }
+    
+    function initializeConnection() {
+        try {
+            socket = io(API_URL);
+            
+            socket.on('connect', () => {
+                document.getElementById('status-text').textContent = 'Bağlı - Aktif';
+                document.querySelector('.status-dot').style.background = 'var(--green)';
+            });
+            
+            socket.on('disconnect', () => {
+                document.getElementById('status-text').textContent = 'Bağlantı Kesildi';
+                document.querySelector('.status-dot').style.background = 'var(--red)';
+            });
+            
+        } catch (error) {
+            console.error('Socket bağlantı hatası:', error);
+            document.getElementById('status-text').textContent = 'Bağlantı Hatası';
+        }
+    }
+    
+    function initializeChart() {
+        const ctx = document.getElementById('performanceChart');
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'AI Güven Skoru',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e2e8f0' }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#1e293b' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { color: '#1e293b' },
+                        ticks: { color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+    }
+    
+    async function fetchData() {
+        try {
+            const response = await fetch(`${API_URL}/api/status`);
+            const data = await response.json();
+            
+            if (data.global_state) {
+                updateStats(data.global_state);
+            }
+        } catch (error) {
+            console.error('Veri çekme hatası:', error);
+        }
+    }
+    
+    function updateStats(globalState) {
+        const metrics = globalState.metrics || {};
+        
+        document.getElementById('ai-direction').textContent = 
+            metrics.sentiment_score > 0 ? 'ALIŞ' : 
+            metrics.sentiment_score < 0 ? 'SATIŞ' : 'NÖTR';
+        
+        document.getElementById('ai-strength').textContent = 
+            Math.abs(metrics.sentiment_score || 0).toFixed(1) + '%';
+        
+        document.getElementById('ai-confidence').textContent = 
+            (metrics.market_regime || 0).toFixed(1) + '%';
+        
+        const signals = globalState.signals_count || {};
+        document.getElementById('ai-groups').textContent = 
+            Object.keys(signals).length + '/5';
+        
+        updateReasoning(globalState);
+        updateChart(metrics);
+    }
+    
+    function updateReasoning(globalState) {
+        const metrics = globalState.metrics || {};
+        const signals = globalState.signal_stats || {};
+        
+        let reasoning = `📊 SİSTEM DURUMU\\n\\n`;
+        reasoning += `✅ Aktif Sinyaller: ${globalState.signals_count ? Object.keys(globalState.signals_count).length : 0}\\n`;
+        reasoning += `✅ Fırsatlar: ${globalState.opportunities_count || 0}\\n`;
+        reasoning += `✅ Market Rejim: ${(metrics.market_regime || 0).toFixed(1)}%\\n`;
+        reasoning += `✅ Risk VaR: ${(metrics.risk_var || 0).toFixed(2)}\\n\\n`;
+        
+        reasoning += `📈 SİNYAL İSTATİSTİKLERİ:\\n`;
+        for (const [source, stats] of Object.entries(signals)) {
+            reasoning += `   • ${source}: ${stats.total} sinyal (Long: ${stats.long}, Short: ${stats.short})\\n`;
+        }
+        
+        reasoning += `\\n⏰ Son Güncelleme: ${new Date().toLocaleString('tr-TR')}`;
+        
+        document.getElementById('ai-reasoning').textContent = reasoning;
+    }
+    
+    function updateChart(metrics) {
+        if (!performanceChart) return;
+        
+        const now = new Date().toLocaleTimeString('tr-TR');
+        const confidence = metrics.market_regime || 0;
+        
+        performanceChart.data.labels.push(now);
+        performanceChart.data.datasets[0].data.push(confidence);
+        
+        if (performanceChart.data.labels.length > 20) {
+            performanceChart.data.labels.shift();
+            performanceChart.data.datasets[0].data.shift();
+        }
+        
+        performanceChart.update();
+    }
+    </script>
+</body>
+</html>"""
+    
+    return html_content
+
       
     @app.route('/health')
     def health():
